@@ -1,0 +1,15 @@
+{
+	"info": {
+		"_postman_id": "7de9906d-695b-4503-acb1-05d3db51bf95",
+		"name": "Dự án tốt nghiệp",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "40806061",
+		"_collection_link": "https://demo55-1692.postman.co/workspace/Demo-Workspace~41f79eec-0b07-4953-88e9-9b189e7cb21d/collection/40806061-7de9906d-695b-4503-acb1-05d3db51bf95?action=share&source=collection_link&creator=40806061"
+	},
+	"item": [
+		{
+			"name": "Products",
+			"item": []
+		}
+	]
+}
