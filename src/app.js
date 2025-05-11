@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
+import attributeRouter from "./routers/attribute.router";
 
 const app = express();
 dotenv.config();
@@ -14,5 +15,6 @@ app.use(express.json());
 mongoose.connect(`mongodb://localhost:27017/${process.env.DB_URL}`);
 
 //router
+app.use("/api", attributeRouter);
 
 export const viteNodeApp = app;
