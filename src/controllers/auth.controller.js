@@ -50,6 +50,38 @@ export const register = async (req, res) => {
 };
 
 
+export const verifyOtp = async (req, res) => {
+  try {
+    const { email, otp, password } = req.body;
+
+    const record = await otpModel.findOne({ email });
+
+    if (!record) {
+      return res.status(400).json({ error: "No OTP found for this email" });
+    }
+
+    const isValid = await bcrypt.compare(otp, record.otp);
+    if (!isValid) {
+      return res.status(400).json({ error: "Invalid OTP" });
+    }
+    const hashPassword = await bcrypt.hash(password, 10);
+    const newUser = await authModel.create({ email, password: hashPassword , fullName,phone, address, avatar, role, activeStatus});
+
+    // Xoá OTP đã dùng
+    await otpModel.deleteOne({ email });
+
+    return res
+      .status(201)
+      .json({ message: "User registered successfully", newUser });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+
+
+
+
 
 
 
