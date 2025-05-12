@@ -7,7 +7,14 @@ const registerSchema = Joi.object({
     
 });
 
+const verifyOtpSchema = Joi.object({
+  email: Joi.string().email().required(),
+  otp: Joi.string().min(6).max(6).required(),
+  password: Joi.string().min(6).required(),
+});
 
 
-export { registerSchema  };
+
+
+export { registerSchema , verifyOtpSchema };
 
