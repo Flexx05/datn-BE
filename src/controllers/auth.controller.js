@@ -78,6 +78,33 @@ export const verifyOtp = async (req, res) => {
   }
 };
 
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email không được để trống" });
+    }
+    if (!password) {
+      return res.status(400).json({ error: "Mật khẩu không được để trống" });
+    }
+    const user = await authModel.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ error: "Email không tồn tại" });
+    }
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      return res.status(400).json({ error: "Sai mật khẩu" });
+    }
+    const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY || "secret", {
+      expiresIn: "1d",
+    });
+    return res.status(200).json({ message: "Đăng nhập thành công", user, accessToken });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+
 
 
 
