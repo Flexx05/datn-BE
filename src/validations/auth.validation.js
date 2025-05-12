@@ -18,6 +18,11 @@ const loginSchema = Joi.object({
   password: Joi.string().min(6).required(),
 });
 
+const loginGoogleSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().min(6).required(),
+});
 
-export { registerSchema , verifyOtpSchema , loginSchema };
+
+export { registerSchema , verifyOtpSchema , loginSchema , loginGoogleSchema };
 
