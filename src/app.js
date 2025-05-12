@@ -2,19 +2,19 @@ import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
+import authRouter from "./routers/auth.router";
 import attributeRouter from "./routers/attribute.router";
 
 const app = express();
 dotenv.config();
 
-// middleware
 app.use(cors());
 app.use(express.json());
 
-// Connect DB
-mongoose.connect(`mongodb://localhost:27017/${process.env.DB_URL}`);
+mongoose.connect(`mongodb://127.0.0.1:27017/demo`);
 
 //router
 app.use("/api", attributeRouter);
+app.use("/api", authRouter);
 
 export const viteNodeApp = app;
