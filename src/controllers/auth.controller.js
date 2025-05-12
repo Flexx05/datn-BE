@@ -105,6 +105,38 @@ export const login = async (req, res) => {
 };
 
 
+export const loginGoogle = async (req, res) => {
+  const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+  // const { token } = req.body;
+  console.log(req.body);
+  return 
+  try {
+    // Xác thực token
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      requiredAudience: process.env.GOOGLE_CLIENT_ID,
+    });
+   
+    const payload = ticket.getPayload();
+
+    const { email, name } = payload;
+   
+    // Kiểm tra xem người dùng đã tồn tại chưa
+    let user = await authModel.findOne({ email });
+    if (!user) {
+      // Nếu chưa tồn tại, tạo người dùng mới
+      user = await authModel.create({ email, name, password: null });
+    }
+    const accessToken = jwt.sign({ id: user.id }, "chutrang", {
+      expiresIn: "5m",
+    });
+    return res.status(200).json({ user, accessToken });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+};
+
+
 
 
 
