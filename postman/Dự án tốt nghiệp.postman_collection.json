@@ -1,15 +1,120 @@
 {
-	"info": {
-		"_postman_id": "7de9906d-695b-4503-acb1-05d3db51bf95",
-		"name": "Dự án tốt nghiệp",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "40806061",
-		"_collection_link": "https://demo55-1692.postman.co/workspace/Demo-Workspace~41f79eec-0b07-4953-88e9-9b189e7cb21d/collection/40806061-7de9906d-695b-4503-acb1-05d3db51bf95?action=share&source=collection_link&creator=40806061"
-	},
-	"item": [
-		{
-			"name": "Products",
-			"item": []
-		}
-	]
+  "info": {
+    "_postman_id": "7de9906d-695b-4503-acb1-05d3db51bf95",
+    "name": "Dự án tốt nghiệp",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api"
+    }
+  ],
+  "item": [
+    {
+      "name": "Attribute",
+      "item": [
+        {
+          "name": "Get All Attributes",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/attribute",
+              "host": ["{{baseUrl}}"],
+              "path": ["attribute"]
+            }
+          }
+        },
+        {
+          "name": "Search Attribute by Name",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/attribute/search?name_like=Giá trị",
+              "host": ["{{baseUrl}}"],
+              "path": ["attribute", "search"],
+              "query": [{ "key": "name_like", "value": "Giá trị" }]
+            }
+          }
+        },
+        {
+          "name": "Get Attribute by Slug",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/attribute/slug/ten-slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["attribute", "slug", "ten-slug"]
+            }
+          }
+        },
+        {
+          "name": "Get Attribute by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/attribute/id/{{id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["attribute", "id", "{{id}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Attribute",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Màu sắc\",\n  \"value\": [\"Đỏ\", \"Xanh\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attribute/add",
+              "host": ["{{baseUrl}}"],
+              "path": ["attribute", "add"]
+            }
+          }
+        },
+        {
+          "name": "Update Attribute",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Màu sắc - cập nhật\",\n  \"value\": [\"Vàng\", \"Tím\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attribute/edit/{{id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["attribute", "edit", "{{id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Attribute",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/attribute/delete/{{id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["attribute", "delete", "{{id}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
 }

@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import authRouter from "./routers/auth.router";
+import attributeRouter from "./routers/attribute.router";
 
 const app = express();
 dotenv.config();
@@ -12,5 +13,8 @@ app.use(express.json());
 
 mongoose.connect(`mongodb://127.0.0.1:27017/demo`);
 
+//router
+app.use("/api", attributeRouter);
 app.use("/api", authRouter);
+
 export const viteNodeApp = app;
