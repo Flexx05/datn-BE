@@ -46,3 +46,16 @@ export const getAllBrands = async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
   };
+
+  export const showBrand = async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const brand = await brandModel.findOne({ slug: slug });
+      if (!brand) {
+        return res.status(404).json({ error: "Brand not found" });
+      }
+      return res.status(200).json({ message: "Brand show successfully", brand });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  };
