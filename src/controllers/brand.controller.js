@@ -18,3 +18,17 @@ export const getAllBrands = async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
   };  
+
+
+  export const getBrandById = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const brand = await brandModel.findById(id);
+      if (!brand) {
+        return res.status(404).json({ error: "Brand not found" });
+      }
+      return res.status(200).json({ message: "Get brand successfully", brand });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
