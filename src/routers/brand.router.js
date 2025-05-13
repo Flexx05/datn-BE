@@ -1,5 +1,5 @@
 import { Router } from "express";
-import {createBrand, getAllBrands, getBrandById, updateBrand} from "../controllers/brand.controller";
+import {createBrand, deleteBrand, getAllBrands, getBrandById, showBrand, updateBrand} from "../controllers/brand.controller";
 
 const router = Router();
 
@@ -8,6 +8,7 @@ router.get("/get-all", getAllBrands);
 router.get("/get-by-id/:id", getBrandById);
 router.put("/update/:id", updateBrand);
 router.get("/show/:slug", showBrand);
+router.delete("/delete/:id", deleteBrand);
 
 
 export default router;
