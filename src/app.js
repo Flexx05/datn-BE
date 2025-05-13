@@ -17,6 +17,7 @@ mongoose.connect(`mongodb://127.0.0.1:27017/demo`);
 //router
 app.use("/api", attributeRouter);
 app.use("/api", authRouter);
+app.use("/api/brand", brandRouter);
 
-export const viteNodeApp = app;
+
 export const viteNodeApp = app;
