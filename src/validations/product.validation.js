@@ -1,11 +1,12 @@
 import Joi from "joi";
 
-export const productAttributeSchema = Joi.object({
+const productAttributeSchema = Joi.object({
   attributeId: Joi.required(),
+  attributeName: Joi.string(),
   values: Joi.array().items(Joi.string()).required(),
 });
 
-export const variationSchema = Joi.object({
+const variationSchema = Joi.object({
   attributes: Joi.array().items(productAttributeSchema).min(1),
   regularPrice: Joi.number().required(),
   salePrice: Joi.number(),
