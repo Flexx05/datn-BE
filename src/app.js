@@ -15,7 +15,7 @@ dotenv.config();
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect(`mongodb://127.0.0.1:27017/demo`);
+mongoose.connect(`mongodb://127.0.0.1:27017/${process.env.DB_URL}`);
 
 //router
 app.use("/api", attributeRouter);
