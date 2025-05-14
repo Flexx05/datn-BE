@@ -15,7 +15,7 @@ export const searchAttribute = async (req, res) => {
   try {
     const { name_like } = req.query;
     const attributes = await attributeModel.find({
-      name: { $regex: name_like },
+      name: { $regex: name_like, $options: "i" },
     });
     return res.status(200).json(attributes);
   } catch (error) {
