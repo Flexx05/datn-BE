@@ -124,7 +124,7 @@ export const generateVariations = async (req, res) => {
         salePrice: 0,
         stock: 0,
         image: "",
-        isActive: true,
+        isActive: false,
       };
     });
 
@@ -145,6 +145,7 @@ export const createProductWithVariations = async (req, res) => {
       const errors = error.details.map((err) => err.message);
       return res.status(400).json({ message: errors });
     }
+
     const {
       name,
       image,
@@ -189,7 +190,16 @@ export const createProductWithVariations = async (req, res) => {
       listProduct?.map((p) => p.slug)
     );
 
-    // 4. Tạo sản phẩm
+    // 4. Xử lý biến thể: set isActive theo stock
+    const updatedVariations = variation.map((v) => ({
+      ...v,
+      isActive: v.stock > 0,
+    }));
+
+    // 5. Nếu tất cả biến thể đều stock = 0 → ẩn sản phẩm chính
+    const allOutOfStock = updatedVariations.every((v) => v.stock === 0);
+
+    // 6. Tạo sản phẩm
     const product = new productModel({
       name,
       slug,
@@ -200,7 +210,8 @@ export const createProductWithVariations = async (req, res) => {
       categoryName,
       description,
       attributes: productAttributes,
-      variation,
+      variation: updatedVariations,
+      isActive: !allOutOfStock,
     });
 
     await product.save();
@@ -263,6 +274,15 @@ export const updateProduct = async (req, res) => {
       listProduct?.filter((p) => p._id != productId).map((p) => p.slug)
     );
 
+    // Xử lý biến thể: set isActive theo stock
+    const updatedVariations = variation.map((v) => ({
+      ...v,
+      isActive: v.stock > 0,
+    }));
+
+    // Nếu tất cả biến thể đều stock = 0 → ẩn sản phẩm chính
+    const allOutOfStock = updatedVariations.every((v) => v.stock === 0);
+
     // Cập nhật
     const updatedProduct = await productModel.findByIdAndUpdate(
       productId,
@@ -277,6 +297,7 @@ export const updateProduct = async (req, res) => {
         description,
         attributes: productAttributes,
         variation,
+        isActive: !allOutOfStock,
       },
       { new: true }
     );
