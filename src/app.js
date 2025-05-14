@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import authRouter from "./routers/auth.router";
 import brandRouter from "./routers/brand.router";
 import attributeRouter from "./routers/attribute.router";
+import productRouter from "./routers/product.router";
 
 const app = express();
 dotenv.config();
@@ -16,8 +17,8 @@ mongoose.connect(`mongodb://127.0.0.1:27017/demo`);
 
 //router
 app.use("/api", attributeRouter);
+app.use("/api", productRouter);
 app.use("/api", authRouter);
 app.use("/api/brand", brandRouter);
-
 
 export const viteNodeApp = app;

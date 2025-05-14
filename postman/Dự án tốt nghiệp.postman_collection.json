@@ -12,6 +12,121 @@
   ],
   "item": [
     {
+      "name": "Product",
+      "item": [
+        {
+          "name": "Get All Products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/product",
+              "host": ["{{baseUrl}}"],
+              "path": ["product"]
+            }
+          }
+        },
+        {
+          "name": "Create Product with Variations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Product Name\",\n  \"description\": \"Product Description\",\n  \"image\": [\"image_url\"],\n  \"brandId\": \"brand_id\",\n  \"brandName\": \"Brand Name\",\n  \"categoryId\": \"category_id\",\n  \"categoryName\": \"Category Name\",\n  \"attributes\": [\n    {\n      \"attributeId\": \"attribute_id_1\",\n      \"values\": [\"value1\", \"value2\"]\n    }\n  ],\n  \"variation\": [\n    {\n      \"attributes\": [\n        {\n          \"attributeId\": \"attribute_id_1\",\n          \"attributeName\": \"Attribute Name\",\n          \"values\": [\"value1\"]\n        }\n      ],\n      \"regularPrice\": 100,\n      \"salePrice\": 80,\n      \"stock\": 10,\n      \"image\": \"variation_image_url\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/product/add",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "add"]
+            }
+          }
+        },
+        {
+          "name": "Get Product By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/product/id/{{id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "id", "{{id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Product By Slug",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/product/slug/{{slug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "slug", "{{slug}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/product/delete/{{id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "delete", "{{id}}"]
+            }
+          }
+        },
+        {
+          "name": "Generate Variations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"attributes\": [\n    {\n      \"attributeId\": \"attribute_id_1\",\n      \"values\": [\"value1\", \"value2\"]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/product/generate-variations",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "generate-variations"]
+            }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Product Name\",\n  \"description\": \"Updated Description\",\n  \"image\": [\"updated_image_url\"],\n  \"brandId\": \"updated_brand_id\",\n  \"brandName\": \"Updated Brand Name\",\n  \"categoryId\": \"updated_category_id\",\n  \"categoryName\": \"Updated Category Name\",\n  \"attributes\": [\n    {\n      \"attributeId\": \"attribute_id_1\",\n      \"values\": [\"updated_value1\", \"updated_value2\"]\n    }\n  ],\n  \"variation\": [\n    {\n      \"attributes\": [\n        {\n          \"attributeId\": \"attribute_id_1\",\n          \"attributeName\": \"Updated Attribute Name\",\n          \"values\": [\"updated_value1\"]\n        }\n      ],\n      \"regularPrice\": 150,\n      \"salePrice\": 120,\n      \"stock\": 5,\n      \"image\": \"updated_variation_image_url\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/product/edit/{{id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "edit", "{{id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Attribute",
       "item": [
         {
