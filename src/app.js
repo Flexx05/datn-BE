@@ -3,14 +3,18 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import authRouter from "./routers/auth.router";
+import userRoutes from "./routers/admin.user.router";
 
 const app = express();
+
 dotenv.config();
 
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect(`mongodb://127.0.0.1:27017/demo`);
+app.use("/api", userRoutes);
+
+mongoose.connect(`mongodb://127.0.0.1:27017/${process.env.DB_URL}`);
 
 app.use("/api", authRouter);
 export const viteNodeApp = app;
