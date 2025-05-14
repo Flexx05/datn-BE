@@ -20,8 +20,10 @@ export const productSchema = Joi.object({
   name: Joi.string().required().min(3).trim(),
   description: Joi.string().trim(),
   image: Joi.array().items(Joi.string()),
-  // brandId: Joi.string().required(),
-  // categoryId: Joi.string().required(),
+  brandId: Joi.string().required(),
+  brandName: Joi.string(),
+  categoryId: Joi.string().required(),
+  categoryName: Joi.string(),
   attributes: Joi.array().items(productAttributeSchema),
   variation: Joi.array().items(variationSchema),
 });

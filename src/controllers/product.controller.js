@@ -315,3 +315,21 @@ export const updateProduct = async (req, res) => {
     return res.status(500).json({ error: "Lỗi server" });
   }
 };
+
+export const searchProduct = async (req, res) => {
+  try {
+    const query = {};
+    for (const key in req.query) {
+      if (key.endsWith("_like")) {
+        const field = key.replace("_like", "");
+        const value = req.query[key];
+        query[field] = { $regex: value, $options: "i" };
+      }
+    }
+    const products = await productModel.find(query);
+    return res.status(200).json(products);
+  } catch (error) {
+    console.error("Lỗi tìm kiếm sản phẩm:", error);
+    return res.status(500).json({ error: "Lỗi server" });
+  }
+};

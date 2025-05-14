@@ -26,28 +26,6 @@
           }
         },
         {
-          "name": "Create Product with Variations",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Product Name\",\n  \"description\": \"Product Description\",\n  \"image\": [\"image_url\"],\n  \"brandId\": \"brand_id\",\n  \"brandName\": \"Brand Name\",\n  \"categoryId\": \"category_id\",\n  \"categoryName\": \"Category Name\",\n  \"attributes\": [\n    {\n      \"attributeId\": \"attribute_id_1\",\n      \"values\": [\"value1\", \"value2\"]\n    }\n  ],\n  \"variation\": [\n    {\n      \"attributes\": [\n        {\n          \"attributeId\": \"attribute_id_1\",\n          \"attributeName\": \"Attribute Name\",\n          \"values\": [\"value1\"]\n        }\n      ],\n      \"regularPrice\": 100,\n      \"salePrice\": 80,\n      \"stock\": 10,\n      \"image\": \"variation_image_url\"\n    }\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/product/add",
-              "host": ["{{baseUrl}}"],
-              "path": ["product", "add"]
-            }
-          }
-        },
-        {
           "name": "Get Product By ID",
           "request": {
             "method": "GET",
@@ -103,6 +81,28 @@
           }
         },
         {
+          "name": "Create Product with Variations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Product Name\",\n  \"description\": \"Product Description\",\n  \"image\": [\"image_url\"],\n  \"brandId\": \"brand_id\",\n  \"brandName\": \"Brand Name\",\n  \"categoryId\": \"category_id\",\n  \"categoryName\": \"Category Name\",\n  \"attributes\": [\n    {\n      \"attributeId\": \"attribute_id_1\",\n      \"values\": [\"value1\", \"value2\"]\n    }\n  ],\n  \"variation\": [\n    {\n      \"attributes\": [\n        {\n          \"attributeId\": \"attribute_id_1\",\n          \"attributeName\": \"Attribute Name\",\n          \"values\": [\"value1\"]\n        }\n      ],\n      \"regularPrice\": 100,\n      \"salePrice\": 80,\n      \"stock\": 10,\n      \"image\": \"variation_image_url\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/product/add",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "add"]
+            }
+          }
+        },
+        {
           "name": "Update Product",
           "request": {
             "method": "PATCH",
@@ -121,6 +121,23 @@
               "raw": "{{baseUrl}}/product/edit/{{id}}",
               "host": ["{{baseUrl}}"],
               "path": ["product", "edit", "{{id}}"]
+            }
+          }
+        },
+        {
+          "name": "Search Product",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/product/search?name_like=example",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "search"],
+              "query": [
+                {
+                  "key": "name_like",
+                  "value": "example"
+                }
+              ]
             }
           }
         }
