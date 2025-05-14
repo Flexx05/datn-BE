@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  login,
   loginGoogle,
   register,
   verifyOtp,
@@ -8,6 +9,10 @@ import {
 const router = Router();
 
 router.post("/register", register);
+router.post("/verify-otp", verifyOtp);
+router.post("/login", login);
+router.post("/loginGoogle", loginGoogle);
+
 
 
 export default router;
