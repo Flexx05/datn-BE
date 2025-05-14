@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import attributeModel from "../models/attribute.model";
 import productModel from "../models/product.model";
 import { productSchema } from "../validations/product.validation";
+import { generateSlug } from "../utils/createSlug";
 
 export const getAllProduct = async (req, res) => {
   try {
@@ -115,12 +116,15 @@ export const generateVariations = async (req, res) => {
         attributeName: item.attributeName,
         values: [item.value],
       }));
+
       return {
+        _id: new mongoose.Types.ObjectId(),
         attributes,
         regularPrice: 0,
         salePrice: 0,
         stock: 0,
         image: "",
+        isActive: true,
       };
     });
 
@@ -143,7 +147,6 @@ export const createProductWithVariations = async (req, res) => {
     }
     const {
       name,
-      slug,
       image,
       brandId,
       brandName,
@@ -180,6 +183,12 @@ export const createProductWithVariations = async (req, res) => {
       values: attr.values,
     }));
 
+    const listProduct = await productModel.find();
+    const slug = generateSlug(
+      name,
+      listProduct?.map((p) => p.slug)
+    );
+
     // 4. Tạo sản phẩm
     const product = new productModel({
       name,
@@ -192,7 +201,6 @@ export const createProductWithVariations = async (req, res) => {
       description,
       attributes: productAttributes,
       variation,
-      isDraft: false,
     });
 
     await product.save();
@@ -203,6 +211,86 @@ export const createProductWithVariations = async (req, res) => {
     });
   } catch (error) {
     console.error("Lỗi khi tạo sản phẩm với biến thể:", error);
+    return res.status(500).json({ error: "Lỗi server" });
+  }
+};
+
+export const updateProduct = async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const { error, value } = productSchema.validate(req.body, {
+      abortEarly: false,
+      convert: false,
+    });
+    if (error) {
+      const errors = error.details.map((err) => err.message);
+      return res.status(400).json({ message: errors });
+    }
+    const {
+      name,
+      image,
+      brandId,
+      brandName,
+      categoryId,
+      categoryName,
+      description,
+      attributes,
+      variation,
+    } = value;
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ error: "ID sản phẩm không hợp lệ" });
+    }
+
+    // Validate và lấy tên thuộc tính
+    const attributeIds = attributes.map((attr) => attr.attributeId);
+    const dbAttributes = await attributeModel.find({
+      _id: { $in: attributeIds },
+    });
+    const attrIdToName = Object.fromEntries(
+      dbAttributes.map((attr) => [attr._id.toString(), attr.name])
+    );
+
+    const productAttributes = attributes.map((attr) => ({
+      attributeId: attr.attributeId,
+      attributeName: attrIdToName[attr.attributeId],
+      values: attr.values,
+    }));
+
+    const listProduct = await productModel.find();
+    const slug = generateSlug(
+      name,
+      listProduct?.filter((p) => p._id != productId).map((p) => p.slug)
+    );
+
+    // Cập nhật
+    const updatedProduct = await productModel.findByIdAndUpdate(
+      productId,
+      {
+        name,
+        slug,
+        image,
+        brandId,
+        brandName,
+        categoryId,
+        categoryName,
+        description,
+        attributes: productAttributes,
+        variation,
+      },
+      { new: true }
+    );
+
+    if (!updatedProduct) {
+      return res.status(404).json({ error: "Không tìm thấy sản phẩm" });
+    }
+
+    return res.status(200).json({
+      message: "Cập nhật sản phẩm thành công",
+      product: updatedProduct,
+    });
+  } catch (error) {
+    console.error("Lỗi cập nhật sản phẩm:", error);
     return res.status(500).json({ error: "Lỗi server" });
   }
 };

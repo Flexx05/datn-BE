@@ -112,10 +112,6 @@ const productSchema = new Schema(
       type: Boolean,
       default: true,
     },
-    isDraft: {
-      type: Boolean,
-      default: true,
-    },
   },
   {
     timestamps: true,

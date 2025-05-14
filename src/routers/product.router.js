@@ -6,6 +6,7 @@ import {
   deleteProduct,
   generateVariations,
   createProductWithVariations,
+  updateProduct,
 } from "../controllers/product.controller";
 
 const router = Router();
@@ -16,5 +17,6 @@ router.get("/product/slug/:slug", getProductBySlug);
 router.delete("/product/delete/:id", deleteProduct);
 router.post("/product/generate-variations", generateVariations);
 router.post("/product/add", createProductWithVariations);
+router.patch("/product/edit/:id", updateProduct);
 
 export default router;

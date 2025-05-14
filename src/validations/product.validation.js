@@ -7,11 +7,13 @@ const productAttributeSchema = Joi.object({
 });
 
 const variationSchema = Joi.object({
+  _id: Joi.string(),
   attributes: Joi.array().items(productAttributeSchema).min(1),
   regularPrice: Joi.number().required(),
   salePrice: Joi.number(),
   stock: Joi.number().required(),
   image: Joi.string(),
+  isActive: Joi.boolean().default(true),
 });
 
 export const productSchema = Joi.object({
