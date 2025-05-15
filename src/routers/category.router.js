@@ -22,5 +22,6 @@ const router = Router();
 
 
 router.post("/create", createCategory);
+router.get("/get-all", getAllCategories);
 
 export default router;
