@@ -13,5 +13,13 @@ const updateCategorySchema = Joi.object({
   categorySort: Joi.number(),
 });
 
+const createSubCategorySchema = Joi.object({
+  name: Joi.string().min(3).max(30).required(),
+  slug: Joi.string().min(3).max(30).required(),
+  description: Joi.string(),
+  categorySort: Joi.number(),
+  parentId: Joi.string().required(),
+});
 
-export {createCategorySchema, updateCategorySchema};
+
+export {createCategorySchema, updateCategorySchema, createSubCategorySchema};
