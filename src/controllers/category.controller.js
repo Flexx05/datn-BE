@@ -155,6 +155,81 @@ export const getAllCategories = async (req, res) => {
       }
   };
 
+
+
+    // Xóa danh mục nhưng giữ nguyên danh mục con và sản phẩm
+   
+  export const deleteCategory2 = async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Kiểm tra danh mục tồn tại
+      const category = await categoryModel.findById(id);
+      if (!category) {
+        return res.status(404).json({ error: "Không tìm thấy danh mục" });
+      }
+      
+      // Kiểm tra xem có danh mục con không
+      const subCategories = await categoryModel.find({ parentId: id, isActive: true });
+      
+      if (subCategories.length > 0) {
+        // Nếu có danh mục con, chuyển chúng thành danh mục gốc (parentId = null)
+        for (const subCategory of subCategories) {
+          await categoryModel.findByIdAndUpdate(subCategory._id, { parentId: null });
+        }
+      }
+      
+      // Kiểm tra xem có sản phẩm liên kết không
+      const products = await productModel.find({ categoryId: id, isActive: true });
+      
+      if (products.length > 0) {
+        // Nếu có sản phẩm liên kết, chuyển chúng sang danh mục khác
+        let newCategoryId = null;
+        
+        // Nếu có danh mục con, chuyển sản phẩm sang danh mục con đầu tiên
+        if (subCategories.length > 0) {
+          newCategoryId = subCategories[0]._id;
+        } else {
+          // Hoặc tạo/tìm danh mục "Chưa phân loại"
+          let uncategorized = await categoryModel.findOne({ name: "Chưa phân loại" });
+          
+          if (!uncategorized) {
+            // Tạo danh mục "Chưa phân loại" nếu chưa có
+            uncategorized = await categoryModel.create({
+              name: "Chưa phân loại",
+              slug: "chua-phan-loai",
+              description: "Danh mục chứa sản phẩm chưa được phân loại",
+              parentId: null,
+              isActive: true
+            });
+          }
+          
+          newCategoryId = uncategorized._id;
+        }
+        
+        // Cập nhật categoryId cho tất cả sản phẩm
+        await productModel.updateMany(
+          { categoryId: id },
+          { categoryId: newCategoryId }
+        );
+      }
+      
+      //  xóa mềm danh mục
+      await categoryModel.findByIdAndUpdate(id, { isActive: false });
+      
+      return res.status(200).json({ 
+        message: "Đã xóa danh mục thành công. Danh mục con đã được chuyển thành danh mục gốc và sản phẩm đã được chuyển sang danh mục khác.",
+        categoryId: id,
+        subCategoriesUpdated: subCategories.length,
+        productsUpdated: products.length
+      });
+    } catch (error) {
+      console.error("Lỗi khi xóa danh mục:", error);
+      return res.status(500).json({ error: error.message });
+    }
+  };
+
+
 //   export const searchCategory = async (req, res) => {
 //     try {
 //       const { name } = req.query;
