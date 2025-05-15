@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createCategory, createSubCategory, deleteCategory, getAllCategories, getAllSubCategory, getCategoryById, getSubCategoryById, searchCategory, showCategoryId, showCategorySlug, updateCategory } from "../controllers/category.controller";
+import { createCategory, createSubCategory, deleteCategory, getAllCategories, getAllSubCategory, getCategoryById, getSubCategoryById, searchCategory, showCategoryId, showCategorySlug, showSubCategory, updateCategory } from "../controllers/category.controller";
 
 
 const router = Router(); 
@@ -18,5 +18,6 @@ router.delete("/delete/:id", deleteCategory);
 router.post("/create-subcategory/:parentId",createSubCategory );
 router.get("/get-all-subcategory/:parentId", getAllSubCategory);
 router.get("/get-subcategory-by-id/:id", getSubCategoryById);
+router.get("/show-subcategory/:slug", showSubCategory);
 
 export default router;
