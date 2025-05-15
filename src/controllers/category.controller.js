@@ -184,4 +184,23 @@ export const createSubCategory = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+export const getAllSubCategory = async (req, res) => {
+    try {
+      const { parentId } = req.params; 
+       const parentCategory = await categoryModel.findById(parentId);
+      if (!parentCategory) {
+        return res.status(404).json({ error: "Parent category not found" });
+      }
+      
+      const subcategories = await categoryModel.find({ parentId, isActive: true }) .sort({ categorySort: 1 });
+      
+      if (!subcategories) {
+        return res.status(404).json({ error: " Sub Categories not found" });
+      }
+      return res.status(200).json({ message: "Get all sub categories successfully", parentCategory, subcategories });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  };
   
