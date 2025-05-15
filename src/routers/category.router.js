@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createCategory, getAllCategories, getCategoryById, showCategoryId, showCategorySlug, updateCategory } from "../controllers/category.controller";
+import { createCategory, deleteCategory, getAllCategories, getCategoryById, showCategoryId, showCategorySlug, updateCategory } from "../controllers/category.controller";
 
 
 const router = Router(); 
@@ -10,6 +10,7 @@ router.get("/get-by-id/:id", getCategoryById);
 router.get("/show/:slug", showCategorySlug);
 router.get("/show/:id", showCategoryId); //show theo id
 router.put("/update/:id",updateCategory)
+router.delete("/delete/:id", deleteCategory);
 
 
 export default router;
