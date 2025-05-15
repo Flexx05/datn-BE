@@ -277,4 +277,17 @@ export const getAllSubCategory = async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
   };
+
+  export const deleteSubCategory = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const subCategory = await categoryModel.findByIdAndUpdate(id, { isActive: false }, { new: true });
+      if (!subCategory) {
+        return res.status(404).json({ error: "Sub Category not found" });
+      } 
+      return res.status(200).json({ message: "Sub Category deleted successfully", subCategory });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  };
   

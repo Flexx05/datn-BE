@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createCategory, createSubCategory, deleteCategory, getAllCategories, getAllSubCategory, getCategoryById, getSubCategoryById, searchCategory, showCategoryId, showCategorySlug, showSubCategory, showSubCategoryId, updateCategory, updateSubCategory } from "../controllers/category.controller";
+import { createCategory, createSubCategory, deleteCategory, deleteSubCategory, getAllCategories, getAllSubCategory, getCategoryById, getSubCategoryById, searchCategory, showCategoryId, showCategorySlug, showSubCategory, showSubCategoryId, updateCategory, updateSubCategory } from "../controllers/category.controller";
 
 
 const router = Router(); 
@@ -21,5 +21,6 @@ router.get("/get-subcategory-by-id/:id", getSubCategoryById);
 router.get("/show-subcategory/:slug", showSubCategory);
 router.get("/show-subcategory/:id", showSubCategoryId); //show : id
 router.put("/update-subcategory/:id", updateSubCategory);
+router.delete("/delete-subcategory/:id", deleteSubCategory);
 
 export default router;
