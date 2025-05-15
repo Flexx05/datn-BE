@@ -121,11 +121,42 @@ export const getAllCategories = async (req, res) => {
   export const deleteCategory = async (req, res) => {
     try {
       const { id } = req.params;
-      const category = await categoryModel.findByIdAndUpdate(id, { isActive: false }, { new: true });
+      const category = await categoryModel.findById(id)
+      .populate({
+        path: "subCategories",
+        match: { isActive: true },
+        options: { sort: { categorySort: 1 } },
+      });
       if (!category) {
         return res.status(404).json({ error: "Category not found" });
       }
-      return res.status(200).json({ message: "Category deleted successfully", category });
+
+      //xoá mềm
+      await categoryModel.updateMany({ parentId: id }, { isActive: false });
+
+      const subCategories = await categoryModel.find({ parentId: id });
+      for (const subCategory of subCategories) {
+        await categoryModel.updateMany({parentId: subCategory._id}, { isActive: false }, { new: true });
+      }
+        //xoá tất cả sản phẩm trong danh mục con
+        // const allCategoryIds = [
+        //     id, ...subCategories.map(sub => sub._id),
+        //     // Lấy ID của các danh mục cháu
+        //     ...(await categoryModel.find({ 
+        //       parentId: { $in: subCategories.map(sub => sub._id) } 
+        //     })).map(grandChild => grandChild._id)
+        //   ];
+          
+        //   await productModel.updateMany(
+        //     { categoryId: { $in: allCategoryIds } },
+        //     { isActive: false }
+        //   );
+        const deleteAll = await categoryModel.findByIdAndUpdate(id, { isActive: false }, { new: true });
+        if (!brand) {
+            return res.status(404).json({ error: "Category not found" });
+          }
+          
+      return res.status(200).json({ message: "Category deleted successfully", deleteAll });
     } catch (error) {
       return res.status(500).json({ error: error.message });
     }
