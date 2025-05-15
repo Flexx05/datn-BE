@@ -290,4 +290,25 @@ export const getAllSubCategory = async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
   };
+
+//   export const searchSubCategory = async (req, res) => {
+//     try {
+//       const { name } = req.query;
+//       if (!name) {
+//         return res.status(400).json({ error: "Name is required" });
+//       }
+//       const categories = await categoryModel.find({ name: { $regex: name, $options: "a" } })
+//         .populate({
+//           path: "subCategories",
+//           match: { isActive: true },
+//           options: { sort: { categorySort: 1 } },
+//         });
+//       if (!categories) {
+//         return res.status(404).json({ error: " Sub Categories not found" });
+//       }
+//       return res.status(200).json({ message: "Get sub categories successfully", categories });
+//     } catch (error) {
+//       return res.status(500).json({ error: error.message });
+//     }
+//   };
   
