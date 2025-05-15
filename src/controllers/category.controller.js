@@ -24,3 +24,22 @@ export const createCategory = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+export const getAllCategories = async (req, res) => {
+    try {
+      const categories = await categoryModel.find({ parentId: null })
+        .populate({
+          path: "subCategories",
+              match: { isActive: true },
+              options: { sort: { categorySort: 1 } },
+        })
+        .sort({ categorySort: 1 });
+      if (!categories) {
+        return res.status(404).json({ error: "Categories not found" });
+      }
+      return res.status(200).json({ message: "Get all categories successfully", categories });
+  
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  };
