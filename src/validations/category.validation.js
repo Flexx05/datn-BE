@@ -6,6 +6,12 @@ const createCategorySchema = Joi.object({
   description: Joi.string(),
   categorySort: Joi.number(),
 });
+const updateCategorySchema = Joi.object({
+  name: Joi.string().min(3).max(30),
+  slug: Joi.string().min(3).max(30),
+  description: Joi.string(),
+  categorySort: Joi.number(),
+});
 
 
-export {createCategorySchema};
+export {createCategorySchema, updateCategorySchema};
