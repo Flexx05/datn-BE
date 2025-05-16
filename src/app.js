@@ -11,6 +11,7 @@ import attributeRouter from "./routers/attribute.router";
 import productRouter from "./routers/product.router";
 import userRouter from "./routers/admin.user.router";
 import voucherRouter from "./routers/voucher.router";
+import staffRrouter from "./routers/staff.router";
 
 const app = express();
 
@@ -21,7 +22,9 @@ app.use(express.json());
 app.use(cookieParser());
 
 
-mongoose.connect(`mongodb://127.0.0.1:27017/${process.env.DB_URL}`);
+mongoose.connect(
+  `mongodb+srv://${process.env.DB_USERNAME}/${process.env.DB_URL}?retryWrites=true&w=majority&appName=DATN-DB`
+);
 
 //route
 app.use("/api", attributeRouter);
@@ -31,6 +34,7 @@ app.use("/api", cartRouter);
 app.use("/api/brand", brandRouter);
 app.use("/api", userRouter);
 app.use("/api", voucherRouter);
+app.use("/api", staffRrouter);
 
 export const viteNodeApp = app;
 
