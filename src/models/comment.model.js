@@ -17,6 +17,14 @@ const commentSchema = new mongoose.Schema({
     content: {
         type: String,
         required: true,
+        max: 500
+    },
+    // Đánh giá sao
+    rating: {
+        type: Number,
+        required: true,
+        min: 1,
+        max: 5
     },
     // Thời gian bình luận
     createdAt: {
