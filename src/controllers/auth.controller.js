@@ -5,11 +5,17 @@ import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import authModel from "../models/auth.model";
 import otpModel from "../models/otp.model";
+import { registerSchema } from "../validations/auth.validation";
 
 export const register = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = await authModel.findOne({ email , password });
+    const { error } = registerSchema.validate(req.body);
+    if (error) {
+      const errors = error.details.map((err) => err.message);
+      return res.status(400).json({ message: errors });
+    }
+    const { email,password} = req.body;
+    const user = await authModel.findOne({ email });
     if (user) {
       return res.status(400).json({ error: "User already exists" });
     }
@@ -25,7 +31,7 @@ export const register = async (req, res) => {
 
     const hashOTP = await bcrypt.hash(OTP, 10);
 
-    await otpModel.create({ email, otp: hashOTP });
+    await otpModel.create({ email, otp: hashOTP , dueDate: Date.now() + 5 * 60 * 1000 });
 
     //sendEmail
     const transporter = nodemailer.createTransport({
@@ -52,7 +58,7 @@ export const register = async (req, res) => {
 
 export const verifyOtp = async (req, res) => {
   try {
-    const { email, otp, password } = req.body;
+    const { fullName, email, otp, password , phone, address, avatar, role, activeStatus} = req.body;
 
     const record = await otpModel.findOne({ email });
 
