@@ -1,9 +1,11 @@
 import { Router } from "express";
-import { getAllStaff, updateUserRole } from "../controllers/staff.controller";
+import { getAllStaff, updateStaffRole } from "../controllers/staff.controller";
+import { verifyToken } from "../middlewares/checkAuth";
 
 const router = Router()
 
-router.get("/staffs", getAllStaff)
+router.get("/staffs", getAllStaff),
+router.patch("/staffs/:id/role", verifyToken, updateStaffRole)
 
 
 export default router
