@@ -97,40 +97,71 @@ export const getAllComment = async (req, res) => {
 };
 
 export const addComment = async (req, res) => {
-    try {
-      const { productId, userId, content, rating } = req.body;
-  
-      if (!productId || !userId || !rating) {
-        return res.status(400).json({ message: "vui lòng nhập đầy đủ thông tin" });
-      }
-  
-      if (typeof content === "string" && content.length > 500) {
-        return res.status(400).json({ message: "Bình luận không được quá 500 ký tự." });
-      }
-  
-      if (rating < 1 || rating > 5) {
-        return res.status(400).json({ message: "Điểm đánh giá phải từ 1 đến 5 sao." });
-      }
-  
-      const hasPurchased = await Order.findOne({
-        userId,
-        "items.productId": productId,
-        status: "completed" // giả định trạng thái giao hàng thành công
-      });
-  
-      if (!hasPurchased) {
-        return res.status(403).json({ message: "Bạn chưa mua sản phẩm này, không thể đánh giá." });
-      }
-  
-      const comment = await Comment.create({
-        productId,
-        userId,
-        content,
-        rating
-      });
-  
-      return res.status(200).json(comment);
-    } catch (error) {
-      return res.status(500).json({ message: "Đã xảy ra lỗi khi gửi đánh giá.", error: error.message });
+  try {
+    const { productId, userId, content, rating } = req.body;
+
+    if (!productId || !userId || !rating) {
+      return res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin." });
     }
-  };
+
+    if (typeof content === "string" && content.length > 500) {
+      return res.status(400).json({ message: "Bình luận không được quá 500 ký tự." });
+    }
+
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ message: "Điểm đánh giá phải từ 1 đến 5 sao." });
+    }
+
+    const productExists = await Product.exists({ _id: productId });
+    if (!productExists) {
+      return res.status(400).json({ message: "Sản phẩm không tồn tại." });
+    }
+
+    const userExists = await User.exists({ _id: userId });
+    if (!userExists) {
+      return res.status(400).json({ message: "Người dùng không tồn tại." });
+    }
+
+    // KIỂM TRA NGƯỜI DÙNG ĐÃ MUA HÀNG CHƯA
+    const orderExists = await Order.exists({
+      userId,
+      productId,
+      status: 'completed' 
+    });
+
+    if (!orderExists) {
+      return res.status(403).json({
+        message: "Bạn chưa mua sản phẩm này, không thể đánh giá."
+      });
+    }
+
+    const comment = await Comment.create({
+      productId,
+      userId,
+      content,
+      rating
+    });
+
+    // Tính lại điểm sao trung bình
+    const allRatings = await Comment.find({ productId }).select("rating");
+    const totalRatings = allRatings.length;
+    const avgRating = allRatings.reduce((sum, item) => sum + item.rating, 0) / totalRatings;
+
+    // (Tùy chọn) Cập nhật điểm trung bình vào bảng sản phẩm
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productId,
+      { averageRating: avgRating },
+      { new: true } // Trả về bản ghi sau khi cập nhật (nếu cần dùng tiếp)
+    );
+
+    return res.status(200).json({
+      message: "Đánh giá thành công",
+      comment,
+      updatedProduct
+    });
+
+  } catch (error) {
+    return res.status(500).json({ message: "Đã xảy ra lỗi khi gửi đánh giá.", error: error.message });
+  }
+};
+
