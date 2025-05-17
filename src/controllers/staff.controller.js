@@ -57,3 +57,52 @@ export const getAllStaff = async (req, res) => {
   }
 };
 
+export const updateStaffRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!["admin", "staff"].includes(role)) {
+      return res.status(400).json({
+        message: "Vai trò không hợp lệ. Vai trò phải là 'admin' hoặc 'staff'",
+      });
+    }
+
+    const user = await authModel.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        message: "Không tìm thấy người dùng",
+      });
+    }
+
+    if (id === req.user._id.toString()) {
+      return res.status(400).json({
+        message: "Không thể thay đổi vai trò của chính mình",
+      });
+    }
+
+    const updatedUser = await authModel
+      .findByIdAndUpdate(
+        id,
+        { $set: { role } },
+        {
+          new: true,
+          runValidators: false,
+        }
+      )
+      .select("-password");
+
+    return res.status(200).json({
+      message: "Cập nhật vai trò thành công",
+      data: {
+        user: updatedUser,
+      },
+    });
+  } catch (error) {
+    console.error("Update Role Error:", error);
+    return res.status(400).json({
+      message: "Cập nhật vai trò thất bại",
+      error: error.message,
+    });
+  }
+};
