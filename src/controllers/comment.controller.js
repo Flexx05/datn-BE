@@ -264,5 +264,39 @@ export const replyToComment = async (req, res) => {
   }
 };
 
+// Lấy tất cả bình luận của người dùng theo sản phẩm(Chỉ lấy bình luận đã được duyệt)
+export const getCommentsForClient = async (req, res) => {
+  try {
+    // Truyền id của sản phẩm
+    const { id } = req.params;
+    const productId = id;
+    if (!productId || productId.trim() === "") {
+      return res.status(400).json({ message: "ID sản phẩm không được để trống." });
+    }
+    // Kiểm tra sản phẩm tồn tại
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Sản phẩm không tồn tại." });
+    }
 
+    // Lấy tất cả bình luận đã được duyệt
+    const comments = await Comment.find({ 
+      productId, 
+      status: "visible" 
+    })
+    .sort({ createdAt: -1 }).populate({
+      path: "userId",         // trường tham chiếu trong Comment
+      select: "fullname email"  // chỉ lấy những trường cần thiết của user
+    }); // Mới nhất trước
+
+    return res.status(200).json({
+      averageRating: product.averageRating || 0,
+      totalComments: comments.length,
+      comments
+    });
+
+  } catch (error) {
+    return res.status(500).json({ message: "Lỗi khi lấy bình luận", error: error.message });
+  }
+};
 
