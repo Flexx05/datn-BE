@@ -158,6 +158,30 @@ export const createProductWithVariations = async (req, res) => {
       variation,
     } = value;
 
+    if (brandId) {
+      // Kiểm tra brandId hợp lệ và tồn tại
+      if (!mongoose.Types.ObjectId.isValid(brandId))
+        return res.status(400).json({ error: "brandId không hợp lệ" });
+
+      const brand = await brandModel.findById(brandId);
+      if (brand.isActive === false)
+        return res.status(404).json({ error: "Thương hiệu không tồn tại" });
+
+      brandName = brand.name; // đồng bộ tên
+    }
+
+    if (categoryId) {
+      // Kiểm tra categoryId hợp lệ và tồn tại
+      if (!mongoose.Types.ObjectId.isValid(categoryId))
+        return res.status(400).json({ error: "categoryId không hợp lệ" });
+
+      const category = await categoryModel.findById(categoryId);
+      if (category.isActive === false)
+        return res.status(404).json({ error: "Danh mục không tồn tại" });
+
+      categoryName = category.name; // đồng bộ tên
+    }
+
     // 1. Validate attributeId
     const attributeIds = attributes.map((attr) => attr.attributeId);
     const invalidIds = attributeIds.filter(
@@ -251,6 +275,30 @@ export const updateProduct = async (req, res) => {
 
     if (!mongoose.Types.ObjectId.isValid(productId)) {
       return res.status(400).json({ error: "ID sản phẩm không hợp lệ" });
+    }
+
+    if (brandId) {
+      // Kiểm tra brandId hợp lệ và tồn tại
+      if (!mongoose.Types.ObjectId.isValid(brandId))
+        return res.status(400).json({ error: "brandId không hợp lệ" });
+
+      const brand = await brandModel.findById(brandId);
+      if (brand.isActive === false)
+        return res.status(404).json({ error: "Thương hiệu không tồn tại" });
+
+      brandName = brand.name; // đồng bộ tên
+    }
+
+    if (categoryId) {
+      // Kiểm tra categoryId hợp lệ và tồn tại
+      if (!mongoose.Types.ObjectId.isValid(categoryId))
+        return res.status(400).json({ error: "categoryId không hợp lệ" });
+
+      const category = await categoryModel.findById(categoryId);
+      if (category.isActive === false)
+        return res.status(404).json({ error: "Danh mục không tồn tại" });
+
+      categoryName = category.name; // đồng bộ tên
     }
 
     // Validate và lấy tên thuộc tính
