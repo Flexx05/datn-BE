@@ -223,3 +223,46 @@ export const updateCommentStatus = async (req, res) => {
 };
 
 
+// Admin trả lời lại bình luận của người dùng
+export const replyToComment = async (req, res) => {
+  try {
+    // Truyền id của bình luận
+    const { id } = req.params;
+
+    const { replyContent } = req.body;
+
+    if (!replyContent || replyContent.trim() === "") {
+      return res.status(400).json({ message: "Nội dung trả lời không được để trống." });
+    }
+
+    const existingComment = await Comment.findById(id);
+
+    if (!existingComment) {
+      return res.status(404).json({ message: "Bình luận không tồn tại." });
+    }
+
+    if (existingComment.status !== "visible") {
+      return res.status(400).json({ message: "Chỉ được trả lời bình luận đã được duyệt." });
+    }
+
+    const updatedComment = await Comment.findByIdAndUpdate(
+      id,
+      {
+        replyContent,
+        replyAt: new Date()
+      },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      message: "Trả lời bình luận thành công.",
+      comment: updatedComment
+    });
+
+  } catch (error) {
+    return res.status(500).json({ message: "Đã xảy ra lỗi khi trả lời bình luận.", error: error.message });
+  }
+};
+
+
+
