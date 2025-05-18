@@ -1,6 +1,7 @@
 import Comment from "../models/comment.model";
 import Auth from "../models/auth.model";
-import Product from "../models/fake.product";
+import Product from "../models/product.model";
+import Order from "../models/fake.order";
 
 // Hiển thị danh sách bình luận (có thể lọc theo người dùng,sản phẩm, trạng thái, thời gian )
 export const getAllComment = async (req, res) => {
@@ -76,7 +77,7 @@ export const getAllComment = async (req, res) => {
       filter.createdAt = { $gte: start, $lte: end };
       }
 
-     const comment = await Comment.find(filter);    // populate("productId", "name").populate("userId", "fullName email");
+     const comment = await Comment.find(filter).populate("productId", "name").populate("userId", "fullName email");
 
     const hasFilter = status || productId || userId || (startDate && endDate);
 
@@ -96,11 +97,19 @@ export const getAllComment = async (req, res) => {
   }
 };
 
+// Thêm bình luận, đánh giá cho sản phẩm(Chỉ cho phép người dùng đã mua hàng và đăng nhập mới có thể bình luận)
 export const addComment = async (req, res) => {
   try {
-    const { productId, userId, content, rating } = req.body;
+    const { productId, content, rating } = req.body;
+    const userId = req.user._id; 
 
-    if (!productId || !userId || !rating) {
+    if (req.body.userId && req.body.userId !== String(req.user._id)) {
+      return res.status(403).json({
+        message: "Hệ thống sẽ tự lấy ID từ tài khoản đăng nhập."
+      });
+    }
+
+    if (!productId || !rating) {
       return res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin." });
     }
 
@@ -108,8 +117,8 @@ export const addComment = async (req, res) => {
       return res.status(400).json({ message: "Bình luận không được quá 500 ký tự." });
     }
 
-    if (rating < 1 || rating > 5) {
-      return res.status(400).json({ message: "Điểm đánh giá phải từ 1 đến 5 sao." });
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: "Điểm đánh giá phải là số nguyên từ 1 đến 5." });
     }
 
     const productExists = await Product.exists({ _id: productId });
@@ -117,12 +126,8 @@ export const addComment = async (req, res) => {
       return res.status(400).json({ message: "Sản phẩm không tồn tại." });
     }
 
-    const userExists = await User.exists({ _id: userId });
-    if (!userExists) {
-      return res.status(400).json({ message: "Người dùng không tồn tại." });
-    }
 
-    // KIỂM TRA NGƯỜI DÙNG ĐÃ MUA HÀNG CHƯA
+    // Kiểm tra xem người dùng đã mua sản phẩm này chưa
     const orderExists = await Order.exists({
       userId,
       productId,
@@ -139,29 +144,82 @@ export const addComment = async (req, res) => {
       productId,
       userId,
       content,
-      rating
+      rating,
+      status: "visible"
     });
 
-    // Tính lại điểm sao trung bình
-    const allRatings = await Comment.find({ productId }).select("rating");
-    const totalRatings = allRatings.length;
-    const avgRating = allRatings.reduce((sum, item) => sum + item.rating, 0) / totalRatings;
+    console.log('New comment created:', comment);
 
-    // (Tùy chọn) Cập nhật điểm trung bình vào bảng sản phẩm
-    const updatedProduct = await Product.findByIdAndUpdate(
-      productId,
-      { averageRating: avgRating },
-      { new: true } // Trả về bản ghi sau khi cập nhật (nếu cần dùng tiếp)
-    );
-
-    return res.status(200).json({
-      message: "Đánh giá thành công",
-      comment,
-      updatedProduct
-    });
+       // Lấy tất cả rating hiện tại của sản phẩm
+       const allRatings = await Comment.find({ productId, status: "visible" }).select("rating");
+       const totalRatings = allRatings.length;
+       const sumRatings = allRatings.reduce((sum, item) => sum + item.rating, 0);
+       const avgRating = sumRatings / totalRatings;
+   
+       // Tính ratingCount theo từng mức sao
+       const ratingCount = { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 };
+       allRatings.forEach(({ rating }) => {
+         ratingCount[rating] = (ratingCount[rating] || 0) + 1;
+       });
+   
+       // Cập nhật sản phẩm với averageRating, reviewCount và ratingCount
+       const updatedProduct = await Product.findByIdAndUpdate(
+         productId,
+         {
+           averageRating: avgRating,
+           reviewCount: totalRatings,
+           ratingCount: ratingCount
+         },
+         { new: true }
+       );
+   
+       return res.status(200).json({
+         message: "Đánh giá thành công",
+         comment,
+         updatedProduct
+       });
 
   } catch (error) {
     return res.status(500).json({ message: "Đã xảy ra lỗi khi gửi đánh giá.", error: error.message });
   }
 };
+
+// Cập nhập trạng thái duyệt của bình luận
+export const updateCommentStatus = async (req, res) => {
+  try {
+    // Truyền id của bình luận
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Kiểm tra id tồn tại
+    if (!id || id.trim() === "") {
+      return res.status(400).json({ message: "ID bình luận không được để trống." });
+    }
+
+    // Kiểm tra giá trị hợp lệ cho status
+    const allowedStatus = ["visible", "hidden"];
+    if (!allowedStatus.includes(status)) {
+      return res.status(400).json({ message: "Trạng thái không hợp lệ"});
+    }
+
+    const updatedComment = await Comment.findByIdAndUpdate(
+      id,
+      { status: status },
+      { new: true } // Trả về document sau khi cập nhật
+    );
+
+    if (!updatedComment) {
+      return res.status(404).json({ message: "Bình luận không tồn tại." });
+    }
+
+    return res.status(200).json({
+      message: `Cập nhật trạng thái bình luận thành công.`,
+      comment: updatedComment
+    });
+
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 
