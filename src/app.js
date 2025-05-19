@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-
 import authRouter from "./routers/auth.router";
 import cartRouter from "./routers/cart.router";
 import brandRouter from "./routers/brand.router";
@@ -20,8 +19,11 @@ app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
+mongoose.connect(
+    `mongodb+srv://root:binova2025@datn-db.nx9ha3d.mongodb.net/${process.env.DB_URL}?retryWrites=true&w=majority&appName=DATN-DB    
+`);
+console.log("Connected to MongooseDb");
 
-mongoose.connect(`mongodb://127.0.0.1:27017/${process.env.DB_URL}`);
 
 //route
 app.use("/api", attributeRouter);
