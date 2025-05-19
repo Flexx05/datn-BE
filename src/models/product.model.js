@@ -25,7 +25,7 @@ const productAttributeSchema = new Schema(
 
 const variationSchema = new Schema(
   {
-    attributes: [productAttributeSchema],
+    attribute: [productAttributeSchema],
     regularPrice: {
       type: Number,
       required: [true, "Giá bán bắt buộc nhập"],

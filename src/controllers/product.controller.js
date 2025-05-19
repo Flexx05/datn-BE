@@ -3,6 +3,7 @@ import attributeModel from "../models/attribute.model";
 import productModel from "../models/product.model";
 import { productSchema } from "../validations/product.validation";
 import { generateSlug } from "../utils/createSlug";
+import brandModel from "../models/brand.model";
 
 export const getAllProduct = async (req, res) => {
   try {
@@ -62,75 +63,88 @@ export const deleteProduct = async (req, res) => {
 };
 
 // Hàm sinh tổ hợp tổ hợp thuộc tính
-function generateCombinations(arr) {
-  if (arr.length === 0) return [[]];
-  const [first, ...rest] = arr;
-  const restComb = generateCombinations(rest);
-  return first.flatMap((val) => restComb.map((comb) => [val, ...comb]));
+function generateCombinations(matrix) {
+  if (!matrix.length) return [];
+  return matrix.reduce(
+    (acc, curr) => acc.flatMap((a) => curr.map((b) => [...a, b])),
+    [[]]
+  );
 }
 
 export const generateVariations = async (req, res) => {
   try {
     const { attributes } = req.body;
-
-    if (!attributes || attributes.length === 0) {
+    if (!attributes?.length) {
       return res.status(400).json({ error: "Thuộc tính là bắt buộc" });
     }
 
-    // Validate ObjectIds
-    const attributeIds = attributes.map((attr) => attr.attributeId);
-    const invalidIds = attributeIds.filter(
+    /* ==== 1. KHÔNG cho trùng attributeId ==== */
+    const attrIds = attributes.map((a) => a.attributeId);
+    const dupAttrIds = attrIds.filter((id, i) => attrIds.indexOf(id) !== i);
+    if (dupAttrIds.length) {
+      return res.status(400).json({
+        error: `Thuộc tính bị lặp: ${[...new Set(dupAttrIds)].join(", ")}`,
+      });
+    }
+
+    /* ==== 2. Check ObjectId hợp lệ ==== */
+    const invalidIds = attrIds.filter(
       (id) => !mongoose.Types.ObjectId.isValid(id)
     );
-    if (invalidIds.length > 0) {
+    if (invalidIds.length) {
       return res
         .status(400)
         .json({ error: `attributeId không hợp lệ: ${invalidIds.join(", ")}` });
     }
 
-    // Lấy tên thuộc tính từ DB
-    const dbAttributes = await attributeModel.find({
-      _id: { $in: attributeIds },
+    /* ==== 3. Không cho trùng VALUE trong cùng 1 thuộc tính ==== */
+    const dupValueAttrs = attributes.filter((a) => {
+      const lower = a.values.map((v) => v.toLowerCase());
+      return new Set(lower).size !== lower.length;
     });
-    const attrIdToName = Object.fromEntries(
-      dbAttributes.map((attr) => [attr._id.toString(), attr.name])
+    if (dupValueAttrs.length) {
+      const msg = dupValueAttrs
+        .map((a) => `Thuộc tính ${a.attributeId} có giá trị trùng lặp`)
+        .join("; ");
+      return res.status(400).json({ error: msg });
+    }
+
+    /* ==== 4. Lấy tên thuộc tính ==== */
+    const dbAttrs = await attributeModel.find({ _id: { $in: attrIds } });
+    const id2name = Object.fromEntries(
+      dbAttrs.map((d) => [d._id.toString(), d.name])
     );
 
-    // Mảng các giá trị để sinh tổ hợp
-    const valueMatrix = attributes.map((attr) => {
-      const attrId = attr.attributeId;
-      return attr.values.map((value) => ({
-        attributeId: attrId,
-        attributeName: attrIdToName[attrId],
-        value,
-      }));
-    });
+    /* ==== 5. Chuẩn bị ma trận giá trị ==== */
+    const valueMatrix = attributes.map((a) =>
+      a.values.map((v) => ({
+        attributeId: a.attributeId,
+        attributeName: id2name[a.attributeId],
+        value: v,
+      }))
+    );
 
-    // Sinh tổ hợp tất cả biến thể
-    const combinations = generateCombinations(valueMatrix);
+    /* ==== 6. Sinh tổ hợp ==== */
+    const combos = generateCombinations(valueMatrix);
 
-    // Mapping kết quả
-    const variation = combinations.map((combo) => {
-      const attributes = combo.map((item) => ({
-        attributeId: item.attributeId,
-        attributeName: item.attributeName,
-        values: [item.value],
-      }));
-
-      return {
-        _id: new mongoose.Types.ObjectId(),
-        attributes,
-        regularPrice: 0,
-        salePrice: 0,
-        stock: 0,
-        image: "",
-        isActive: false,
-      };
-    });
+    /* ==== 7. Mapping về variation ==== */
+    const variation = combos.map((combo) => ({
+      _id: new mongoose.Types.ObjectId(),
+      attribute: combo.map((i) => ({
+        attributeId: i.attributeId,
+        attributeName: i.attributeName,
+        values: [i.value],
+      })),
+      regularPrice: 0,
+      salePrice: 0,
+      stock: 0,
+      image: "",
+      isActive: false, // mặc định vì stock = 0
+    }));
 
     return res.status(200).json({ variation });
-  } catch (error) {
-    console.error("Lỗi generateVariants:", error);
+  } catch (err) {
+    console.error("generateVariations:", err);
     return res.status(500).json({ error: "Lỗi server" });
   }
 };
