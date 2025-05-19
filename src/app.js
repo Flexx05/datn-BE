@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 
 import authRouter from "./routers/auth.router";
+import categoryRouter from "./routers/category.router";
 import cartRouter from "./routers/cart.router";
 import brandRouter from "./routers/brand.router";
 import attributeRouter from "./routers/attribute.router";
@@ -30,11 +31,10 @@ console.log("Connected to MongoDB");
 app.use("/api", attributeRouter);
 app.use("/api", productRouter);
 app.use("/api", authRouter);
+app.use("/api/category", categoryRouter );
 app.use("/api", cartRouter);
 app.use("/api/brand", brandRouter);
 app.use("/api", userRouter);
 app.use("/api", voucherRouter);
 
 export const viteNodeApp = app;
-
-
