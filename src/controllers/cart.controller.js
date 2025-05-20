@@ -208,4 +208,76 @@ export const getCart = async (req, res) => {
   
   
 
+export const updateCartQuantity = async (req, res) => {
+  try {
+    const { error } = addToCartSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
 
+
+    const { productId, variantAttributes, quantity } = req.body;
+    // const variantAttrs = Array.isArray(variantAttributes) ? variantAttributes : [];
+
+    // Tìm sản phẩm
+    const product = await Product.findById(productId);
+    if (!product || !product.isActive) {
+      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+    }
+
+    // Tìm biến thể phù hợp
+    const variant = product.variation.find(v => {
+      return variantAttributes.every(attrReq => {
+        const attrInVariant = v.attributes.find(attrVar => attrVar.attributeName === attrReq.attributeName);
+        return attrInVariant && attrInVariant.values.includes(attrReq.value);
+      });
+    });
+
+    if (!variant || !variant.isActive) {
+      return res.status(404).json({ message: "Biến thể sản phẩm không tồn tại" });
+    }
+
+    // Kiểm tra tồn kho
+    if (variant.stock < quantity) {
+      return res.status(400).json({ message: "Số lượng vượt quá tồn kho" });
+    }
+
+    // Lấy giỏ hàng từ cookie
+    let cart = [];
+    if (req.cookies.cart) {
+      try {
+        cart = JSON.parse(req.cookies.cart);
+      } catch {
+        cart = [];
+      }
+    }
+
+    // Tìm item trong giỏ hàng
+    const index = cart.findIndex(item => {
+      if (item.productId !== productId) return false;
+      if (!Array.isArray(item.variantAttributes)) return false;
+
+      return variantAttributes.every(attrReq => {
+        const attrInCart = item.variantAttributes.find(attrCart => attrCart.attributeName === attrReq.attributeName);
+        return attrInCart && attrInCart.value === attrReq.value;
+      });
+    });
+
+    if (index === -1) {
+      return res.status(404).json({ message: "Sản phẩm này chưa có trong giỏ hàng" });
+    }
+
+    // Cập nhật số lượng
+    cart[index].quantity = quantity;
+
+    // Ghi lại cookie mới
+    res.cookie("cart", JSON.stringify(cart), {
+      httpOnly: true,
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(200).json({ message: "Cập nhật số lượng thành công", cart });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
