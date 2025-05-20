@@ -12,6 +12,138 @@
   ],
   "item": [
     {
+      "name": "Product",
+      "item": [
+        {
+          "name": "Get All Products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/product",
+              "host": ["{{baseUrl}}"],
+              "path": ["product"]
+            }
+          }
+        },
+        {
+          "name": "Get Product By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/product/id/{{id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "id", "{{id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Product By Slug",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/product/slug/{{slug}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "slug", "{{slug}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/product/delete/{{id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "delete", "{{id}}"]
+            }
+          }
+        },
+        {
+          "name": "Generate Variations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"attributes\": [\n    {\n      \"attributeId\": \"attribute_id_1\",\n      \"values\": [\"value1\", \"value2\"]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/product/generate-variations",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "generate-variations"]
+            }
+          }
+        },
+        {
+          "name": "Create Product with Variations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Product Name\",\n  \"description\": \"Product Description\",\n  \"image\": [\"image_url\"],\n  \"brandId\": \"brand_id\",\n  \"brandName\": \"Brand Name\",\n  \"categoryId\": \"category_id\",\n  \"categoryName\": \"Category Name\",\n  \"attributes\": [\n    {\n      \"attributeId\": \"attribute_id_1\",\n      \"values\": [\"value1\", \"value2\"]\n    }\n  ],\n  \"variation\": [\n    {\n      \"attributes\": [\n        {\n          \"attributeId\": \"attribute_id_1\",\n          \"attributeName\": \"Attribute Name\",\n          \"values\": [\"value1\"]\n        }\n      ],\n      \"regularPrice\": 100,\n      \"salePrice\": 80,\n      \"stock\": 10,\n      \"image\": \"variation_image_url\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/product/add",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "add"]
+            }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Product Name\",\n  \"description\": \"Updated Description\",\n  \"image\": [\"updated_image_url\"],\n  \"brandId\": \"updated_brand_id\",\n  \"brandName\": \"Updated Brand Name\",\n  \"categoryId\": \"updated_category_id\",\n  \"categoryName\": \"Updated Category Name\",\n  \"attributes\": [\n    {\n      \"attributeId\": \"attribute_id_1\",\n      \"values\": [\"updated_value1\", \"updated_value2\"]\n    }\n  ],\n  \"variation\": [\n    {\n      \"attributes\": [\n        {\n          \"attributeId\": \"attribute_id_1\",\n          \"attributeName\": \"Updated Attribute Name\",\n          \"values\": [\"updated_value1\"]\n        }\n      ],\n      \"regularPrice\": 150,\n      \"salePrice\": 120,\n      \"stock\": 5,\n      \"image\": \"updated_variation_image_url\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/product/edit/{{id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "edit", "{{id}}"]
+            }
+          }
+        },
+        {
+          "name": "Search Product",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/product/search?name_like=example",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "search"],
+              "query": [
+                {
+                  "key": "name_like",
+                  "value": "example"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Attribute",
       "item": [
         {
@@ -20,8 +152,12 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/attribute",
-              "host": ["{{baseUrl}}"],
-              "path": ["attribute"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attribute"
+              ]
             }
           }
         },
@@ -31,9 +167,19 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/attribute/search?name_like=Giá trị",
-              "host": ["{{baseUrl}}"],
-              "path": ["attribute", "search"],
-              "query": [{ "key": "name_like", "value": "Giá trị" }]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attribute",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "name_like",
+                  "value": "Giá trị"
+                }
+              ]
             }
           }
         },
@@ -43,8 +189,14 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/attribute/slug/ten-slug",
-              "host": ["{{baseUrl}}"],
-              "path": ["attribute", "slug", "ten-slug"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attribute",
+                "slug",
+                "ten-slug"
+              ]
             }
           }
         },
@@ -54,8 +206,14 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/attribute/id/{{id}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["attribute", "id", "{{id}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attribute",
+                "id",
+                "{{id}}"
+              ]
             }
           }
         },
@@ -76,8 +234,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/attribute/add",
-              "host": ["{{baseUrl}}"],
-              "path": ["attribute", "add"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attribute",
+                "add"
+              ]
             }
           }
         },
@@ -98,8 +261,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/attribute/edit/{{id}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["attribute", "edit", "{{id}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attribute",
+                "edit",
+                "{{id}}"
+              ]
             }
           }
         },
@@ -109,8 +278,354 @@
             "method": "DELETE",
             "url": {
               "raw": "{{baseUrl}}/attribute/delete/{{id}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["attribute", "delete", "{{id}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attribute",
+                "delete",
+                "{{id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Đăng ký",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Nguyen Van A\",\n  \"email\": \"example@email.com\",\n  \"password\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/register",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "register"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Xác thực OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"example@email.com\",\n  \"otp\": \"123456\",\n  \"password\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/verify-otp",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "verify-otp"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Đăng nhập",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"example@email.com\",\n  \"password\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/login",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Đăng nhập Google",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"google@email.com\",\n  \"password\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/loginGoogle",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "loginGoogle"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Category",
+      "item": [
+        {
+          "name": "[CATEGORY] Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Áo sơ mi\", \"description\": \"Danh mục áo sơ mi\", \"categorySort\": 1}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/categories/create",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "create"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[CATEGORY] Get All Categories",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/categories/get-all",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "get-all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[CATEGORY] Get Category By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/categories/get-by-id/:id",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "get-by-id",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[CATEGORY] Get Category By Slug",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/categories/show/:slug",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "show",
+                ":slug"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[CATEGORY] Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Áo sơ mi cập nhật\", \"description\": \"Mô tả cập nhật\", \"categorySort\": 2}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/categories/update/:id",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "update",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[CATEGORY] Delete Category",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/categories/delete/:id",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "delete",
+                ":id"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SubCategory",
+      "item": [
+        {
+          "name": "[SUBCATEGORY] Create SubCategory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Áo sơ mi tay ngắn\", \"description\": \"Subcategory cho áo sơ mi\", \"categorySort\": 1}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/categories/create-subcategory/:parentId",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "create-subcategory",
+                ":parentId"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[SUBCATEGORY] Get All SubCategories by Parent ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/categories/get-all-subcategory/:parentId",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "get-all-subcategory",
+                ":parentId"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[SUBCATEGORY] Get SubCategory By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/categories/get-subcategory-by-id/:id",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "get-subcategory-by-id",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[SUBCATEGORY] Get SubCategory By Slug",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/categories/show-subcategory/:slug",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "show-subcategory",
+                ":slug"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[SUBCATEGORY] Update SubCategory",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Sub cập nhật\", \"description\": \"Mô tả mới\", \"categorySort\": 2}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/categories/update-subcategory/:id",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "update-subcategory",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[SUBCATEGORY] Delete SubCategory",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/categories/delete-subcategory/:id",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "delete-subcategory",
+                ":id"
+              ]
             }
           }
         }
