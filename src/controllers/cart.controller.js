@@ -144,4 +144,68 @@ export const getCart = async (req, res) => {
   
   
 
+  export const removeCart = async (req, res) => {
+    try {
+      const { productId, variantAttributes } = req.body;
   
+      // Đảm bảo variantAttributes là mảng
+      const variantAttrs = Array.isArray(variantAttributes) ? variantAttributes : [];
+  
+      let cart = [];
+      if (req.cookies.cart) {
+        try {
+          cart = JSON.parse(req.cookies.cart);
+        } catch {
+          cart = [];
+        }
+      }
+  
+      const exists = cart.some(item => {
+        if (item.productId !== productId) return false;
+  
+        const itemAttrs = Array.isArray(item.variantAttributes) ? item.variantAttributes : [];
+  
+        if (!itemAttrs.length && !variantAttrs.length) return true;
+        if (!itemAttrs.length || !variantAttrs.length || itemAttrs.length !== variantAttrs.length) return false;
+  
+        return variantAttrs.every(attrReq => {
+          const attrInCart = itemAttrs.find(attrCart => attrCart.attributeName === attrReq.attributeName);
+          return attrInCart && attrInCart.value === attrReq.value;
+        });
+      });
+  
+      if (!exists) {
+        return res.status(404).json({ message: "Sản phẩm cần xóa không tồn tại trong giỏ hàng" });
+      }
+  
+      const filteredCart = cart.filter(item => {
+        if (item.productId !== productId) return true;
+  
+        const itemAttrs = Array.isArray(item.variantAttributes) ? item.variantAttributes : [];
+  
+        if (!itemAttrs.length && !variantAttrs.length) return false;
+        if (!itemAttrs.length || !variantAttrs.length || itemAttrs.length !== variantAttrs.length) return true;
+  
+        const isMatch = variantAttrs.every(attrReq => {
+          const attrInCart = itemAttrs.find(attrCart => attrCart.attributeName === attrReq.attributeName);
+          return attrInCart && attrInCart.value === attrReq.value;
+        });
+  
+        return !isMatch;
+      });
+  
+      res.cookie("cart", JSON.stringify(filteredCart), {
+        httpOnly: true,
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      });
+  
+      return res.status(200).json({ message: "Đã xóa sản phẩm khỏi giỏ hàng" });
+    } catch (error) {
+      return res.status(500).json({ message: error.message });
+    }
+};
+  
+  
+  
+
+
