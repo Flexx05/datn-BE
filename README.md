@@ -37,6 +37,8 @@ Ví dụ:
 PORT=8080
 DB_URL=datn-binova
 JWT_SECRET_KEY=binova
+DB_USER=root
+DB_PASS=binova2025
 ```
 4. Chạy server
 ```bash

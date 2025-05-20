@@ -107,9 +107,7 @@ export const login = async (req, res) => {
 
 export const loginGoogle = async (req, res) => {
   const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-  // const { token } = req.body;
-  console.log(req.body);
-  return 
+  const { token } = req.body;
   try {
     // Xác thực token
     const ticket = await client.verifyIdToken({
