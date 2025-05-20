@@ -21,7 +21,6 @@ app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
-
 mongoose.connect(
   `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@datn-db.nx9ha3d.mongodb.net/${process.env.DB_URL}?retryWrites=true&w=majority&appName=DATN-DB`
 );
