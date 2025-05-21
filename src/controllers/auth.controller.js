@@ -14,7 +14,7 @@ export const register = async (req, res) => {
       const errors = error.details.map((err) => err.message);
       return res.status(400).json({ message: errors });
     }
-    const { email,password} = req.body;
+    const { email, password } = req.body;
     const user = await authModel.findOne({ email });
     if (user) {
       return res.status(400).json({ error: "User already exists" });
@@ -31,14 +31,18 @@ export const register = async (req, res) => {
 
     const hashOTP = await bcrypt.hash(OTP, 10);
 
-    await otpModel.create({ email, otp: hashOTP , dueDate: Date.now() + 5 * 60 * 1000 });
+    await otpModel.create({
+      email,
+      otp: hashOTP,
+      dueDate: Date.now() + 5 * 60 * 1000,
+    });
 
     //sendEmail
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "mlinhalone@gmail.com",
-        pass: "kqpo zlxp lfld furi",
+        user: "binovaweb73@gmail.com",
+        pass: "kcjf jurr rjva hqfu",
       },
     });
 
@@ -55,10 +59,19 @@ export const register = async (req, res) => {
   }
 };
 
-
 export const verifyOtp = async (req, res) => {
   try {
-    const { fullName, email, otp, password , phone, address, avatar, role, activeStatus} = req.body;
+    const {
+      fullName,
+      email,
+      otp,
+      password,
+      phone,
+      address,
+      avatar,
+      role,
+      activeStatus,
+    } = req.body;
 
     const record = await otpModel.findOne({ email });
 
@@ -71,7 +84,16 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ error: "Invalid OTP" });
     }
     const hashPassword = await bcrypt.hash(password, 10);
-    const newUser = await authModel.create({ email, password: hashPassword , fullName,phone, address, avatar, role, activeStatus});
+    const newUser = await authModel.create({
+      email,
+      password: hashPassword,
+      fullName,
+      phone,
+      address,
+      avatar,
+      role,
+      activeStatus,
+    });
 
     // Xoá OTP đã dùng
     await otpModel.deleteOne({ email });
@@ -101,15 +123,20 @@ export const login = async (req, res) => {
     if (!isValid) {
       return res.status(400).json({ error: "Sai mật khẩu" });
     }
-    const accessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY || "secret", {
-      expiresIn: "1d",
-    });
-    return res.status(200).json({ message: "Đăng nhập thành công", user, accessToken });
+    const accessToken = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET_KEY || "secret",
+      {
+        expiresIn: "1d",
+      }
+    );
+    return res
+      .status(200)
+      .json({ message: "Đăng nhập thành công", user, accessToken });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 };
-
 
 export const loginGoogle = async (req, res) => {
   const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -120,11 +147,11 @@ export const loginGoogle = async (req, res) => {
       idToken: token,
       requiredAudience: process.env.GOOGLE_CLIENT_ID,
     });
-   
+
     const payload = ticket.getPayload();
 
     const { email, name } = payload;
-   
+
     // Kiểm tra xem người dùng đã tồn tại chưa
     let user = await authModel.findOne({ email });
     if (!user) {
@@ -139,14 +166,3 @@ export const loginGoogle = async (req, res) => {
     return res.status(400).json({ error: error.message });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
