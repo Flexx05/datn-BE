@@ -110,3 +110,90 @@ export const createVnpayPayment = async (req, res) => {
   }
 };
 
+// Xử lý callback từ VNPAY
+export const vnpayCallback = async (req, res) => {
+  try {
+    const vnpParams = req.query;
+
+    // Kiểm tra chữ ký VNPAY
+    const isValidSignature = verifyReturnUrl(vnpParams);
+
+    if (!isValidSignature) {
+      return res.status(400).json({
+        message: "Chữ ký không hợp lệ"
+      });
+    }
+
+    // Kiểm tra kết quả giao dịch từ VNPAY
+    const vnp_ResponseCode = vnpParams.vnp_ResponseCode;
+    const vnp_TxnRef = vnpParams.vnp_TxnRef;
+
+    // Lấy orderId từ mã giao dịch
+    const orderId = parseOrderIdFromTxnRef(vnp_TxnRef);
+
+    if (!orderId) {
+      return res.status(400).json({
+        message: "Không thể xác định đơn hàng",
+      });
+    }
+
+    // Tìm thông tin thanh toán
+    const payment = await paymentModel.findOne({ transactionId: vnp_TxnRef });
+
+    if (!payment) {
+      return res.status(404).json({
+        message: "Không tìm thấy thông tin thanh toán",
+      });
+    }
+
+    // Lưu trữ toàn bộ dữ liệu phản hồi từ VNPAY
+    payment.responseData = vnpParams;
+
+    // Xử lý kết quả thanh toán
+    if (vnp_ResponseCode === "00") {
+      // Thanh toán thành công
+      payment.status = 1; // Đã thanh toán
+      await payment.save();
+
+      // Cập nhật trạng thái đơn hàng
+      await orderModel.findByIdAndUpdate(
+        payment.orderId,
+        {
+          paymentStatus: "paid",
+        },
+        { new: true }
+      );
+
+      // Chuyển hướng hoặc trả về kết quả
+      return res.status(200).json({
+        message: "Thanh toán thành công",
+        data: {
+          orderId: payment.orderId,
+          paymentId: payment._id,
+          transactionId: vnp_TxnRef,
+        },
+      });
+    } else {
+      // Thanh toán thất bại
+      payment.status = 2; // Thanh toán thất bại
+      await payment.save();
+
+      return res.status(400).json({
+        message: "Thanh toán thất bại",
+        data: {
+          orderId: payment.orderId,
+          paymentId: payment._id,
+          responseCode: vnp_ResponseCode,
+          transactionId: vnp_TxnRef,
+        },
+      });
+    }
+  } catch (error) {
+    console.error("VNPAY Callback Error:", error);
+    return res.status(500).json({
+      message: "Đã xảy ra lỗi khi xử lý callback từ VNPAY",
+      error: error.message,
+    });
+  }
+};
+
