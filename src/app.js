@@ -30,7 +30,7 @@ console.log("Connected to MongoDB");
 app.use("/api", attributeRouter);
 app.use("/api", productRouter);
 app.use("/api", authRouter);
-app.use("/api/category", categoryRouter );
+app.use("/api/category", categoryRouter);
 app.use("/api", cartRouter);
 app.use("/api/brand", brandRouter);
 app.use("/api", userRouter);
