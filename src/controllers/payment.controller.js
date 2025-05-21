@@ -197,3 +197,56 @@ export const vnpayCallback = async (req, res) => {
   }
 };
 
+// Lấy trạng thái thanh toán của đơn hàng
+export const getPaymentStatus = async (req, res) => {
+  try {
+    console.log(req.params);
+
+    const { orderId } = req.params;
+    const userId = req.user._id;
+
+    // Kiểm tra đơn hàng tồn tại
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        message: "Không tìm thấy đơn hàng",
+      });
+    }
+
+    // Kiểm tra quyền truy cập đơn hàng
+    if (order.userId.toString() !== userId.toString()) {
+      return res.status(403).json({
+        message: "Bạn không có quyền truy cập đơn hàng này",
+      });
+    }
+
+    // Tìm thông tin thanh toán
+    const payment = await paymentModel.findOne({ orderId });
+
+    if (!payment) {
+      return res.status(404).json({
+        message: "Không tìm thấy thông tin thanh toán",
+      });
+    }
+
+    // Trả về thông tin thanh toán
+    return res.status(200).json({
+      message: "Lấy thông tin thanh toán thành công",
+      data: {
+        paymentId: payment._id,
+        orderId: payment.orderId,
+        status: payment.status,
+        paymentMethod: payment.paymentMethod,
+        amount: payment.amount,
+        createdAt: payment.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error("Get Payment Status Error:", error);
+    return res.status(500).json({
+      message: "Đã xảy ra lỗi khi lấy thông tin thanh toán",
+      error: error.message,
+    });
+  }
+};
+
