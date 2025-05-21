@@ -301,4 +301,81 @@ export const getUserPaymentHistory = async (req, res) => {
   }
 };
 
+// Admin: Lấy tất cả giao dịch thanh toán
+export const getAllPayments = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      order = "desc",
+      status,
+      paymentMethod,
+      search,
+    } = req.query;
+
+    // Xây dựng điều kiện tìm kiếm
+    const query = {};
+
+    // Lọc theo trạng thái nếu có
+    if (status !== undefined) {
+      query.status = parseInt(status);
+    }
+
+    // Lọc theo phương thức thanh toán
+    if (paymentMethod) {
+      query.paymentMethod = paymentMethod;
+    }
+
+    // Tìm kiếm theo order ID hoặc transaction ID
+    if (search) {
+      if (Types.ObjectId.isValid(search)) {
+        query.$or = [{ orderId: new Types.ObjectId(search) }];
+      } else {
+        query.$or = [{ transactionId: { $regex: search, $options: "i" } }];
+      }
+    }
+
+    // Tính toán số lượng bản ghi để bỏ qua (skip)
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Thực hiện truy vấn với điều kiện lọc và phân trang
+    const payments = await paymentModel
+      .find(query)
+      .sort({ [sortBy]: order === "desc" ? -1 : 1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate({
+        path: "userId",
+        select: "fullName email",
+      })
+      .populate({
+        path: "orderId",
+        select: "orderCode totalAmount status createdAt",
+      });
+
+    // Đếm tổng số bản ghi thỏa mãn điều kiện
+    const total = await paymentModel.countDocuments(query);
+
+    return res.status(200).json({
+      message: "Lấy danh sách thanh toán thành công",
+      data: {
+        payments,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / parseInt(limit)),
+          totalItems: total,
+          itemsPerPage: parseInt(limit),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Get All Payments Error:", error);
+    return res.status(500).json({
+      message: "Đã xảy ra lỗi khi lấy danh sách thanh toán",
+      error: error.message,
+    });
+  }
+};
+
 
