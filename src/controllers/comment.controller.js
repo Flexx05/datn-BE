@@ -2,6 +2,7 @@ import Comment from "../models/comment.model";
 import Auth from "../models/auth.model";
 import Product from "../models/product.model";
 import Order from "../models/fake.order";
+import { sendMail } from "../utils/sendMail";
 
 // Hiển thị danh sách bình luận (có thể lọc theo người dùng,sản phẩm, trạng thái, thời gian )
 export const getAllComment = async (req, res) => {
@@ -148,7 +149,6 @@ export const addComment = async (req, res) => {
       status: "visible"
     });
 
-    console.log('New comment created:', comment);
 
        // Lấy tất cả rating hiện tại của sản phẩm
        const allRatings = await Comment.find({ productId, status: "visible" }).select("rating");
@@ -226,16 +226,14 @@ export const updateCommentStatus = async (req, res) => {
 // Admin trả lời lại bình luận của người dùng
 export const replyToComment = async (req, res) => {
   try {
-    // Truyền id của bình luận
     const { id } = req.params;
-
     const { replyContent } = req.body;
 
     if (!replyContent || replyContent.trim() === "") {
       return res.status(400).json({ message: "Nội dung trả lời không được để trống." });
     }
 
-    const existingComment = await Comment.findById(id);
+    const existingComment = await Comment.findById(id).populate("userId", "email fullName");
 
     if (!existingComment) {
       return res.status(404).json({ message: "Bình luận không tồn tại." });
@@ -253,6 +251,22 @@ export const replyToComment = async (req, res) => {
       },
       { new: true }
     );
+
+    // Gửi email thông báo cho user
+    if (existingComment.userId?.email) {
+      await sendMail({
+        to: existingComment.userId.email,
+        subject: "Phản hồi bình luận từ Binova Shop",
+        html: `
+          <p>Xin chào ${existingComment.userId.fullName || "bạn"},</p>
+          <p>Bình luận của bạn đã được admin phản hồi:</p>
+          <blockquote>${existingComment.content}</blockquote>
+          <p><b>Phản hồi từ admin:</b></p>
+          <blockquote>${replyContent}</blockquote>
+          <p>Trân trọng,<br/>Đội ngũ hỗ trợ khách hàng</p>
+        `
+      });
+    }
 
     return res.status(200).json({
       message: "Trả lời bình luận thành công.",
