@@ -378,4 +378,58 @@ export const getAllPayments = async (req, res) => {
   }
 };
 
+// Admin: Xử lý hoàn tiền
+export const refundPayment = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
 
+    // Tìm thông tin thanh toán
+    const payment = await paymentModel.findById(paymentId);
+
+    if (!payment) {
+      return res.status(404).json({
+        message: "Không tìm thấy thông tin thanh toán",
+      });
+    }
+
+    // Kiểm tra trạng thái thanh toán
+    if (payment.status !== 1) {
+      // Chỉ hoàn tiền cho thanh toán đã thành công
+      return res.status(400).json({
+        message:
+          "Chỉ có thể hoàn tiền cho các giao dịch đã thanh toán thành công",
+      });
+    }
+
+    // Cập nhật trạng thái thanh toán
+    payment.status = 3; // Đã hoàn tiền
+    await payment.save();
+
+    // Cập nhật trạng thái đơn hàng
+    await orderModel.findByIdAndUpdate(
+      payment.orderId,
+      {
+        paymentStatus: "refunded",
+      },
+      { new: true }
+    );
+
+    // Ghi chú: Trong thực tế, bạn cần thực hiện các bước hoàn tiền thông qua API của VNPAY
+    // Đây chỉ là cập nhật trạng thái trong hệ thống của bạn
+
+    return res.status(200).json({
+      message: "Hoàn tiền thành công",
+      data: {
+        paymentId: payment._id,
+        orderId: payment.orderId,
+        status: payment.status,
+      },
+    });
+  } catch (error) {
+    console.error("Refund Payment Error:", error);
+    return res.status(500).json({
+      message: "Đã xảy ra lỗi khi xử lý hoàn tiền",
+      error: error.message,
+    });
+  }
+};

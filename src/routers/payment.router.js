@@ -5,6 +5,7 @@ import {
   getPaymentStatus,
   getUserPaymentHistory,
   getAllPayments,
+  refundPayment,
 } from "../controllers/payment.controller.js";
 import { verifyToken } from "../middlewares/checkAuth.js";
 
@@ -18,6 +19,6 @@ router.get("/payment/history", verifyToken, getUserPaymentHistory);
 
 // Routes cho admin
 router.get("/admin/payments", verifyToken, getAllPayments);
-
+router.patch("/admin/payments/:paymentId/refund", verifyToken, refundPayment);
 
 export default router;
