@@ -13,6 +13,7 @@ const router = express.Router();
 router.post("/payment/vnpay/create", verifyToken, createVnpayPayment);
 router.get("/payment/vnpay/callback", verifyToken, vnpayCallback);
 router.get("/payment/status/:orderId", verifyToken, getPaymentStatus);
+router.get("/payment/history", verifyToken, getUserPaymentHistory);
 
 
 export default router;

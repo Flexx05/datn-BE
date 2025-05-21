@@ -250,3 +250,55 @@ export const getPaymentStatus = async (req, res) => {
   }
 };
 
+// Lấy lịch sử thanh toán của người dùng
+export const getUserPaymentHistory = async (req, res) => {
+  try {
+    console.log(req.user);
+
+    const userId = req.user._id;
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      order = "desc",
+    } = req.query;
+
+    // Tính toán số lượng bản ghi để bỏ qua (skip)
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Truy vấn lịch sử thanh toán
+    const payments = await paymentModel
+      .find({ userId })
+      .sort({ [sortBy]: order === "desc" ? -1 : 1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate({
+        path: "orderId",
+        select: "orderCode totalAmount status createdAt",
+      });
+
+    // Đếm tổng số bản ghi
+    const total = await paymentModel.countDocuments({ userId });
+
+    return res.status(200).json({
+      message: "Lấy lịch sử thanh toán thành công",
+      data: {
+        payments,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / parseInt(limit)),
+          totalItems: total,
+          itemsPerPage: parseInt(limit),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Get Payment History Error:", error);
+    return res.status(500).json({
+      message: "Đã xảy ra lỗi khi lấy lịch sử thanh toán",
+      error: error.message,
+    });
+  }
+};
+
+
