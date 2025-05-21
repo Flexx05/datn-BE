@@ -8,8 +8,7 @@ const categorySchema = new Schema(
     },
     slug: {
       type: String,
-        required: [true, "Slug không được để trống"],
-        unique: [true, "Slug phải là duy nhất"],
+
     },
     description: {
       type: String,
