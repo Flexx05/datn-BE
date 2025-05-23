@@ -146,7 +146,7 @@ export const addComment = async (req, res) => {
       userId,
       content,
       rating,
-      status: "visible"
+      status: "hidden"
     });
 
 

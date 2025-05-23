@@ -5,14 +5,14 @@ export const sendMail = async ({ to, subject, html }) => {
     const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
-          user: "phambao2132005@gmail.com",
-          pass: "jsvd vtnm kygr spge",        
+          user: "binovaweb73@gmail.com",
+          pass: "kcjf jurr rjva hqfu",        
         },
       });
     
       // Gửi mail
       const info = await transporter.sendMail({
-        from: '"Binova Support" <phambao2132005@gmail.com>',
+        from: '"Binova Support" <binovaweb73@gmail.com>',
         to,
         subject,
         html,
