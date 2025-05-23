@@ -15,7 +15,7 @@ router.delete("/delete/:id", deleteCategory);
 
 
 // router subCategories
-router.post("/create-subcategory/:parentId",createSubCategory );
+// router.post("/create-subcategory/:parentId",createSubCategory );
 router.get("/get-all-subcategory/:parentId", getAllSubCategory);
 router.get("/get-subcategory-by-id/:id", getSubCategoryById);
 router.get("/show-subcategory/:slug", showSubCategory);

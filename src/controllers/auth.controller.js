@@ -5,17 +5,12 @@ import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import authModel from "../models/auth.model";
 import otpModel from "../models/otp.model";
-import { registerSchema } from "../validations/auth.validation";
+import { changePasswordSchema } from "../validations/auth.validation";
 
 export const register = async (req, res) => {
   try {
-    const { error } = registerSchema.validate(req.body);
-    if (error) {
-      const errors = error.details.map((err) => err.message);
-      return res.status(400).json({ message: errors });
-    }
     const { email, password } = req.body;
-    const user = await authModel.findOne({ email });
+    const user = await authModel.findOne({ email, password });
     if (user) {
       return res.status(400).json({ error: "User already exists" });
     }
@@ -31,18 +26,14 @@ export const register = async (req, res) => {
 
     const hashOTP = await bcrypt.hash(OTP, 10);
 
-    await otpModel.create({
-      email,
-      otp: hashOTP,
-      dueDate: Date.now() + 5 * 60 * 1000,
-    });
+    await otpModel.create({ email, otp: hashOTP });
 
     //sendEmail
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "binovaweb73@gmail.com",
-        pass: "kcjf jurr rjva hqfu",
+        user: "mlinhalone@gmail.com",
+        pass: "kqpo zlxp lfld furi",
       },
     });
 
@@ -61,17 +52,7 @@ export const register = async (req, res) => {
 
 export const verifyOtp = async (req, res) => {
   try {
-    const {
-      fullName,
-      email,
-      otp,
-      password,
-      phone,
-      address,
-      avatar,
-      role,
-      activeStatus,
-    } = req.body;
+    const { email, otp, password } = req.body;
 
     const record = await otpModel.findOne({ email });
 
@@ -164,5 +145,55 @@ export const loginGoogle = async (req, res) => {
     return res.status(200).json({ user, accessToken });
   } catch (error) {
     return res.status(400).json({ error: error.message });
+  }
+};
+
+export const changePassword = async (req, res) => {
+  try {
+    const { error } = changePasswordSchema.validate(req.body, {
+      abortEarly: false,
+      allowUnknown: true,
+    });
+
+    if (error) {
+      const errorMessages = error.details.map((detail) => detail.message);
+      return res.status(400).json({
+        message: "Dữ liệu không hợp lệ",
+        errors: errorMessages,
+      });
+    }
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.user._id; // Lấy từ middleware checkAuth
+
+    // Tìm user trong database
+    const user = await authModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        message: "Người dùng không tồn tại",
+      });
+    }
+
+    // So sánh mật khẩu cũ
+    const isValidPassword = await bcrypt.compare(oldPassword, user.password);
+    if (!isValidPassword) {
+      return res.status(400).json({
+        message: "Mật khẩu cũ không đúng",
+      });
+    }
+
+    // Hash và cập nhật mật khẩu mới
+    const hashPassword = await bcrypt.hash(newPassword, 10);
+    await authModel.findByIdAndUpdate(userId, {
+      password: hashPassword,
+    });
+
+    return res.status(200).json({
+      message: "Đổi mật khẩu thành công",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Đã có lỗi xảy ra",
+      error: error.message,
+    });
   }
 };
