@@ -1,6 +1,9 @@
 import attributeModel from "../models/attribute.model";
 import { generateSlug } from "../utils/createSlug";
-import { attributeSchema } from "../validations/attribute.validation";
+import {
+  attributeCreateSchema,
+  attributeUpdateSchema,
+} from "../validations/attribute.validation";
 
 export const getAllAttribute = async (req, res) => {
   try {
@@ -65,7 +68,7 @@ export const deleteAttribute = async (req, res) => {
 
 export const createAttribute = async (req, res) => {
   try {
-    const { error, value } = attributeSchema.validate(req.body, {
+    const { error, value } = attributeCreateSchema.validate(req.body, {
       abortEarly: false,
       convert: false,
     });
@@ -100,7 +103,7 @@ export const createAttribute = async (req, res) => {
 export const updateAttribute = async (req, res) => {
   try {
     const { id } = req.params;
-    const { error, value } = attributeSchema.validate(req.body, {
+    const { error, value } = attributeUpdateSchema.validate(req.body, {
       abortEarly: false,
       convert: false,
     });

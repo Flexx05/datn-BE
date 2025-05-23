@@ -9,6 +9,10 @@ const attributeSChema = new Schema(
     slug: {
       type: String,
     },
+    isColor: {
+      type: Boolean,
+      default: false,
+    },
     values: {
       type: [String],
     },
