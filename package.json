@@ -19,6 +19,7 @@
     "google-auth-library": "^9.15.1",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.16.0",
     "mongoose": "^8.13.2",
     "mongoose-paginate-v2": "^1.9.0",
     "nodemailer": "^7.0.3",

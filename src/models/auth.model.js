@@ -4,6 +4,7 @@ const authSchema = new Schema(
   {
     fullName: {
       type: String,
+      required: [true, "Full name is required"],
     },
     email: {
       type: String,
@@ -12,6 +13,7 @@ const authSchema = new Schema(
     },
     password: {
       type: String,
+      required: [true, "Password is required"],
     },
     phone: {
       type: String,
