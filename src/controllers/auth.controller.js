@@ -5,19 +5,22 @@ import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import authModel from "../models/auth.model";
 import otpModel from "../models/otp.model";
-import { loginGoogleSchema, loginSchema, verifyOtpSchema } from "../validations/auth.validation";
+import {
+  registerSchema,
+  forgotPasswordSchema
+} from "../validations/auth.validation";
 
 export const register = async (req, res) => {
   try {
 
     const { error, value } = registerSchema.validate(req.body, {
-          abortEarly: false,
-          convert: false,
-        });
-        if (error) {
-          const errors = error.details.map((err) => err.message);
-          return res.status(400).json({ message: errors });
-        }
+      abortEarly: false,
+      convert: false,
+    });
+    if (error) {
+      const errors = error.details.map((err) => err.message);
+      return res.status(400).json({ message: errors });
+    }
     const { email, password } = req.body;
     const user = await authModel.findOne({ email });
     if (user) {
@@ -66,13 +69,13 @@ export const register = async (req, res) => {
 export const verifyOtp = async (req, res) => {
   try {
     const { error, value } = verifyOtpSchema.validate(req.body, {
-          abortEarly: false,
-          convert: false,
-        });
-        if (error) {
-          const errors = error.details.map((err) => err.message);
-          return res.status(400).json({ message: errors });
-        }
+      abortEarly: false,
+      convert: false,
+    });
+    if (error) {
+      const errors = error.details.map((err) => err.message);
+      return res.status(400).json({ message: errors });
+    }
 
     const { email, otp, password } = value;
 
@@ -147,13 +150,13 @@ export const login = async (req, res) => {
 export const loginGoogle = async (req, res) => {
 
   const { error, value } = loginGoogleSchema.validate(req.body, {
-        abortEarly: false,
-        convert: false,
-      });
-      if (error) {
-        const errors = error.details.map((err) => err.message);
-        return res.status(400).json({ message: errors });
-      }
+    abortEarly: false,
+    convert: false,
+  });
+  if (error) {
+    const errors = error.details.map((err) => err.message);
+    return res.status(400).json({ message: errors });
+  }
 
   const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
   const { token } = req.body;
@@ -182,3 +185,73 @@ export const loginGoogle = async (req, res) => {
     return res.status(400).json({ error: error.message });
   }
 };
+
+// Gửi OTP để reset mật khẩu
+export const forgotPassword = async (req, res) => {
+  try {
+    // Validate request body
+    const { error } = forgotPasswordSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message
+      });
+    }
+    const { email } = req.body;
+    // Kiểm tra email có tồn tại trong hệ thống
+    const user = await authModel.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Email không tồn tại trong hệ thống"
+      });
+    }
+    // Xóa OTP cũ nếu có
+    await otpModel.findOneAndDelete({ email });
+    // Tạo OTP mới
+    const OTP = otpGenerator.generate(6, {
+      digits: true,
+      lowerCaseAlphabets: false,
+      upperCaseAlphabets: false,
+      specialChars: false,
+    });
+    console.log(OTP);
+    // Mã hóa OTP
+    const hashOTP = await bcrypt.hash(OTP, 10);
+    // Lưu OTP vào database
+    await otpModel.create({
+      email,
+      otp: hashOTP,
+      dueDate: Date.now() + 5 * 60 * 1000, // OTP hết hạn sau 5 phút
+    });
+
+    // Gửi email chứa OTP
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "binovaweb73@gmail.com",
+        pass: "kcjf jurr rjva hqfu",
+      },
+    });
+
+    await transporter.sendMail({
+      from: "binovaweb73@gmail.com",
+      to: email,
+      subject: "Yêu cầu đặt lại mật khẩu",
+      text: `Mã xác thực để đặt lại mật khẩu của bạn là: ${OTP}. Mã này sẽ hết hạn sau 5 phút.`,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Mã xác thực đã được gửi đến email của bạn"
+    });
+  } catch (error) {
+    console.error("Forgot Password Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Có lỗi xảy ra khi gửi mã xác thực",
+      error: error.message
+    });
+  }
+};
+
