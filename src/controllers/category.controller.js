@@ -23,11 +23,27 @@ const { parentId } = req.body;
         if (existingCategory) {
           return res.status(400).json({ message: "Tên danh mục đã tồn tại" });
         }
+
+      const maxOrderCategory = await categoryModel.findOne().sort({ order: -1 });
+
+// const newCategory = new categoryModel({
+//   name: req.body.name,
+//   parentId: req.body.parentId || null,
+//   order: maxOrderCategory ? maxOrderCategory.order + 1 : 1,
+// });
+
+
+
      const cate = await categoryModel.find();
-    const newCategory = await categoryModel.create({ ...value, slug: generateSlug(
+    const newCategory = await categoryModel.create({ ...value,
+       parentId: req.body.parentId || null,
+      order: maxOrderCategory ? maxOrderCategory.order + 1 : 1,
+      
+      slug: generateSlug(
         value.name,
         cate.map((category) => category.slug)
       ), });
+      await newCategory.save();
     return res.status(201).json({ message: parentId ? "Sub Category created successfully" : "Category created successfully", newCategory });
   } catch (error) {
     return res.status(500).json({ error: error.message });

@@ -5,7 +5,7 @@ const router = Router();
 
 router.post("/brand/add", createBrand);
 router.get("/brand", getAllBrands);
-router.get("/brand/get-by-id/:id", getBrandById);
+router.get("/brand/id/:id", getBrandById);
 router.put("/brand/edit/:id", updateBrand);
 router.get("/brand/show/:slug", showBrand);
 router.delete("/brand/delete/:id", deleteBrand);

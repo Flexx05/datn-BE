@@ -34,7 +34,7 @@ export const createBrand = async (req, res) => {
 export const getAllBrands = async (req, res) => {
     try {
       const brands = await brandModel.find();
-      return res.status(200).json({ message: "Get all brands successfully", brands });
+      return res.status(200).json( brands );
     } catch (error) {
       return res.status(500).json({ error: error.message });
     }
