@@ -158,7 +158,7 @@ export const getAllCategories = async (req, res) => {
       return res.status(404).json({ error: "Category not found" });
     }
 
-    if (mode === "full") {
+    if (mode === "full"|| mode === "keepParent") {
       // --- Xoá mềm category cha ---
       await categoryModel.findByIdAndUpdate(id, { isActive: false });
 
@@ -166,8 +166,10 @@ export const getAllCategories = async (req, res) => {
       const subCategories = await categoryModel.find({ parentId: id, isActive: true });
 
       // --- Xoá mềm tất cả danh mục con ---
+
       for (const subCategory of subCategories) {
         await categoryModel.findByIdAndUpdate(subCategory._id, { isActive: false });
+
 
         // --- Xoá mềm sản phẩm liên kết danh mục con ---
         // await productModel.updateMany(
@@ -177,10 +179,7 @@ export const getAllCategories = async (req, res) => {
       }
 
       // --- Xoá mềm sản phẩm liên kết danh mục cha ---
-      await productModel.updateMany(
-        { categoryId: id, isActive: true },
-        { isActive: false }
-      );
+      
 
       return res.status(200).json({
         message: "Deleted category, subcategories and related products (soft delete)",
@@ -191,15 +190,12 @@ export const getAllCategories = async (req, res) => {
       // --- Tìm danh mục con trực tiếp ---
       const subCategories = await categoryModel.find({ parentId: id, isActive: true });
 
-      // --- Xoá mềm tất cả danh mục con ---
+      // --- Xoá mềm tất cả danh mục con --- 
       for (const subCategory of subCategories) {
         await categoryModel.findByIdAndUpdate(subCategory._id, { isActive: false });
-
-      
+  
       }
-
       // Giữ nguyên danh mục cha (không xoá mềm)
-
       return res.status(200).json({
         message: "Deleted subcategories and related products, kept parent category",
         parentCategoryId: id,

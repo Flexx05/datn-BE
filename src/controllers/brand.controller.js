@@ -65,7 +65,8 @@ export const getAllBrands = async (req, res) => {
       const errors = error.details.map((err) => err.message);
       return res.status(400).json({ message: errors });
     }
-      const brand = await brandModel.findByIdAndUpdate(id, { name, slug, logoUrl }, { new: true });
+    const { name, logoUrl, isActive } = value;
+      const brand = await brandModel.findByIdAndUpdate(id, { name, isActive, logoUrl }, { new: true });
       if (!brand) {
         return res.status(404).json({ error: "Brand not found" });
       }
