@@ -255,3 +255,59 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
+// Xác thực OTP và đặt lại mật khẩu
+export const resetPassword = async (req, res) => {
+  try {
+    const { error } = resetPasswordSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message
+      });
+    }
+    const { email, otp, newPassword } = req.body;
+    const otpRecord = await otpModel.findOne({ email });
+    if (!otpRecord) {
+      return res.status(400).json({
+        success: false,
+        message: "Không tìm thấy mã xác thực cho email này"
+      });
+    }
+    if (Date.now() > otpRecord.dueDate) {
+      await otpModel.deleteOne({ email });
+      return res.status(400).json({
+        success: false,
+        message: "Mã xác thực đã hết hạn"
+      });
+    }
+    const isValidOTP = await bcrypt.compare(otp, otpRecord.otp);
+    if (!isValidOTP) {
+      return res.status(400).json({
+        success: false,
+        message: "Mã xác thực không đúng"
+      });
+    }
+    const user = await authModel.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng"
+      });
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+    await otpModel.deleteOne({ email });
+    return res.status(200).json({
+      success: true,
+      message: "Đặt lại mật khẩu thành công"
+    });
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Có lỗi xảy ra khi đặt lại mật khẩu",
+      error: error.message
+    });
+  }
+};
