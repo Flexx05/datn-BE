@@ -102,17 +102,24 @@ export const getAllBrands = async (req, res) => {
     }
   };
 
-  export const searchBrand = async (req, res) => {
-    try {
-      const { name } = req.query;
-      // console.log(req.query);
-      const brands = await brandModel.find({ name: { $regex: name, $options: "i" } });
-      if (brands.length === 0) {
-        return res.status(404).json({ error: "No brands found" });
-      }
-      return res.status(200).json({ message: "Get brands successfully", brands });
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
+ export const searchBrand = async (req, res) => {
+  try {
+    const { name } = req.query;
+
+    const query = {};
+
+    if (typeof name === "string" && name.trim() !== "") {
+      query.name = { $regex: name, $options: "i" };
     }
-  };
+
+    const brands = await brandModel.find(query);
+
+    if (brands.length === 0) {
+      return res.status(404).json({ error: "No brands found" });
+    }
+    return res.status(200).json(brands);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
   

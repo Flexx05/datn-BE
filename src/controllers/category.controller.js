@@ -24,7 +24,10 @@ const { parentId } = req.body;
           return res.status(400).json({ message: "Tên danh mục đã tồn tại" });
         }
 
-      const maxOrderCategory = await categoryModel.findOne().sort({ order: -1 });
+       const maxOrderCategory = await categoryModel.findOne().sort({ categorySort: -1 });
+          const nextOrder = maxOrderCategory && typeof maxOrderCategory.categorySort === "number"
+      ? maxOrderCategory.categorySort + 1
+      : 1;
 
 // const newCategory = new categoryModel({
 //   name: req.body.name,
@@ -32,18 +35,13 @@ const { parentId } = req.body;
 //   order: maxOrderCategory ? maxOrderCategory.order + 1 : 1,
 // });
 
-
-
      const cate = await categoryModel.find();
     const newCategory = await categoryModel.create({ ...value,
-       parentId: req.body.parentId || null,
-      order: maxOrderCategory ? maxOrderCategory.order + 1 : 1,
-      
+      categorySort: nextOrder,
       slug: generateSlug(
         value.name,
         cate.map((category) => category.slug)
       ), });
-      await newCategory.save();
     return res.status(201).json({ message: parentId ? "Sub Category created successfully" : "Category created successfully", newCategory });
   } catch (error) {
     return res.status(500).json({ error: error.message });
