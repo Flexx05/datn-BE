@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-
 import authRouter from "./routers/auth.router";
 import categoryRouter from "./routers/category.router";
 import cartRouter from "./routers/cart.router";
