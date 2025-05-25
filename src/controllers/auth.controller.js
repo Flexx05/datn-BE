@@ -65,7 +65,7 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ error: "Invalid OTP" });
     }
     const hashPassword = await bcrypt.hash(password, 10);
-    const newUser = await authModel.create({ email, password: hashPassword , fullName,phone, address, avatar, role, activeStatus});
+    const newUser = await authModel.create({ email, password: hashPassword });
 
     // Xoá OTP đã dùng
     await otpModel.deleteOne({ email });

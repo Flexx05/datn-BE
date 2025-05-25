@@ -1,9 +1,30 @@
 import brandModel from "../models/brand.model";
+import { generateSlug } from "../utils/createSlug";
+import { createBrandSchema, updateBrandSchema } from "../validations/brand.validation";
 
 export const createBrand = async (req, res) => {
   try {
-    const { name, slug, logoUrl } = req.body;
-    const newBrand = await brandModel.create({ name, slug, logoUrl });
+    const { error, value } = createBrandSchema.validate(req.body, {
+      abortEarly: false,
+      convert: false,
+    });
+    if (error) {
+      const errors = error.details.map((err) => err.message);
+      return res.status(400).json({ message: errors });
+    }
+    const { name } = req.body;
+    const checkName = await brandModel.findOne({name: name});
+    if (checkName) {
+      return res.status(400).json({ message: "Tên thương hiệu đã tồn tại" });
+    }
+    const brands = await brandModel.find();
+    const newBrand = await brandModel.create({
+      ...value,
+      slug: generateSlug(
+        value.name,
+        brands.map((brand) => brand.slug)
+      ),
+    });
     return res.status(201).json({ message: "Brand created successfully", newBrand });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -36,7 +57,14 @@ export const getAllBrands = async (req, res) => {
   export const updateBrand = async (req, res) => {
     try {
       const { id } = req.params;
-      const { name, slug, logoUrl } = req.body;
+       const { error, value } = updateBrandSchema.validate(req.body, {
+      abortEarly: false,
+      convert: false,
+    });
+    if (error) {
+      const errors = error.details.map((err) => err.message);
+      return res.status(400).json({ message: errors });
+    }
       const brand = await brandModel.findByIdAndUpdate(id, { name, slug, logoUrl }, { new: true });
       if (!brand) {
         return res.status(404).json({ error: "Brand not found" });

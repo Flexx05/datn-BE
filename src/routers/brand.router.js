@@ -3,13 +3,13 @@ import {createBrand, deleteBrand, getAllBrands, getBrandById, searchBrand, showB
 
 const router = Router();
 
-router.post("/create", createBrand);
-router.get("/get-all", getAllBrands);
-router.get("/get-by-id/:id", getBrandById);
-router.put("/update/:id", updateBrand);
-router.get("/show/:slug", showBrand);
-router.delete("/delete/:id", deleteBrand);
-router.get("/search", searchBrand);
+router.post("/brand/add", createBrand);
+router.get("/brand", getAllBrands);
+router.get("/brand/get-by-id/:id", getBrandById);
+router.put("/brand/edit/:id", updateBrand);
+router.get("/brand/show/:slug", showBrand);
+router.delete("/brand/delete/:id", deleteBrand);
+router.get("/brand/search", searchBrand);
 
 
 export default router;
