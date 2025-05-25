@@ -12,7 +12,6 @@ const verifyOtpSchema = Joi.object({
   otp: Joi.string().min(6).max(6).required(),
   password: Joi.string().min(6).required(),
   confirmPassword: Joi.string().valid(Joi.ref("password")).required().messages({ "any.only": "confirmPassword does not match" }),
-
 });
 
 const loginSchema = Joi.object({
@@ -25,5 +24,20 @@ const loginGoogleSchema = Joi.object({
   password: Joi.string().min(6).required(),
 });
 
-export { registerSchema , verifyOtpSchema, loginSchema , loginGoogleSchema };
+
+const forgotPasswordSchema = Joi.object({
+  email: Joi.string().email().required().messages({
+    "string.email": "Email không hợp lệ",
+    "any.required": "Email là bắt buộc"
+  })
+});
+
+
+export { 
+  registerSchema, 
+  verifyOtpSchema, 
+  loginSchema, 
+  loginGoogleSchema,
+  forgotPasswordSchema,
+};
 
