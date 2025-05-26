@@ -65,7 +65,7 @@ export const getAllCategories = async (req, res) => {
       const categories = await categoryModel.find({ parentId: null })
         .populate({
           path: "subCategories",
-              match: { isActive: true },
+              // match: { isActive: true },
               options: { sort: { categorySort: 1 } },
         })
         .sort({ categorySort: 1 });
