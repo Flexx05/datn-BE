@@ -1,5 +1,18 @@
 import { model, Schema } from "mongoose";
 
+const attributeValueSchema = new Schema(
+  {
+    name: {
+      type: String,
+      required: [true, "Tên giá trị không được để trống"],
+    },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+  }
+);
+
 const attributeSChema = new Schema(
   {
     name: {
@@ -9,13 +22,7 @@ const attributeSChema = new Schema(
     slug: {
       type: String,
     },
-    isColor: {
-      type: Boolean,
-      default: false,
-    },
-    values: {
-      type: [String],
-    },
+    values: [attributeValueSchema],
     isActive: {
       type: Boolean,
       default: true,

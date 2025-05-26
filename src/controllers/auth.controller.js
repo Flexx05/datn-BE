@@ -5,22 +5,19 @@ import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import authModel from "../models/auth.model";
 import otpModel from "../models/otp.model";
-import {
-  registerSchema,
-  forgotPasswordSchema
-} from "../validations/auth.validation";
+import { loginGoogleSchema, loginSchema, verifyOtpSchema } from "../validations/auth.validation";
 
 export const register = async (req, res) => {
   try {
 
     const { error, value } = registerSchema.validate(req.body, {
-      abortEarly: false,
-      convert: false,
-    });
-    if (error) {
-      const errors = error.details.map((err) => err.message);
-      return res.status(400).json({ message: errors });
-    }
+          abortEarly: false,
+          convert: false,
+        });
+        if (error) {
+          const errors = error.details.map((err) => err.message);
+          return res.status(400).json({ message: errors });
+        }
     const { email, password } = req.body;
     const user = await authModel.findOne({ email });
     if (user) {
@@ -69,13 +66,13 @@ export const register = async (req, res) => {
 export const verifyOtp = async (req, res) => {
   try {
     const { error, value } = verifyOtpSchema.validate(req.body, {
-      abortEarly: false,
-      convert: false,
-    });
-    if (error) {
-      const errors = error.details.map((err) => err.message);
-      return res.status(400).json({ message: errors });
-    }
+          abortEarly: false,
+          convert: false,
+        });
+        if (error) {
+          const errors = error.details.map((err) => err.message);
+          return res.status(400).json({ message: errors });
+        }
 
     const { email, otp, password } = value;
 
@@ -114,16 +111,13 @@ export const verifyOtp = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { error, value } = loginSchema.validate(req.body, {
-      abortEarly: false,
-      convert: false,
-    });
-    if (error) {
-      const errors = error.details.map((err) => err.message);
-      return res.status(400).json({ message: errors });
-    }
-
     const { email, password } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email không được để trống" });
+    }
+    if (!password) {
+      return res.status(400).json({ error: "Mật khẩu không được để trống" });
+    }
     const user = await authModel.findOne({ email });
     if (!user) {
       return res.status(400).json({ error: "Email không tồn tại" });
@@ -150,13 +144,13 @@ export const login = async (req, res) => {
 export const loginGoogle = async (req, res) => {
 
   const { error, value } = loginGoogleSchema.validate(req.body, {
-    abortEarly: false,
-    convert: false,
-  });
-  if (error) {
-    const errors = error.details.map((err) => err.message);
-    return res.status(400).json({ message: errors });
-  }
+        abortEarly: false,
+        convert: false,
+      });
+      if (error) {
+        const errors = error.details.map((err) => err.message);
+        return res.status(400).json({ message: errors });
+      }
 
   const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
   const { token } = req.body;
