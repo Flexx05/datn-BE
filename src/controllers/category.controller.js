@@ -402,7 +402,7 @@ export const getAllSubCategory = async (req, res) => {
       if (!subcategories) {
         return res.status(404).json({ error: " Sub Categories not found" });
       }
-      return res.status(200).json({ message: "Get all sub categories successfully", parentCategory, subcategories });
+      return res.status(200).json(parentCategory, subcategories);
     } catch (error) {
       return res.status(500).json({ error: error.message });
     }
@@ -420,7 +420,7 @@ export const getAllSubCategory = async (req, res) => {
       if (!subCategory) {
         return res.status(404).json({ error: "Category not found" });
       }
-      return res.status(200).json({ message: "Get sub category successfully", subCategory });
+      return res.status(200).json(subCategory );
     } catch (error) {
       return res.status(500).json({ error: error.message });
     }
