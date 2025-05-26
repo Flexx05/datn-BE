@@ -23,7 +23,11 @@ const { parentId } = req.body;
         if (existingCategory) {
           return res.status(400).json({ message: "Tên danh mục đã tồn tại" });
         }
-
+ const { categorySort } = req.body;
+        const existingCategorySort = await categoryModel.findOne({ categorySort });
+        if (existingCategorySort) {
+          return res.status(400).json({ message: "Tên danh mục đã tồn tại" });
+        }
        const maxOrderCategory = await categoryModel.findOne().sort({ categorySort: -1 });
           const nextOrder = maxOrderCategory && typeof maxOrderCategory.categorySort === "number"
       ? maxOrderCategory.categorySort + 1
@@ -130,35 +134,55 @@ export const getAllCategories = async (req, res) => {
     }
   };
 
-  export const updateCategory = async (req, res) => {
-    try {
-      const { id } = req.params;
-      // const { name, slug, description, categorySort } = req.body;
-       const { error, value } = updateCategorySchema.validate(req.body, {
-            abortEarly: false,
-            convert: false,
-          });
-          if (error) {
-            const errors = error.details.map((err) => err.message);
-            return res.status(400).json({ message: errors });
-          }
-//  const newCategory = await categoryModel.create({ ...value, slug: generateSlug(
-//         value.name,
-//         cate.map((category) => category.slug)
-//       ), });
-           const cate = await categoryModel.find();
-      const category = await categoryModel.findByIdAndUpdate(id, { ...value },{slug: generateSlug(
-        value.name,
-        cate.map((category) => category.slug)
-      ),}, { new: true });
-      if (!category) {
-        return res.status(404).json({ error: "Category not found" });
-      }
-      return res.status(200).json({ message: "Category updated successfully", category });
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
+ export const updateCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { error, value } = updateCategorySchema.validate(req.body, {
+      abortEarly: false,
+      convert: false,
+    });
+    if (error) {
+      const errors = error.details.map((err) => err.message);
+      return res.status(400).json({ message: errors });
     }
-  };
+
+    const cate = await categoryModel.findById(id);  // Sửa lấy category hiện tại
+
+    if (
+      value.categorySort &&
+      value.categorySort !== cate.categorySort
+    ) {
+      const target = await categoryModel.findOne({
+        categorySort: value.categorySort,
+        parentId: cate.parentId || null,
+      });
+
+      if (target) {
+        await categoryModel.findByIdAndUpdate(target._id, {
+          categorySort: cate.categorySort,
+        });
+      }
+    }
+
+    // Cập nhật category với slug mới
+    const category = await categoryModel.findByIdAndUpdate(
+      id,
+      {
+        ...value,
+        slug: generateSlug(value.name, (await categoryModel.find()).map((c) => c.slug)),
+      },
+      { new: true }
+    );
+
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+    return res.status(200).json({ message: "Category updated successfully", category });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
 
 
   export const deleteCategory = async (req, res) => {
