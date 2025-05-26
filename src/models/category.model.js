@@ -39,7 +39,6 @@ const categorySchema = new Schema(
 // tạo danh mục con của category
 categorySchema.virtual("subCategories", {
   ref: "Category",
-  localField: "_id",
   foreignField: "parentId",
 });
 
