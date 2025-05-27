@@ -7,12 +7,11 @@ import authModel from "../models/auth.model";
 import otpModel from "../models/otp.model";
 import {
   registerSchema,
-  forgotPasswordSchema
+  forgotPasswordSchema,
 } from "../validations/auth.validation";
 
 export const register = async (req, res) => {
   try {
-
     const { error, value } = registerSchema.validate(req.body, {
       abortEarly: false,
       convert: false,
@@ -139,7 +138,6 @@ export const login = async (req, res) => {
 };
 
 export const loginGoogle = async (req, res) => {
-
   const { error, value } = loginGoogleSchema.validate(req.body, {
     abortEarly: false,
     convert: false,
@@ -185,7 +183,7 @@ export const forgotPassword = async (req, res) => {
     if (error) {
       return res.status(400).json({
         success: false,
-        message: error.details[0].message
+        message: error.details[0].message,
       });
     }
     const { email } = req.body;
@@ -194,7 +192,7 @@ export const forgotPassword = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "Email không tồn tại trong hệ thống"
+        message: "Email không tồn tại trong hệ thống",
       });
     }
     // Xóa OTP cũ nếu có
@@ -234,14 +232,14 @@ export const forgotPassword = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Mã xác thực đã được gửi đến email của bạn"
+      message: "Mã xác thực đã được gửi đến email của bạn",
     });
   } catch (error) {
     console.error("Forgot Password Error:", error);
     return res.status(500).json({
       success: false,
       message: "Có lỗi xảy ra khi gửi mã xác thực",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -253,7 +251,7 @@ export const resetPassword = async (req, res) => {
     if (error) {
       return res.status(400).json({
         success: false,
-        message: error.details[0].message
+        message: error.details[0].message,
       });
     }
     const { email, otp, newPassword } = req.body;
@@ -261,28 +259,28 @@ export const resetPassword = async (req, res) => {
     if (!otpRecord) {
       return res.status(400).json({
         success: false,
-        message: "Không tìm thấy mã xác thực cho email này"
+        message: "Không tìm thấy mã xác thực cho email này",
       });
     }
     if (Date.now() > otpRecord.dueDate) {
       await otpModel.deleteOne({ email });
       return res.status(400).json({
         success: false,
-        message: "Mã xác thực đã hết hạn"
+        message: "Mã xác thực đã hết hạn",
       });
     }
     const isValidOTP = await bcrypt.compare(otp, otpRecord.otp);
     if (!isValidOTP) {
       return res.status(400).json({
         success: false,
-        message: "Mã xác thực không đúng"
+        message: "Mã xác thực không đúng",
       });
     }
     const user = await authModel.findOne({ email });
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "Không tìm thấy người dùng"
+        message: "Không tìm thấy người dùng",
       });
     }
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -291,14 +289,14 @@ export const resetPassword = async (req, res) => {
     await otpModel.deleteOne({ email });
     return res.status(200).json({
       success: true,
-      message: "Đặt lại mật khẩu thành công"
+      message: "Đặt lại mật khẩu thành công",
     });
   } catch (error) {
     console.error("Reset Password Error:", error);
     return res.status(500).json({
       success: false,
       message: "Có lỗi xảy ra khi đặt lại mật khẩu",
-      error: error.message
+      error: error.message,
     });
   }
 };

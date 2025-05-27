@@ -26,9 +26,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-mongoose.connect(
-  `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@datn-db.nx9ha3d.mongodb.net/${process.env.DB_URL}?retryWrites=true&w=majority&appName=DATN-DB`
-);
+mongoose.connect(`mongodb://127.0.0.1:27017/${process.env.DB_URL}`);
 console.log("Connected to MongoDB");
 //route
 app.use("/api", attributeRouter);
