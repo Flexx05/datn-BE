@@ -155,7 +155,6 @@ export const filterVouchersByStatus = async (req, res) => {
 // Cập nhật voucher
 export const updateVoucher = async (req, res) => {
   try {
-    // Validate dữ liệu đầu vào
     const { error } = updateVoucherSchema.validate(req.body, { abortEarly: false });
     if (error) {
       return res.status(400).json({
@@ -163,19 +162,36 @@ export const updateVoucher = async (req, res) => {
         errors: error.details.map((e) => e.message),
       });
     }
-    // Cập nhật voucher theo ID
-    const updatedVoucher = await Voucher.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-    // Nếu không tìm thấy voucher
-    if (!updatedVoucher) {
+    // Lấy thông tin voucher hiện tại
+    const currentVoucher = await Voucher.findById(req.params.id);
+    if (!currentVoucher) {
       return res.status(404).json({
         message: "Không tìm thấy voucher để cập nhật",
       });
     }
-    // Thành công
+    // Chuẩn bị dữ liệu cập nhật
+    const updateData = { ...req.body };
+    const now = new Date();
+
+    // Tự động cập nhật trạng thái dựa trên ngày
+    const startDate = new Date(updateData.startDate || currentVoucher.startDate);
+    const endDate = new Date(updateData.endDate || currentVoucher.endDate);
+
+    // Cập nhật trạng thái dựa trên thời gian hiện tại
+    if (now > endDate) {
+      updateData.voucherStatus = "expired";
+    } else if (now >= startDate && now <= endDate) {
+      updateData.voucherStatus = "active";
+    } else if (now < endDate) {
+      updateData.voucherStatus = "inactive";
+    }
+
+    // Cập nhật voucher
+    const updatedVoucher = await Voucher.findOneAndUpdate(
+      { _id: req.params.id },
+      updateData,
+      { new: true, runValidators: true }
+    );
     return res.status(200).json({
       message: "Cập nhật voucher thành công",
       data: updatedVoucher,
