@@ -1,15 +1,13 @@
 import Voucher from "../models/voucher.model.js"
 import {
   createVoucherSchema,
-  updateVoucherSchema,
-  updateVoucherStatus
+  updateVoucherSchema
 } from "../validations/voucher.validation.js";
 
 
 //Thêm mới voucher
 export const createVoucher = async (req, res) => {
   try {
-    //validate
     const { error } = createVoucherSchema.validate(req.body, { abortEarly: false });
     if (error) {
       return res.status(400).json({
@@ -17,13 +15,29 @@ export const createVoucher = async (req, res) => {
         errors: error.details.map((e) => e.message),
       });
     }
-    // Kiểm tra mã giảm giá đã tồn tại chưa
     const exists = await Voucher.findOne({ code: req.body.code });
     if (exists) {
       return res.status(400).json({ message: "Mã giảm giá đã tồn tại" });
     }
+
+    // Chuẩn bị dữ liệu cập nhật
+    const createData = { ...req.body };
+    const now = new Date();
+
+    // Tự động cập nhật trạng thái dựa trên ngày
+    const startDate = new Date(createData.startDate);
+    const endDate = new Date(createData.endDate);
+
+    // Cập nhật trạng thái dựa trên thời gian hiện tại
+    if (now > endDate) {
+      createData.voucherStatus = "expired";
+    } else if (now >= startDate && now <= endDate) {
+      createData.voucherStatus = "active";
+    } else if (now < endDate) {
+      createData.voucherStatus = "inactive";
+    }
     //Thêm mới
-    const newVoucher = await Voucher.create(req.body);
+    const newVoucher = await Voucher.create(createData);
     res.status(200).json({
       message: "Tạo voucher thành công",
       data: newVoucher
