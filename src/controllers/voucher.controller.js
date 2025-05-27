@@ -155,6 +155,7 @@ export const filterVouchersByStatus = async (req, res) => {
 // Cập nhật voucher
 export const updateVoucher = async (req, res) => {
   try {
+    // Validate dữ liệu đầu vào
     const { error } = updateVoucherSchema.validate(req.body, { abortEarly: false });
     if (error) {
       return res.status(400).json({
@@ -199,39 +200,6 @@ export const updateVoucher = async (req, res) => {
   } catch (error) {
     return res.status(500).json({
       message: "Cập nhật voucher thất bại",
-      error: error.message,
-    });
-  }
-};
-
-// Cập nhật trạng thái voucher
-export const updateVoucherStatus = async (req, res) => {
-  try {
-    const { error } = updateVoucherStatus.validate(req.body);
-    if (error) {
-      return res.status(400).json({
-        message: "Dữ liệu không hợp lệ",
-        errors: error.details.map((e) => e.message),
-      });
-    }
-
-    const updatedVoucher = await Voucher.findByIdAndUpdate(
-      req.params.id,
-      { voucherStatus: req.body.voucherStatus },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedVoucher) {
-      return res.status(404).json({ message: "Không tìm thấy voucher để cập nhật trạng thái." });
-    }
-
-    return res.status(200).json({
-      message: "Cập nhật trạng thái voucher thành công.",
-      data: updatedVoucher,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: "Lỗi khi cập nhật trạng thái voucher.",
       error: error.message,
     });
   }
