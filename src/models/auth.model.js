@@ -4,6 +4,7 @@ const authSchema = new Schema(
   {
     fullName: {
       type: String,
+      required: [true, "Full name is required"],
     },
     email: {
       type: String,
@@ -12,6 +13,7 @@ const authSchema = new Schema(
     },
     password: {
       type: String,
+      required: [true, "Password is required"],
     },
     phone: {
       type: String,
@@ -24,7 +26,7 @@ const authSchema = new Schema(
     },
     role: {
       type: String,
-      enum: ["staff","admin", "user"],
+      enum: ["staff", "admin", "user"],
       default: "user",
     },
     activeStatus: {
@@ -34,7 +36,6 @@ const authSchema = new Schema(
       type: Boolean,
       default: true,
     },
-
   },
   {
     timestamps: true,
