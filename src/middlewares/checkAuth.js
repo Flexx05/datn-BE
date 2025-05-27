@@ -1,27 +1,120 @@
 import jwt from "jsonwebtoken";
 import authModel from "../models/auth.model";
 
-const checkAuth = async (req, res, next) => {
-  const token = req.header("authorization")?.replace("Bearer ", "");
-  if (!token) return res.status(401).json({ message: "Bạn chưa đăng nhập!" });
+export const verifyToken = async (req, res, next) => {
   try {
-    const decode = jwt.verify(token, process.env.JWT_SECRET_KEY);
-    if (!decode) {
-      return res.status(401).json({ message: "Token không hợp lệ!" });
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        message: "Vui lòng đăng nhập để tiếp tục",
+      });
     }
 
-    const user = await authModel.findById(decode.id);
+    const token = authHeader.split(" ")[1];
 
-    if (user.role === "user")
-      return res
-        .status(401)
-        .json({ message: "Bạn không có quyền truy cập chức năng này!" });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    if (!decoded.id) {
+      return res.status(401).json({
+        message: "Token không hợp lệ",
+      });
+    }
+
+    const user = await authModel.findById(decoded.id).select("-password");
+    if (!user) {
+      return res.status(401).json({
+        message: "Không tìm thấy người dùng",
+      });
+    }
 
     req.user = user;
     next();
   } catch (error) {
-    return res.status(401).json({ message: error.message });
+    console.error("Auth Error:", error);
+    if (error instanceof jwt.TokenExpiredError) {
+      return res.status(401).json({
+        message: "Token đã hết hạn",
+      });
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      return res.status(401).json({
+        message: "Token không hợp lệ",
+      });
+    }
+    return res.status(500).json({
+      message: "Lỗi xác thực",
+      error: error.message,
+    });
   }
 };
 
-export default checkAuth;
+export const isAdmin = (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Vui lòng đăng nhập để tiếp tục",
+      });
+    }
+
+    if (req.user.role !== "admin") {
+      return res.status(403).json({
+        message: "Bạn không có quyền thực hiện hành động này",
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error("Admin Check Error:", error);
+    return res.status(500).json({
+      message: "Lỗi kiểm tra quyền",
+      error: error.message,
+    });
+  }
+};
+
+export const isStaff = (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Vui lòng đăng nhập để tiếp tục",
+      });
+    }
+
+    if (req.user.role !== "staff") {
+      return res.status(403).json({
+        message: "Bạn không có quyền thực hiện hành động này",
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error("Staff Check Error:", error);
+    return res.status(500).json({
+      message: "Lỗi kiểm tra quyền",
+      error: error.message,
+    });
+  }
+};
+
+export const isAdminOrStaff = (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Vui lòng đăng nhập để tiếp tục",
+      });
+    }
+
+    if (req.user.role !== "admin" && req.user.role !== "staff") {
+      return res.status(403).json({
+        message: "Bạn không có quyền thực hiện hành động này",
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error("Permission Check Error:", error);
+    return res.status(500).json({
+      message: "Lỗi kiểm tra quyền",
+      error: error.message,
+    });
+  }
+};

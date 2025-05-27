@@ -11,6 +11,7 @@ import attributeRouter from "./routers/attribute.router";
 import productRouter from "./routers/product.router";
 import userRouter from "./routers/admin.user.router";
 import voucherRouter from "./routers/voucher.router";
+import paymentRouter from "./routers/payment.router";
 
 const app = express();
 
@@ -37,5 +38,6 @@ app.use("/api", cartRouter);
 app.use("/api", brandRouter);
 app.use("/api", userRouter);
 app.use("/api", voucherRouter);
+app.use("/api", paymentRouter);
 
 export const viteNodeApp = app;
