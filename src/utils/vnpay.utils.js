@@ -25,6 +25,9 @@ export const createPaymentUrl = (ipAddr, orderId, amount, bankCode = null) => {
   const now = moment();
   const createDate = now.format("YYYYMMDDHHmmss");
 
+  // Encode orderId để tránh ký tự đặc biệt
+  const safeOrderId = encodeURIComponent(orderId.toString());
+
   const vnpParams = {
     vnp_Amount: amount * 100,
     vnp_Command: "pay",
@@ -32,36 +35,42 @@ export const createPaymentUrl = (ipAddr, orderId, amount, bankCode = null) => {
     vnp_CurrCode: "VND",
     vnp_IpAddr: ipAddr === "::1" ? "127.0.0.1" : ipAddr,
     vnp_Locale: "vn",
-    vnp_OrderInfo: `Thanh toan don hang ${orderId}`, // **Chưa encode ở đây**
+    vnp_OrderInfo: encodeURIComponent(`Thanh toan don hang ${safeOrderId}`),
     vnp_OrderType: "other",
     vnp_ReturnUrl:
       process.env.VNP_RETURN_URL || "https://domainmerchant.vn/ReturnUrl",
     vnp_TmnCode: process.env.VNP_TMN_CODE || "DEMOV210",
-    vnp_TxnRef: orderId,
+    vnp_TxnRef: safeOrderId,
     vnp_Version: "2.1.0",
   };
 
-
+  // if (bankCode) {
+  //   vnpParams.vnp_BankCode = bankCode;
+  // }
 
   const sortedParams = sortObject(vnpParams);
 
-  // Tạo chuỗi ký tự cho việc tạo chữ ký (chưa encode)
-  const signData = qs.stringify(sortedParams, { encode: true });
+  // Tạo chuỗi ký tự cho việc tạo chữ ký
+  const signData = Object.keys(sortedParams)
+    .map((key) => `${key}=${sortedParams[key]}`)
+    .join("&");
 
   // Tạo chữ ký HMAC SHA512
   const hmac = crypto.createHmac("sha512", process.env.VNP_HASH_SECRET);
-  const signed = hmac.update(signData).digest("hex");
+  const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
 
   // Thêm chữ ký vào tham số
   sortedParams.vnp_SecureHash = signed;
 
-  // Tạo chuỗi query string với encode = true
+  // Tạo URL thanh toán với các tham số đã được encode
   const paymentUrl =
     "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?" +
-    qs.stringify(sortedParams, { encode: true });
+    Object.keys(sortedParams)
+      .map((key) => `${key}=${sortedParams[key]}`)
+      .join("&");
 
   return {
-    vnpTxnRef: orderId,
+    vnpTxnRef: safeOrderId,
     paymentUrl,
   };
 };

@@ -8,7 +8,7 @@ const paymentSchema = new Schema(
       required: true,
     },
     userId: {
-      type: Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId, 
       ref: "Auth",
       required: true,
     },
