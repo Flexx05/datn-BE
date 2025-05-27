@@ -5,12 +5,23 @@ import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import authModel from "../models/auth.model";
 import otpModel from "../models/otp.model";
-import { changePasswordSchema } from "../validations/auth.validation";
+import {
+  registerSchema,
+  forgotPasswordSchema,
+} from "../validations/auth.validation";
 
 export const register = async (req, res) => {
   try {
+    const { error, value } = registerSchema.validate(req.body, {
+      abortEarly: false,
+      convert: false,
+    });
+    if (error) {
+      const errors = error.details.map((err) => err.message);
+      return res.status(400).json({ message: errors });
+    }
     const { email, password } = req.body;
-    const user = await authModel.findOne({ email, password });
+    const user = await authModel.findOne({ email });
     if (user) {
       return res.status(400).json({ error: "User already exists" });
     }
@@ -26,14 +37,18 @@ export const register = async (req, res) => {
 
     const hashOTP = await bcrypt.hash(OTP, 10);
 
-    await otpModel.create({ email, otp: hashOTP });
+    await otpModel.create({
+      email,
+      otp: hashOTP,
+      dueDate: Date.now() + 5 * 60 * 1000,
+    });
 
     //sendEmail
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "mlinhalone@gmail.com",
-        pass: "kqpo zlxp lfld furi",
+        user: "binovaweb73@gmail.com",
+        pass: "kcjf jurr rjva hqfu",
       },
     });
 
@@ -52,7 +67,16 @@ export const register = async (req, res) => {
 
 export const verifyOtp = async (req, res) => {
   try {
-    const { email, otp, password } = req.body;
+    const { error, value } = verifyOtpSchema.validate(req.body, {
+      abortEarly: false,
+      convert: false,
+    });
+    if (error) {
+      const errors = error.details.map((err) => err.message);
+      return res.status(400).json({ message: errors });
+    }
+
+    const { email, otp, password } = value;
 
     const record = await otpModel.findOne({ email });
 
@@ -65,16 +89,7 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ error: "Invalid OTP" });
     }
     const hashPassword = await bcrypt.hash(password, 10);
-    const newUser = await authModel.create({
-      email,
-      password: hashPassword,
-      fullName,
-      phone,
-      address,
-      avatar,
-      role,
-      activeStatus,
-    });
+    const newUser = await authModel.create({ email, password: hashPassword });
 
     // Xoá OTP đã dùng
     await otpModel.deleteOne({ email });
@@ -89,13 +104,16 @@ export const verifyOtp = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
+    const { error, value } = loginSchema.validate(req.body, {
+      abortEarly: false,
+      convert: false,
+    });
+    if (error) {
+      const errors = error.details.map((err) => err.message);
+      return res.status(400).json({ message: errors });
+    }
+
     const { email, password } = req.body;
-    if (!email) {
-      return res.status(400).json({ error: "Email không được để trống" });
-    }
-    if (!password) {
-      return res.status(400).json({ error: "Mật khẩu không được để trống" });
-    }
     const user = await authModel.findOne({ email });
     if (!user) {
       return res.status(400).json({ error: "Email không tồn tại" });
@@ -120,6 +138,15 @@ export const login = async (req, res) => {
 };
 
 export const loginGoogle = async (req, res) => {
+  const { error, value } = loginGoogleSchema.validate(req.body, {
+    abortEarly: false,
+    convert: false,
+  });
+  if (error) {
+    const errors = error.details.map((err) => err.message);
+    return res.status(400).json({ message: errors });
+  }
+
   const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
   const { token } = req.body;
   try {
@@ -148,51 +175,127 @@ export const loginGoogle = async (req, res) => {
   }
 };
 
-export const changePassword = async (req, res) => {
+// Gửi OTP để reset mật khẩu
+export const forgotPassword = async (req, res) => {
   try {
-    const { error } = changePasswordSchema.validate(req.body, {
-      abortEarly: false,
-      allowUnknown: true,
-    });
-
+    // Validate request body
+    const { error } = forgotPasswordSchema.validate(req.body);
     if (error) {
-      const errorMessages = error.details.map((detail) => detail.message);
       return res.status(400).json({
-        message: "Dữ liệu không hợp lệ",
-        errors: errorMessages,
+        success: false,
+        message: error.details[0].message,
       });
     }
-    const { oldPassword, newPassword } = req.body;
-    const userId = req.user._id; // Lấy từ middleware checkAuth
-
-    // Tìm user trong database
-    const user = await authModel.findById(userId);
+    const { email } = req.body;
+    // Kiểm tra email có tồn tại trong hệ thống
+    const user = await authModel.findOne({ email });
     if (!user) {
       return res.status(404).json({
-        message: "Người dùng không tồn tại",
+        success: false,
+        message: "Email không tồn tại trong hệ thống",
       });
     }
+    // Xóa OTP cũ nếu có
+    await otpModel.findOneAndDelete({ email });
+    // Tạo OTP mới
+    const OTP = otpGenerator.generate(6, {
+      digits: true,
+      lowerCaseAlphabets: false,
+      upperCaseAlphabets: false,
+      specialChars: false,
+    });
+    console.log(OTP);
+    // Mã hóa OTP
+    const hashOTP = await bcrypt.hash(OTP, 10);
+    // Lưu OTP vào database
+    await otpModel.create({
+      email,
+      otp: hashOTP,
+      dueDate: Date.now() + 5 * 60 * 1000, // OTP hết hạn sau 5 phút
+    });
 
-    // So sánh mật khẩu cũ
-    const isValidPassword = await bcrypt.compare(oldPassword, user.password);
-    if (!isValidPassword) {
-      return res.status(400).json({
-        message: "Mật khẩu cũ không đúng",
-      });
-    }
+    // Gửi email chứa OTP
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "binovaweb73@gmail.com",
+        pass: "kcjf jurr rjva hqfu",
+      },
+    });
 
-    // Hash và cập nhật mật khẩu mới
-    const hashPassword = await bcrypt.hash(newPassword, 10);
-    await authModel.findByIdAndUpdate(userId, {
-      password: hashPassword,
+    await transporter.sendMail({
+      from: "binovaweb73@gmail.com",
+      to: email,
+      subject: "Yêu cầu đặt lại mật khẩu",
+      text: `Mã xác thực để đặt lại mật khẩu của bạn là: ${OTP}. Mã này sẽ hết hạn sau 5 phút.`,
     });
 
     return res.status(200).json({
-      message: "Đổi mật khẩu thành công",
+      success: true,
+      message: "Mã xác thực đã được gửi đến email của bạn",
     });
   } catch (error) {
+    console.error("Forgot Password Error:", error);
     return res.status(500).json({
-      message: "Đã có lỗi xảy ra",
+      success: false,
+      message: "Có lỗi xảy ra khi gửi mã xác thực",
+      error: error.message,
+    });
+  }
+};
+
+// Xác thực OTP và đặt lại mật khẩu
+export const resetPassword = async (req, res) => {
+  try {
+    const { error } = resetPasswordSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message,
+      });
+    }
+    const { email, otp, newPassword } = req.body;
+    const otpRecord = await otpModel.findOne({ email });
+    if (!otpRecord) {
+      return res.status(400).json({
+        success: false,
+        message: "Không tìm thấy mã xác thực cho email này",
+      });
+    }
+    if (Date.now() > otpRecord.dueDate) {
+      await otpModel.deleteOne({ email });
+      return res.status(400).json({
+        success: false,
+        message: "Mã xác thực đã hết hạn",
+      });
+    }
+    const isValidOTP = await bcrypt.compare(otp, otpRecord.otp);
+    if (!isValidOTP) {
+      return res.status(400).json({
+        success: false,
+        message: "Mã xác thực không đúng",
+      });
+    }
+    const user = await authModel.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+    await otpModel.deleteOne({ email });
+    return res.status(200).json({
+      success: true,
+      message: "Đặt lại mật khẩu thành công",
+    });
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Có lỗi xảy ra khi đặt lại mật khẩu",
       error: error.message,
     });
   }
