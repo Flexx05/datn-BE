@@ -53,7 +53,27 @@ export const createVoucher = async (req, res) => {
 //Lấy tất cả voucher
 export const getAllVoucher = async (req, res) => {
   try {
-    const listVouchers = await Voucher.find();
+    const { code, status, voucherType } = req.query;
+    let query = {};
+    // Tìm kiếm theo code nếu có
+    if (code) {
+      query.code = { $regex: code, $options: "i" };
+    }
+    // Lọc theo status nếu có
+    if (status) {
+      const allowedStatuses = ["active", "inactive", "expired"];
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({
+          message: "Trạng thái không hợp lệ. Chỉ chấp nhận: active, inactive, expired",
+        });
+      }
+      query.voucherStatus = status;
+    }
+    //Tìm kiếm voucherType nếu có
+    if(voucherType){
+      query.voucherType = { $regex: voucherType, $options: "i" };
+    }
+    const listVouchers = await Voucher.find(query);
     res.status(200).json({
       message: "Lấy danh sách voucher thành công",
       data: listVouchers,
@@ -82,71 +102,6 @@ export const getByIdVoucher = async (req, res) => {
   } catch (error) {
     res.status(400).json({
       message: "Lỗi khi lấy voucher",
-      error: error.message,
-    });
-  }
-};
-
-//Tìm kiếm Voucher
-export const searchVoucherByCode = async (req, res) => {
-  try {
-    const { code } = req.query;
-
-    if (!code) {
-      return res.status(400).json({
-        message: "Vui lòng cung cấp mã voucher để tìm kiếm",
-      });
-    }
-    const vouchers = await Voucher.find({
-      code: { $regex: code, $options: "i" }, // tìm gần đúng, không phân biệt hoa thường
-    });
-
-    if (vouchers.length === 0) {
-      return res.status(404).json({
-        message: "Không tìm thấy voucher nào với mã phù hợp",
-      });
-    }
-
-    res.status(200).json({
-      message: "Tìm kiếm voucher theo mã thành công",
-      data: vouchers,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Tìm kiếm thất bại",
-      error: error.message,
-    });
-  }
-};
-
-//Lọc theo trạng thái
-export const filterVouchersByStatus = async (req, res) => {
-  try {
-    const { status } = req.query;
-
-    if (!status) {
-      return res.status(400).json({
-        message: "Vui lòng cung cấp trạng thái để lọc (active, inactive, expired)",
-      });
-    }
-
-    // Chỉ cho phép lọc theo 3 trạng thái hợp lệ
-    const allowedStatuses = ["active", "inactive", "expired"];
-    if (!allowedStatuses.includes(status)) {
-      return res.status(400).json({
-        message: "Trạng thái không hợp lệ. Chỉ chấp nhận: active, inactive, expired",
-      });
-    }
-
-    const vouchers = await Voucher.find({ voucherStatus: status });
-
-    res.status(200).json({
-      message: `Lọc voucher theo trạng thái '${status}' thành công`,
-      data: vouchers,
-    });
-  } catch (error) {
-    res.status(500).json({
-      message: "Lọc voucher thất bại",
       error: error.message,
     });
   }
