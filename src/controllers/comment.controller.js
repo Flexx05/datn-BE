@@ -98,6 +98,30 @@ export const getAllComment = async (req, res) => {
   }
 };
 
+export const getCommentById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Kiểm tra id có tồn tại không
+    if (!id || id.trim() === '') {
+      return res.status(400).json({ message: "ID bình luận không được để trống." });
+    }
+
+    const comment = await Comment.findById(id)
+      .populate("productId", "name")
+      .populate("userId", "fullName email");
+
+    if (!comment) {
+      return res.status(404).json({ message: "Không tìm thấy bình luận." });
+    }
+
+    return res.status(200).json(comment);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+
 // Thêm bình luận, đánh giá cho sản phẩm(Chỉ cho phép người dùng đã mua hàng và đăng nhập mới có thể bình luận)
 export const addComment = async (req, res) => {
   try {
