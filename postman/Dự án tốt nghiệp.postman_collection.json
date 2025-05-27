@@ -152,8 +152,12 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/attribute",
-              "host": ["{{baseUrl}}"],
-              "path": ["attribute"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attribute"
+              ]
             }
           }
         },
@@ -163,9 +167,19 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/attribute/search?name_like=Giá trị",
-              "host": ["{{baseUrl}}"],
-              "path": ["attribute", "search"],
-              "query": [{ "key": "name_like", "value": "Giá trị" }]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attribute",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "name_like",
+                  "value": "Giá trị"
+                }
+              ]
             }
           }
         },
@@ -175,8 +189,14 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/attribute/slug/ten-slug",
-              "host": ["{{baseUrl}}"],
-              "path": ["attribute", "slug", "ten-slug"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attribute",
+                "slug",
+                "ten-slug"
+              ]
             }
           }
         },
@@ -186,8 +206,14 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/attribute/id/{{id}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["attribute", "id", "{{id}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attribute",
+                "id",
+                "{{id}}"
+              ]
             }
           }
         },
@@ -208,8 +234,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/attribute/add",
-              "host": ["{{baseUrl}}"],
-              "path": ["attribute", "add"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attribute",
+                "add"
+              ]
             }
           }
         },
@@ -230,8 +261,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/attribute/edit/{{id}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["attribute", "edit", "{{id}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attribute",
+                "edit",
+                "{{id}}"
+              ]
             }
           }
         },
@@ -241,8 +278,354 @@
             "method": "DELETE",
             "url": {
               "raw": "{{baseUrl}}/attribute/delete/{{id}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["attribute", "delete", "{{id}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attribute",
+                "delete",
+                "{{id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Đăng ký",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Nguyen Van A\",\n  \"email\": \"example@email.com\",\n  \"password\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/register",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "register"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Xác thực OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"example@email.com\",\n  \"otp\": \"123456\",\n  \"password\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/verify-otp",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "verify-otp"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Đăng nhập",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"example@email.com\",\n  \"password\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/login",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Đăng nhập Google",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"google@email.com\",\n  \"password\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/loginGoogle",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "loginGoogle"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Category",
+      "item": [
+        {
+          "name": "[CATEGORY] Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Áo sơ mi\", \"description\": \"Danh mục áo sơ mi\", \"categorySort\": 1}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/categories/create",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "create"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[CATEGORY] Get All Categories",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/categories/get-all",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "get-all"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[CATEGORY] Get Category By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/categories/get-by-id/:id",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "get-by-id",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[CATEGORY] Get Category By Slug",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/categories/show/:slug",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "show",
+                ":slug"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[CATEGORY] Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Áo sơ mi cập nhật\", \"description\": \"Mô tả cập nhật\", \"categorySort\": 2}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/categories/update/:id",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "update",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[CATEGORY] Delete Category",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/categories/delete/:id",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "delete",
+                ":id"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SubCategory",
+      "item": [
+        {
+          "name": "[SUBCATEGORY] Create SubCategory",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Áo sơ mi tay ngắn\", \"description\": \"Subcategory cho áo sơ mi\", \"categorySort\": 1}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/categories/create-subcategory/:parentId",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "create-subcategory",
+                ":parentId"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[SUBCATEGORY] Get All SubCategories by Parent ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/categories/get-all-subcategory/:parentId",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "get-all-subcategory",
+                ":parentId"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[SUBCATEGORY] Get SubCategory By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/categories/get-subcategory-by-id/:id",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "get-subcategory-by-id",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[SUBCATEGORY] Get SubCategory By Slug",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/categories/show-subcategory/:slug",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "show-subcategory",
+                ":slug"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[SUBCATEGORY] Update SubCategory",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Sub cập nhật\", \"description\": \"Mô tả mới\", \"categorySort\": 2}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/categories/update-subcategory/:id",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "update-subcategory",
+                ":id"
+              ]
+            }
+          }
+        },
+        {
+          "name": "[SUBCATEGORY] Delete SubCategory",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/categories/delete-subcategory/:id",
+              "host": [
+                "{{base_url}}/api/categories"
+              ],
+              "path": [
+                "delete-subcategory",
+                ":id"
+              ]
             }
           }
         }

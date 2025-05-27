@@ -7,10 +7,10 @@ export const getAllUsers = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const search = req.query.search || "";
-    const role = req.query.role || "";
     const isActive = req.query.isActive;
 
-    const filter = {};
+    // Luôn set role là "user"
+    const filter = { role: "user" };
 
     if (search) {
       filter.$or = [
@@ -18,10 +18,6 @@ export const getAllUsers = async (req, res) => {
         { email: { $regex: search, $options: "i" } },
         { phone: { $regex: search, $options: "i" } },
       ];
-    }
-
-    if (role) {
-      filter.role = role;
     }
 
     if (isActive !== undefined) {

@@ -3,8 +3,8 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-
 import authRouter from "./routers/auth.router";
+import categoryRouter from "./routers/category.router";
 import cartRouter from "./routers/cart.router";
 import brandRouter from "./routers/brand.router";
 import attributeRouter from "./routers/attribute.router";
@@ -17,23 +17,27 @@ const app = express();
 
 dotenv.config();
 
-app.use(cors());
+const corsOptions = {
+  origin: (origin, callback) => {
+    callback(null, origin);
+  },
+  credentials: true,
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-
 mongoose.connect(`mongodb://127.0.0.1:27017/${process.env.DB_URL}`);
-
+console.log("Connected to MongoDB");
 //route
 app.use("/api", attributeRouter);
 app.use("/api", productRouter);
 app.use("/api", authRouter);
+app.use("/api", categoryRouter );
 app.use("/api", cartRouter);
-app.use("/api/brand", brandRouter);
+app.use("/api", brandRouter);
 app.use("/api", userRouter);
 app.use("/api", voucherRouter);
 app.use("/api", paymentRouter);
 
 export const viteNodeApp = app;
-
-
