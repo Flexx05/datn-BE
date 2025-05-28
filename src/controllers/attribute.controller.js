@@ -80,7 +80,7 @@ export const createAttribute = async (req, res) => {
     }
 
     // Kiểm tra trùng tên value (không phân biệt hoa thường, loại bỏ khoảng trắng)
-    const normalized = value.value.map((v) => v.trim().toLowerCase());
+    const normalized = value.values.map((v) => v.trim().toLowerCase());
     const hasDuplicate = normalized.some((v, i) => normalized.indexOf(v) !== i);
     if (hasDuplicate) {
       return res
@@ -89,7 +89,7 @@ export const createAttribute = async (req, res) => {
     }
 
     const attributes = await attributeModel.find();
-    const values = value.value.map((val) => ({ name: val }));
+    const values = value.values.map((val) => val);
     const attribute = await attributeModel.create({
       ...value,
       slug: generateSlug(
@@ -117,7 +117,7 @@ export const updateAttribute = async (req, res) => {
     }
 
     // Kiểm tra trùng tên value (không phân biệt hoa thường, loại bỏ khoảng trắng)
-    const normalized = value.value.map((v) => v.trim().toLowerCase());
+    const normalized = value.values.map((v) => v.trim().toLowerCase());
     const hasDuplicate = normalized.some((v, i) => normalized.indexOf(v) !== i);
     if (hasDuplicate) {
       return res
@@ -126,7 +126,7 @@ export const updateAttribute = async (req, res) => {
     }
 
     const attributes = await attributeModel.find();
-    const values = value.value.map((val) => ({ name: val }));
+    const values = value.values.map((val) => val);
     const attribute = await attributeModel.findByIdAndUpdate(
       id,
       {
