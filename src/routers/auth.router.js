@@ -5,7 +5,7 @@ import {
   register,
   verifyOtp,
   forgotPassword,
-  resetPassword
+  resetPassword,
 } from "../controllers/auth.controller";
 
 const router = Router();

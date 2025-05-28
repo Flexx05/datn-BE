@@ -1,9 +1,6 @@
 import attributeModel from "../models/attribute.model";
 import { generateSlug } from "../utils/createSlug";
-import {
-  attributeCreateSchema,
-  attributeUpdateSchema,
-} from "../validations/attribute.validation";
+import { attributeSchema } from "../validations/attribute.validation";
 
 export const getAllAttribute = async (req, res) => {
   try {
@@ -30,6 +27,7 @@ export const searchAttribute = async (req, res) => {
     return res.status(400).json({ message: error.message });
   }
 };
+
 
 export const getAttributeBySlug = async (req, res) => {
   try {
@@ -73,7 +71,7 @@ export const deleteAttribute = async (req, res) => {
 
 export const createAttribute = async (req, res) => {
   try {
-    const { error, value } = attributeCreateSchema.validate(req.body, {
+    const { error, value } = attributeSchema.validate(req.body, {
       abortEarly: false,
       convert: false,
     });
@@ -83,21 +81,23 @@ export const createAttribute = async (req, res) => {
     }
 
     // Kiểm tra trùng tên value (không phân biệt hoa thường, loại bỏ khoảng trắng)
-    const normalized = value.values.map((v) => v.trim().toLowerCase());
+    const normalized = value.value.map((v) => v.trim().toLowerCase());
     const hasDuplicate = normalized.some((v, i) => normalized.indexOf(v) !== i);
     if (hasDuplicate) {
       return res
         .status(400)
-        .json({ message: "Các giá trị không được trùng tên." });
+        .json({ message: "Các giá trị value không được trùng tên." });
     }
 
     const attributes = await attributeModel.find();
+    const values = value.value.map((val) => ({ name: val }));
     const attribute = await attributeModel.create({
       ...value,
       slug: generateSlug(
         value.name,
         attributes.map((attr) => attr.slug)
       ),
+      values,
     });
     return res.status(200).json(attribute);
   } catch (error) {
@@ -108,7 +108,7 @@ export const createAttribute = async (req, res) => {
 export const updateAttribute = async (req, res) => {
   try {
     const { id } = req.params;
-    const { error, value } = attributeUpdateSchema.validate(req.body, {
+    const { error, value } = attributeSchema.validate(req.body, {
       abortEarly: false,
       convert: false,
     });
@@ -118,7 +118,7 @@ export const updateAttribute = async (req, res) => {
     }
 
     // Kiểm tra trùng tên value (không phân biệt hoa thường, loại bỏ khoảng trắng)
-    const normalized = value.values.map((v) => v.trim().toLowerCase());
+    const normalized = value.value.map((v) => v.trim().toLowerCase());
     const hasDuplicate = normalized.some((v, i) => normalized.indexOf(v) !== i);
     if (hasDuplicate) {
       return res
@@ -127,6 +127,7 @@ export const updateAttribute = async (req, res) => {
     }
 
     const attributes = await attributeModel.find();
+    const values = value.value.map((val) => ({ name: val }));
     const attribute = await attributeModel.findByIdAndUpdate(
       id,
       {
@@ -135,6 +136,7 @@ export const updateAttribute = async (req, res) => {
           value.name,
           attributes.filter((attr) => attr._id != id).map((attr) => attr.slug)
         ),
+        values,
       },
       {
         new: true,

@@ -77,32 +77,21 @@ const createVoucherSchema = Joi.object({
 
 // Validate cập nhật voucher
 const updateVoucherSchema = Joi.object({
-  voucherType: Joi.string().valid("product", "shipping").required(),
-  link: Joi.string().uri().required(),
+  voucherType: Joi.string().valid("product", "shipping").optional(),
+  link: Joi.string().uri().optional(),
   code:Joi.string().optional(),
-  description: Joi.string().required(),
-  discountType: Joi.string().valid("fixed", "percent").required(),
-  discountValue: Joi.number().min(0).required(),
-  minOrderValues: Joi.number().min(0).required(),
-  maxDiscount: Joi.number().min(0).required(),
-  quantity: Joi.number().min(1).required(),
+  description: Joi.string().optional(),
+  discountType: Joi.string().valid("fixed", "percent").optional(),
+  discountValue: Joi.number().min(0).optional(),
+  minOrderValues: Joi.number().min(0).optional(),
+  maxDiscount: Joi.number().min(0).optional(),
+  quantity: Joi.number().min(1).optional(),
   used: Joi.number().optional(),
-  startDate: Joi.date().required(),
+  startDate: Joi.date().optional(),
   endDate: Joi.date()
     .greater(Joi.ref("startDate"))
-    .required(),
-  voucherStatus: Joi.string().valid("active", "inactive", "expired").required(),
+    .optional(),
+  voucherStatus: Joi.string().valid("active", "inactive", "expired").optional(),
 });
 
-// Validate cập nhật trạng thái voucher
-const updateVoucherStatus= Joi.object({
-  voucherStatus: Joi.string()
-    .valid("active", "inactive", "expired")
-    .required()
-    .messages({
-      "any.required": "Trạng thái là bắt buộc",
-      "any.only": "Trạng thái không hợp lệ. Chỉ chấp nhận: active, inactive, expired.",
-    }),
-});
-
-export { createVoucherSchema, updateVoucherSchema, updateVoucherStatus};
+export { createVoucherSchema, updateVoucherSchema};
