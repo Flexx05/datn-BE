@@ -11,7 +11,6 @@ import attributeRouter from "./routers/attribute.router";
 import productRouter from "./routers/product.router";
 import userRouter from "./routers/admin.user.router";
 import voucherRouter from "./routers/voucher.router";
-import staffRrouter from "./routers/staff.router";
 import paymentRouter from "./routers/payment.router";
 
 const app = express();
@@ -28,10 +27,8 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-mongoose.connect(
-  `mongodb+srv://${process.env.DB_USERNAME}/${process.env.DB_URL}?retryWrites=true&w=majority&appName=DATN-DB`
-);
-
+mongoose.connect(`mongodb://127.0.0.1:27017/${process.env.DB_URL}`);
+console.log("Connected to MongoDB");
 //route
 app.use("/api", attributeRouter);
 app.use("/api", productRouter);
@@ -41,7 +38,6 @@ app.use("/api", cartRouter);
 app.use("/api", brandRouter);
 app.use("/api", userRouter);
 app.use("/api", voucherRouter);
-app.use("/api", staffRrouter);
 app.use("/api", paymentRouter);
 
 export const viteNodeApp = app;
