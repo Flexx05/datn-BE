@@ -16,11 +16,11 @@ export const getAllAttribute = async (req, res) => {
 
 export const searchAttribute = async (req, res) => {
   try {
-    const { name_like } = req.query;
+    const { name } = req.query;
 
     const query = {};
 
-    if (typeof name_like === "string" && name_like.trim() !== "") {
+    if (typeof name_like === "string" && name.trim() !== "") {
       query.name = { $regex: name_like, $options: "i" };
     }
 
