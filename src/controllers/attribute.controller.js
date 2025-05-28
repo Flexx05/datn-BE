@@ -17,8 +17,8 @@ export const searchAttribute = async (req, res) => {
 
     const query = {};
 
-    if (typeof name_like === "string" && name.trim() !== "") {
-      query.name = { $regex: name_like, $options: "i" };
+    if (typeof name === "string" && name.trim() !== "") {
+      query.name = { $regex: name, $options: "i" };
     }
 
     const attributes = await attributeModel.find(query);
@@ -27,7 +27,6 @@ export const searchAttribute = async (req, res) => {
     return res.status(400).json({ message: error.message });
   }
 };
-
 
 export const getAttributeBySlug = async (req, res) => {
   try {
