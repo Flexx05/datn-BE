@@ -3,7 +3,6 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
-
 import authRouter from "./routers/auth.router";
 import categoryRouter from "./routers/category.router";
 import cartRouter from "./routers/cart.router";
@@ -17,10 +16,15 @@ const app = express();
 
 dotenv.config();
 
-app.use(cors());
+const corsOptions = {
+  origin: (origin, callback) => {
+    callback(null, origin);
+  },
+  credentials: true,
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
-
 
 mongoose.connect(
   `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@datn-db.nx9ha3d.mongodb.net/${process.env.DB_URL}?retryWrites=true&w=majority&appName=DATN-DB`

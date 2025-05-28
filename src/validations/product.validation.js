@@ -8,7 +8,7 @@ const productAttributeSchema = Joi.object({
 
 const variationSchema = Joi.object({
   _id: Joi.string(),
-  attributes: Joi.array().items(productAttributeSchema).min(1),
+  attribute: Joi.array().items(productAttributeSchema).min(1),
   regularPrice: Joi.number().required(),
   salePrice: Joi.number(),
   stock: Joi.number().required(),
@@ -21,9 +21,7 @@ export const productSchema = Joi.object({
   description: Joi.string().trim(),
   image: Joi.array().items(Joi.string()),
   brandId: Joi.string().required(),
-  brandName: Joi.string(),
   categoryId: Joi.string().required(),
-  categoryName: Joi.string(),
   attributes: Joi.array().items(productAttributeSchema),
   variation: Joi.array().items(variationSchema),
 });
