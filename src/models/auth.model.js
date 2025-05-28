@@ -26,7 +26,7 @@ const authSchema = new Schema(
     },
     role: {
       type: String,
-      enum: ["staff","admin", "user"],
+      enum: ["staff", "admin", "user"],
       default: "user",
     },
     activeStatus: {
@@ -36,7 +36,6 @@ const authSchema = new Schema(
       type: Boolean,
       default: true,
     },
-
   },
   {
     timestamps: true,
