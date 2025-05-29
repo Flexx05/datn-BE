@@ -30,4 +30,12 @@ const loginGoogleSchema = Joi.object({
   password: Joi.string().min(6).required(),
 });
 
-export { registerSchema, verifyOtpSchema, loginSchema, loginGoogleSchema };
+
+const forgotPasswordSchema = Joi.object({
+  email: Joi.string().email().required().messages({
+    "string.email": "Email không hợp lệ",
+    "any.required": "Email là bắt buộc"
+  })
+});
+
+export { registerSchema, verifyOtpSchema, loginSchema, loginGoogleSchema, forgotPasswordSchema };
