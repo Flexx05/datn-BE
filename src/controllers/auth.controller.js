@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import authModel from "../models/auth.model";
 import otpModel from "../models/otp.model";
-import { loginGoogleSchema,loginSchema, registerSchema, verifyOtpSchema, forgotPasswordSchema } from "../validations/auth.validation";
+import { loginGoogleSchema,loginSchema, registerSchema, verifyOtpSchema, forgotPasswordSchema, resetPasswordSchema } from "../validations/auth.validation";
 
 export const register = async (req, res) => {
   try {
