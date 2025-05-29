@@ -19,6 +19,7 @@ const createSubCategorySchema = Joi.object({
   name: Joi.string().min(3).max(30).required(),
   description: Joi.string(),
   categorySort: Joi.number(),
+    parentId: Joi.string().required(),
 });
 
 const updateSubCategorySchema = Joi.object({
