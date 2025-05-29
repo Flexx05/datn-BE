@@ -1,5 +1,4 @@
 import Comment from "../models/comment.model";
-import Auth from "../models/auth.model";
 import Product from "../models/product.model";
 import Order from "../models/fake.order";
 import { sendMail } from "../utils/sendMail";
@@ -7,7 +6,7 @@ import { sendMail } from "../utils/sendMail";
 // Hiển thị danh sách bình luận (có thể lọc theo người dùng,sản phẩm, trạng thái, thời gian )
 export const getAllComment = async (req, res) => {
   try {
-    const { status, productId, userId, startDate, endDate } = req.query;
+    const { status, productId, userId, startDate, endDate, userName, productName, rating } = req.query;
     // Khởi tạo filter gắn vào đối tượng rỗng
     const filter = {};
     
@@ -26,6 +25,11 @@ export const getAllComment = async (req, res) => {
       }
       filter.userId = userId;
     }
+    
+    // Lọc số sao đánh giá
+    if(rating !== undefined && rating !== "") {
+        filter.rating = Number(rating);
+    } 
     
    
     // Kiểm tra status xem có bị thay đổi không đúng định dạng là "hidden" và "visible" không
@@ -78,9 +82,23 @@ export const getAllComment = async (req, res) => {
       filter.createdAt = { $gte: start, $lte: end };
       }
 
-     const comment = await Comment.find(filter).populate("productId", "name").populate("userId", "fullName email");
+     let comment = await Comment.find(filter).populate("productId", "name").populate("userId", "fullName email");
+    
+      // Lọc theo tên người dùng nếu có
+    if (userName) {
+      comment = comment.filter(c =>
+        c.userId?.fullName?.toLowerCase().includes(userName.toLowerCase())
+      );
+    }
 
-    const hasFilter = status || productId || userId || (startDate && endDate);
+    // Lọc theo tên sản phẩm nếu có
+    if (productName) {
+      comment = comment.filter(c =>
+        c.productId?.name?.toLowerCase().includes(productName.toLowerCase())
+      );
+    }
+
+    const hasFilter = status || productId || userId || (startDate && endDate) || userName || productName;
 
       if (comment.length === 0) {
         if (hasFilter) {
@@ -175,9 +193,11 @@ export const addComment = async (req, res) => {
 
 
        // Lấy tất cả rating hiện tại của sản phẩm
+
        const allRatings = await Comment.find({ productId, status: "visible" }).select("rating");
+       console.log(allRatings);
        const totalRatings = allRatings.length;
-       const sumRatings = allRatings.reduce((sum, item) => sum + item.rating, 0);
+       const sumRatings = allRatings.reduce((sum, item) => sum + Number(item.rating), 0);
        const avgRating = sumRatings / totalRatings;
    
        // Tính ratingCount theo từng mức sao
@@ -235,6 +255,28 @@ export const updateCommentStatus = async (req, res) => {
     if (!updatedComment) {
       return res.status(404).json({ message: "Bình luận không tồn tại." });
     }
+    
+    // Cập nhập lại số sao trung bình mỗi lần duyệt bình luận
+    const productId = updatedComment.productId;
+    const allRatings = await Comment.find({ productId, status: "visible" }).select("rating");
+    const totalRatings = allRatings.length;
+    const sumRatings = allRatings.reduce((sum, item) => sum + Number(item.rating), 0);
+    const avgRating = totalRatings > 0 ? sumRatings / totalRatings : 0;
+
+    // Tính ratingCount theo từng mức sao
+    const ratingCount = { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 };
+    allRatings.forEach(({ rating }) => {
+      ratingCount[rating] = (ratingCount[rating] || 0) + 1;
+    });
+
+    await Product.findByIdAndUpdate(
+      productId,
+      {
+        averageRating: avgRating,
+        reviewCount: totalRatings,
+        ratingCount: ratingCount
+      }
+    );
 
     return res.status(200).json({
       message: `Cập nhật trạng thái bình luận thành công.`,
@@ -323,10 +365,13 @@ export const getCommentsForClient = async (req, res) => {
       status: "visible" 
     })
     .sort({ createdAt: -1 }).populate({
-      path: "userId",         // trường tham chiếu trong Comment
-      select: "fullname email"  // chỉ lấy những trường cần thiết của user
+      path: "userId  productId",         // trường tham chiếu trong Comment
+      select: "fullName email name"  // chỉ lấy những trường cần thiết của user
     }); // Mới nhất trước
-
+    
+    if (comments.length === 0) {
+      return res.status(404).json({ message: "Không có bình luận nào cho sản phẩm này." });
+    }
     return res.status(200).json({
       averageRating: product.averageRating || 0,
       totalComments: comments.length,
