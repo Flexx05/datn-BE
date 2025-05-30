@@ -3,8 +3,7 @@ import { model, Schema } from "mongoose";
 const authSchema = new Schema(
   {
     fullName: {
-      type: String,
-      required: [true, "Full name is required"],
+      type: String
     },
     email: {
       type: String,

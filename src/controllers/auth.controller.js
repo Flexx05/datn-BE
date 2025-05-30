@@ -1,18 +1,53 @@
-import { OAuth2Client } from "google-auth-library";
-import otpGenerator from "otp-generator";
 import bcrypt from "bcryptjs";
+import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
+import otpGenerator from "otp-generator";
 import authModel from "../models/auth.model";
 import otpModel from "../models/otp.model";
 import {
-  loginGoogleSchema,
+  forgotPasswordSchema,
   loginSchema,
   registerSchema,
-  verifyOtpSchema,
-  forgotPasswordSchema,
   resetPasswordSchema,
+  verifyOtpSchema,
 } from "../validations/auth.validation";
+
+const sendEmail = async (email) => {
+  await otpModel.findOneAndDelete({ email });
+
+  const OTP = otpGenerator.generate(6, {
+    digits: true,
+    lowerCaseAlphabets: false,
+    upperCaseAlphabets: false,
+    specialChars: false,
+  });
+  console.log(OTP);
+
+  const hashOTP = await bcrypt.hash(OTP, 10);
+
+  await otpModel.create({
+    email,
+    otp: hashOTP,
+    dueDate: Date.now() + 5 * 60 * 1000,
+  });
+
+  //sendEmail
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: "binovaweb73@gmail.com",
+      pass: "kcjf jurr rjva hqfu",
+    },
+  });
+
+  await transporter.sendMail({
+    from: "Bạn hãy kiểm tra email của mình để xác thực tài khoản",
+    to: email,
+    subject: "Xác thực tài khoản",
+    text: `Mã xác thực của bạn là ${OTP}`,
+  });
+};
 
 export const register = async (req, res) => {
   try {
@@ -24,46 +59,21 @@ export const register = async (req, res) => {
       const errors = error.details.map((err) => err.message);
       return res.status(400).json({ message: errors });
     }
-    const { email, password } = req.body;
-    const user = await authModel.findOne({ email });
-    if (user) {
+
+    const { email } = value;
+    const userExist = await authModel.findOne({ email });
+    if (userExist) {
       return res.status(400).json({ error: "User already exists" });
     }
-    await otpModel.findOneAndDelete({ email });
-
-    const OTP = otpGenerator.generate(6, {
-      digits: true,
-      lowerCaseAlphabets: false,
-      upperCaseAlphabets: false,
-      specialChars: false,
-    });
-    console.log(OTP);
-
-    const hashOTP = await bcrypt.hash(OTP, 10);
-
-    await otpModel.create({
-      email,
-      otp: hashOTP,
-      dueDate: Date.now() + 5 * 60 * 1000,
+    sendEmail(email);
+    const hashPassword = await bcrypt.hash(value.password, 10);
+    const user = await authModel.create({
+      ...value,
+      password: hashPassword,
+      isActive: false,
     });
 
-    //sendEmail
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: "binovaweb73@gmail.com",
-        pass: "kcjf jurr rjva hqfu",
-      },
-    });
-
-    await transporter.sendMail({
-      from: "Bạn hãy kiểm tra email của mình để xác thực tài khoản",
-      to: email,
-      subject: "Xác thực tài khoản",
-      text: `Mã xác thực của bạn là ${OTP}`,
-    });
-
-    return res.status(200).json({ message: "OTP đã được gửi đi" });
+    return res.status(200).json({ message: "OTP đã được gửi đi", user });
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
@@ -80,7 +90,7 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ message: errors });
     }
 
-    const { fullName, email, otp, password } = value;
+    const { email, otp } = value;
 
     const record = await otpModel.findOne({ email });
 
@@ -92,17 +102,15 @@ export const verifyOtp = async (req, res) => {
     if (!isValid) {
       return res.status(400).json({ error: "Invalid OTP" });
     }
-    const hashPassword = await bcrypt.hash(password, 10);
-    const newUser = await authModel.create({
-      email,
-      password: hashPassword,
-      fullName,
-      // phone,
-      // address,
-      // avatar,
-      // role,
-      // activeStatus,
-    });
+    const newUser = await authModel.findOneAndUpdate(
+      { email },
+      { isActive: true },
+      { new: true }
+    );
+
+    if (!newUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
     // Xoá OTP đã dùng
     await otpModel.deleteOne({ email });
@@ -117,13 +125,15 @@ export const verifyOtp = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email) {
-      return res.status(400).json({ error: "Email không được để trống" });
+    const { error, value } = loginSchema.validate(req.body, {
+      abortEarly: false,
+      convert: false,
+    });
+    if (error) {
+      const errors = error.details.map((err) => err.message);
+      return res.status(400).json({ message: errors });
     }
-    if (!password) {
-      return res.status(400).json({ error: "Mật khẩu không được để trống" });
-    }
+    const { email, password } = value;
     const user = await authModel.findOne({ email });
     if (!user) {
       return res.status(400).json({ error: "Email không tồn tại" });
@@ -132,9 +142,16 @@ export const login = async (req, res) => {
     if (!isValid) {
       return res.status(400).json({ error: "Sai mật khẩu" });
     }
+    if (!user.isActive || user.isActive === false) {
+      sendEmail(email);
+      return res
+        .status(400)
+        .json({ error: "OTP đã được gửi! Vui lòng kiểm tra email" });
+    }
+
     const accessToken = jwt.sign(
       { id: user._id },
-      process.env.JWT_SECRET_KEY || "secret",
+      process.env.JWT_SECRET_KEY || "binova",
       {
         expiresIn: "1d",
       }
@@ -148,15 +165,6 @@ export const login = async (req, res) => {
 };
 
 export const loginGoogle = async (req, res) => {
-  const { error, value } = loginGoogleSchema.validate(req.body, {
-    abortEarly: false,
-    convert: false,
-  });
-  if (error) {
-    const errors = error.details.map((err) => err.message);
-    return res.status(400).json({ message: errors });
-  }
-
   const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
   const { token } = req.body;
   try {
