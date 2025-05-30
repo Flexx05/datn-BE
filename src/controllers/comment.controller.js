@@ -195,7 +195,6 @@ export const addComment = async (req, res) => {
        // Lấy tất cả rating hiện tại của sản phẩm
 
        const allRatings = await Comment.find({ productId, status: "visible" }).select("rating");
-       console.log(allRatings);
        const totalRatings = allRatings.length;
        const sumRatings = allRatings.reduce((sum, item) => sum + Number(item.rating), 0);
        const avgRating = sumRatings / totalRatings;

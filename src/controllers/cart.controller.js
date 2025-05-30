@@ -1,6 +1,6 @@
 // src/controllers/cart.controller.js
 import { addToCartSchema } from "../validations/cart.validation"; // Import validation schema
-import { Product } from "../product.fake";
+// import { Product } from "../product.fake";
 
 // API thêm sản phẩm vào giỏ hàng
 export const addToCart = (req, res) => {
