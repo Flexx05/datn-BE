@@ -10,6 +10,18 @@ export const getAllComment = async (req, res) => {
     // Khởi tạo filter gắn vào đối tượng rỗng
     const filter = {};
     
+    // Hàm chuẩn hóa chuỗi để so sánh không phân biệt hoa thường và bỏ dấu tiếng Việt
+    function normalizeString(str) {
+      return str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // bỏ dấu tiếng Việt
+        .replace(/đ/g, "d").replace(/Đ/g, "D")
+        .replace(/\s+/g, " ") // nhiều dấu cách thành 1 dấu cách
+        .trim();
+    }
+
+    
     // Kiểm tra xem admin có bỏ trống id trên URL hoặc thay thế id bằng dấu cách hay không
     if (productId !== undefined) {
       if (productId.trim() === '') {
@@ -84,17 +96,21 @@ export const getAllComment = async (req, res) => {
 
      let comment = await Comment.find(filter).populate("productId", "name").populate("userId", "fullName email");
     
-      // Lọc theo tên người dùng nếu có
+     // Lọc theo tên người dùng nếu có
     if (userName) {
+      const normalizedUserName = normalizeString(userName);
       comment = comment.filter(c =>
-        c.userId?.fullName?.toLowerCase().includes(userName.toLowerCase())
+        c.userId?.fullName &&
+        normalizeString(c.userId.fullName).includes(normalizedUserName)
       );
     }
 
     // Lọc theo tên sản phẩm nếu có
     if (productName) {
+      const normalizedProductName = normalizeString(productName);
       comment = comment.filter(c =>
-        c.productId?.name?.toLowerCase().includes(productName.toLowerCase())
+        c.productId?.name &&
+        normalizeString(c.productId.name).includes(normalizedProductName)
       );
     }
 
