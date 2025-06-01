@@ -3,6 +3,7 @@ import Joi from "joi";
 const productAttributeSchema = Joi.object({
   attributeId: Joi.required(),
   attributeName: Joi.string(),
+  isColor: Joi.boolean(),
   values: Joi.array().items(Joi.string()).required(),
 });
 

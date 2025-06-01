@@ -4,6 +4,7 @@ import productModel from "../models/product.model";
 import { productSchema } from "../validations/product.validation";
 import { generateSlug } from "../utils/createSlug";
 import brandModel from "../models/brand.model";
+import categoryModel from "../models/category.model";
 
 export const getAllProduct = async (req, res) => {
   try {
@@ -160,13 +161,14 @@ export const createProductWithVariations = async (req, res) => {
       return res.status(400).json({ message: errors });
     }
 
+    let brandName = "";
+    let categoryName = "";
+
     const {
       name,
       image,
       brandId,
-      brandName,
       categoryId,
-      categoryName,
       description,
       attributes,
       variation,
@@ -220,6 +222,7 @@ export const createProductWithVariations = async (req, res) => {
       attributeId: attr.attributeId,
       attributeName: attrIdToName[attr.attributeId],
       values: attr.values,
+      isColor: attr.isColor,
     }));
 
     const listProduct = await productModel.find();

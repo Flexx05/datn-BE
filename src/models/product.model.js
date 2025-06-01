@@ -15,6 +15,9 @@ const productAttributeSchema = new Schema(
       type: [String],
       required: [true, "Giá trị thuộc tính bắt buộc nhập"],
     },
+    isColor: {
+      type: Boolean,
+    },
   },
   {
     timestamps: true,
