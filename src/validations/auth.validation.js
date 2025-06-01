@@ -15,7 +15,7 @@ const verifyOtpSchema = Joi.object({
   otp: Joi.string().min(6).max(6).required(),
 });
 
-const loginGoogleSchema = Joi.object({
+const loginSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
 });
@@ -52,7 +52,7 @@ const resetPasswordSchema = Joi.object({
 export {
   registerSchema,
   verifyOtpSchema,
-  loginGoogleSchema,
+  loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
 };
