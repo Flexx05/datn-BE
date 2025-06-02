@@ -148,7 +148,7 @@ export const login = async (req, res) => {
         .status(400)
         .json({ error: "OTP đã được gửi! Vui lòng kiểm tra email" });
     }
-
+    user.password = undefined; // Không trả về mật khẩu trong response
     const accessToken = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET_KEY || "binova",

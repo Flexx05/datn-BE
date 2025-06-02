@@ -22,6 +22,7 @@ const authSchema = new Schema(
     },
     avatar: {
       type: String,
+      default: null,
     },
     role: {
       type: String,
@@ -41,5 +42,6 @@ const authSchema = new Schema(
     versionKey: false,
   }
 );
+
 
 export default model("Auth", authSchema);
