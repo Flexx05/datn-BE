@@ -149,6 +149,9 @@ export const login = async (req, res) => {
         .json({ error: "OTP đã được gửi! Vui lòng kiểm tra email" });
     }
 
+    const userWithoutPassword = { ...user._doc };
+delete userWithoutPassword.password;
+
     const accessToken = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET_KEY || "binova",
@@ -158,7 +161,7 @@ export const login = async (req, res) => {
     );
     return res
       .status(200)
-      .json({ message: "Đăng nhập thành công", user, accessToken });
+      .json({ message: "Đăng nhập thành công", user: userWithoutPassword, accessToken });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
