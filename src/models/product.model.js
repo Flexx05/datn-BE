@@ -39,9 +39,11 @@ const variationSchema = new Schema(
     },
     saleFrom: {
       type: Date,
+      default: null,
     },
     saleTo: {
       type: Date,
+      default: null,
     },
     stock: {
       type: Number,
