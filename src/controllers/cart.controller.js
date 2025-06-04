@@ -359,3 +359,110 @@ export const updateCartQuantity = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
+
+
+// Hàm đồng bộ giỏ hàng từ cookie lên DB khi user đăng nhập
+export const syncCart = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: "Bạn chưa đăng nhập" });
+    }
+    // Lấy giỏ hàng từ cookie
+    let cookieCart = [];
+    if (req.cookies.cart) {
+      try {
+        cookieCart = JSON.parse(req.cookies.cart);
+      } catch {
+        cookieCart = [];
+      }
+    }
+    if (!cookieCart.length) {
+      return res.status(200).json({ message: "Không có dữ liệu cần đồng bộ" });
+    }
+    // Lấy giỏ hàng từ DB
+    let dbCart = await Cart.findOne({ userId: req.user._id });
+    if (!dbCart) {
+      dbCart = new Cart({ userId: req.user._id, items: [] });
+    }
+
+    // Danh sách sản phẩm bị bỏ qua khi đồng bộ
+    const skippedItems = [];
+
+    // Merge từng sản phẩm từ cookie vào DB
+    for (const cookieItem of cookieCart) {
+      // Kiểm tra sản phẩm và biến thể có còn tồn tại không
+      const product = await Product.findById(cookieItem.productId);
+      if (!product || !product.isActive) {
+        skippedItems.push({
+          ...cookieItem,
+          reason: "Sản phẩm không tồn tại hoặc đã bị ẩn"
+        });
+        continue;
+      }
+      const variantAttrs = Array.isArray(cookieItem.variantAttributes) ? cookieItem.variantAttributes : [];
+      const variant = product.variation.find(v =>
+        variantAttrs.every(attrReq => {
+          const attrInVariant = v.attributes.find(attrVar => attrVar.attributeName === attrReq.attributeName);
+          return attrInVariant && attrInVariant.values.includes(attrReq.value);
+        })
+      );
+      if (!variant || !variant.isActive) {
+        skippedItems.push({
+          ...cookieItem,
+          reason: "Biến thể không tồn tại"
+        });
+        continue;
+      }
+      if (variant.stock <= 0) {
+        skippedItems.push({
+          ...cookieItem,
+          reason: "Sản phẩm đã hết hàng"
+        });
+        continue;
+      }
+
+      // Kiểm tra đã có trong DB chưa
+      const index = dbCart.items.findIndex(item => {
+        if (item.productId.toString() !== cookieItem.productId) return false;
+        if (!Array.isArray(item.variantAttributes)) return false;
+        return variantAttrs.every(attrReq => {
+          const attrInCart = item.variantAttributes.find(attrCart => attrCart.attributeName === attrReq.attributeName);
+          return attrInCart && attrInCart.value === attrReq.value;
+        });
+      });
+      
+       // Nếu đã có thì cộng dồn số lượng, chưa có thì thêm mới
+      if (index !== -1) {
+        // Kiểm tra xem sản phẩm đồng bộ có vượt quá tồn kho không. Nếu vượt thì bỏ qua
+        const newQuantity = dbCart.items[index].quantity + cookieItem.quantity;
+        if (variant.stock < newQuantity) {
+          skippedItems.push({
+            ...cookieItem,
+            reason: "Tổng số lượng vượt quá tồn kho khi đồng bộ"
+          });
+          continue;
+        }
+        dbCart.items[index].quantity = newQuantity;
+      } else {
+        dbCart.items.push({
+          productId: cookieItem.productId,
+          variantAttributes: [...variantAttrs], 
+          quantity: cookieItem.quantity,
+        });
+      }
+    }
+
+    await dbCart.save();
+
+    // Xóa cookie giỏ hàng sau khi đồng bộ
+    res.clearCookie("cart");
+
+    return res.status(200).json({
+      message: "Đồng bộ giỏ hàng thành công",
+      cart: dbCart.items,
+      skippedItems // trả về danh sách sản phẩm không đồng bộ được
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};

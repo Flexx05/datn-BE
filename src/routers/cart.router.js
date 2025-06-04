@@ -1,7 +1,7 @@
 import {Router} from "express";
 import { addToCart, getCart, removeCart, syncCart, updateCartQuantity } from "../controllers/cart.controller";
 import { checkCartAuth } from "../middlewares/checkCart";
-
+import { verifyToken } from "../middlewares/checkAuth";
 
 const router = Router();
 
@@ -13,4 +13,6 @@ router.get("/cart", checkCartAuth ,getCart);
 router.post("/cart/remove", checkCartAuth ,removeCart);
 // Cập nhập số lượng sản phẩm trong giỏ hàng
 router.patch("/cart/update",checkCartAuth ,updateCartQuantity);
+// Đồng bộ giỏ hàng từ cookie vào cơ sở dữ liệu
+router.post("/cart/sync", verifyToken, syncCart)
 export default router;
