@@ -3,8 +3,7 @@ import { model, Schema } from "mongoose";
 const authSchema = new Schema(
   {
     fullName: {
-      type: String,
-      required: [true, "Full name is required"],
+      type: String
     },
     email: {
       type: String,
@@ -23,6 +22,7 @@ const authSchema = new Schema(
     },
     avatar: {
       type: String,
+      default: null,
     },
     role: {
       type: String,
@@ -42,5 +42,6 @@ const authSchema = new Schema(
     versionKey: false,
   }
 );
+
 
 export default model("Auth", authSchema);

@@ -15,6 +15,9 @@ const productAttributeSchema = new Schema(
       type: [String],
       required: [true, "Giá trị thuộc tính bắt buộc nhập"],
     },
+    isColor: {
+      type: Boolean,
+    },
   },
   {
     timestamps: true,
@@ -36,9 +39,11 @@ const variationSchema = new Schema(
     },
     saleFrom: {
       type: Date,
+      default: null,
     },
     saleTo: {
       type: Date,
+      default: null,
     },
     stock: {
       type: Number,
