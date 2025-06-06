@@ -3,7 +3,7 @@ import { model, Schema } from "mongoose";
 const authSchema = new Schema(
   {
     fullName: {
-      type: String,
+      type: String
     },
     email: {
       type: String,
@@ -12,6 +12,7 @@ const authSchema = new Schema(
     },
     password: {
       type: String,
+      required: [true, "Password is required"],
     },
     phone: {
       type: String,
@@ -21,10 +22,11 @@ const authSchema = new Schema(
     },
     avatar: {
       type: String,
+      default: null,
     },
     role: {
       type: String,
-      enum: ["staff","admin", "user"],
+      enum: ["staff", "admin", "user"],
       default: "user",
     },
     activeStatus: {
@@ -34,12 +36,12 @@ const authSchema = new Schema(
       type: Boolean,
       default: true,
     },
-
   },
   {
     timestamps: true,
     versionKey: false,
   }
 );
+
 
 export default model("Auth", authSchema);

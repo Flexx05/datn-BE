@@ -12,7 +12,7 @@ const otpSchema = new Schema(
     dueDate: {
       type: Date,
       default: Date.now(),
-      index: { expires: 60 },
+      index: { expires: 120 },
     },
   },
   {
