@@ -1,13 +1,17 @@
 import categoryModel from "../models/category.model";
 import productModel from "../models/product.model";
 import { generateSlug } from "../utils/createSlug";
-import { createCategorySchema, createSubCategorySchema, updateCategorySchema, updateSubCategorySchema } from "../validations/category.validation";
+import {
+  createCategorySchema,
+  createSubCategorySchema,
+  updateCategorySchema,
+  updateSubCategorySchema,
+} from "../validations/category.validation";
 
 export const createCategory = async (req, res) => {
-  try {  
-
-const { parentId } = req.body;
-   const schema = parentId ? createSubCategorySchema : createCategorySchema;
+  try {
+    const { parentId } = req.body;
+    const schema = parentId ? createSubCategorySchema : createCategorySchema;
 
     const { error, value } = schema.validate(req.body, {
       abortEarly: false,
@@ -41,62 +45,48 @@ const { parentId } = req.body;
 
      const cate = await categoryModel.find();
     const newCategory = await categoryModel.create({ ...value,
+
       categorySort: nextOrder,
       slug: generateSlug(
         value.name,
         cate.map((category) => category.slug)
-      ), });
-    return res.status(201).json({ message: parentId ? "Sub Category created successfully" : "Category created successfully", newCategory });
+      ),
+    });
+    return res.status(201).json({
+      message: parentId
+        ? "Sub Category created successfully"
+        : "Category created successfully",
+      newCategory,
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
-
 };
 
 export const getAllCategories = async (req, res) => {
-    try {
-
-      // if(value.parentId){
-      //   const parent = await categoryModel.findOne({ _id: value.parentId, isActive: true });
-      //   if (!parent) {
-      //     return res.status(404).json({ error: "Parent category not found" });
-      //   }
-      // }
-      const categories = await categoryModel.find({ parentId: null })
-        .populate({
-          path: "subCategories",
-              // match: { isActive: true },
-              options: { sort: { categorySort: 1 } },
-        })
-        .sort({ categorySort: 1 });
-      if (!categories) {
-        return res.status(404).json({ error: "Categories not found" });
-      }
-      return res.status(200).json(categories);
-  
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
+  try {
+    // if(value.parentId){
+    //   const parent = await categoryModel.findOne({ _id: value.parentId, isActive: true });
+    //   if (!parent) {
+    //     return res.status(404).json({ error: "Parent category not found" });
+    //   }
+    // }
+    const categories = await categoryModel
+      .find({ parentId: null })
+      .populate({
+        path: "subCategories",
+        // match: { isActive: true },
+        options: { sort: { categorySort: 1 } },
+      })
+      .sort({ categorySort: 1 });
+    if (!categories) {
+      return res.status(404).json({ error: "Categories not found" });
     }
-  };
-
-  // export const getCategoryById = async (req, res) => {
-  //   try {
-  //     const { id } = req.params;
-  //     const category = await categoryModel.findById(id)
-  //       .populate({
-  //         path: "subCategories",
-  //         match: { isActive: true },
-  //         options: { sort: { categorySort: 1 } },
-  //       });
-  //     if (!category) {
-  //       return res.status(404).json({ error: "Category not found" });
-  //     }
-  //     return res.status(200).json(category);
-  //   } catch (error) {
-  //     return res.status(500).json({ error: error.message });
-  //   }
-  // };
-
+        return res.status(200).json(categories);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
 
 export const getCategoryById = async (req, res) => {
   try {
@@ -116,9 +106,7 @@ export const getCategoryById = async (req, res) => {
 };
 
 
-
-
-  export const showCategorySlug = async (req, res) => {
+export const showCategorySlug = async (req, res) => {
     try {
       const { slug } = req.params;
       const category = await categoryModel.findOne({ slug: slug })
@@ -137,7 +125,7 @@ export const getCategoryById = async (req, res) => {
     }
   };
 
-  export const showCategoryId = async (req, res) => {
+export const showCategoryId = async (req, res) => {
     try {
       const { id } = req.params;             // param là :id
       const category = await categoryModel.findOne({ _id: id , isActive: true })
@@ -154,7 +142,6 @@ export const getCategoryById = async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
   };
-
 
   export const updateCategory = async (req, res) => {
     try {
@@ -192,15 +179,18 @@ export const getCategoryById = async (req, res) => {
         }
       }
 
-      // Cập nhật category với slug mới
-      const category = await categoryModel.findByIdAndUpdate(
-        id,
-        {
-          ...value,
-          slug: generateSlug(value.name, (await categoryModel.find()).map((c) => c.slug)),
-        },
-        { new: true }
-      );
+    // Cập nhật category với slug mới
+    const category = await categoryModel.findByIdAndUpdate(
+      id,
+      {
+        ...value,
+        slug: generateSlug(
+          value.name,
+          (await categoryModel.find()).map((c) => c.slug)
+        ),
+      },
+      { new: true }
+    );
 
       if (!category) {
         return res.status(404).json({ error: "Category not found" });
@@ -211,8 +201,7 @@ export const getCategoryById = async (req, res) => {
     }
   };
 
-
-  export const deleteCategory = async (req, res) => {
+export const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
     const mode = req.query.mode || "full"; // mặc định là full
@@ -223,18 +212,22 @@ export const getCategoryById = async (req, res) => {
       return res.status(404).json({ error: "Category not found" });
     }
 
-    if (mode === "full"|| mode === "keepParent") {
+    if (mode === "full" || mode === "keepParent") {
       // --- Xoá mềm category cha ---
       await categoryModel.findByIdAndUpdate(id, { isActive: false });
 
       // --- Tìm tất cả danh mục con trực tiếp ---
-      const subCategories = await categoryModel.find({ parentId: id, isActive: true });
+      const subCategories = await categoryModel.find({
+        parentId: id,
+        isActive: true,
+      });
 
       // --- Xoá mềm tất cả danh mục con ---
 
       for (const subCategory of subCategories) {
-        await categoryModel.findByIdAndUpdate(subCategory._id, { isActive: false });
-
+        await categoryModel.findByIdAndUpdate(subCategory._id, {
+          isActive: false,
+        });
 
         // --- Xoá mềm sản phẩm liên kết danh mục con ---
         // await productModel.updateMany(
@@ -244,25 +237,30 @@ export const getCategoryById = async (req, res) => {
       }
 
       // --- Xoá mềm sản phẩm liên kết danh mục cha ---
-      
 
       return res.status(200).json({
-        message: "Deleted category, subcategories and related products (soft delete)",
+        message:
+          "Deleted category, subcategories and related products (soft delete)",
         categoryId: id,
         deletedSubCategoryCount: subCategories.length,
       });
     } else if (mode === "keepParent") {
       // --- Tìm danh mục con trực tiếp ---
-      const subCategories = await categoryModel.find({ parentId: id, isActive: true });
+      const subCategories = await categoryModel.find({
+        parentId: id,
+        isActive: true,
+      });
 
-      // --- Xoá mềm tất cả danh mục con --- 
+      // --- Xoá mềm tất cả danh mục con ---
       for (const subCategory of subCategories) {
-        await categoryModel.findByIdAndUpdate(subCategory._id, { isActive: false });
-  
+        await categoryModel.findByIdAndUpdate(subCategory._id, {
+          isActive: false,
+        });
       }
       // Giữ nguyên danh mục cha (không xoá mềm)
       return res.status(200).json({
-        message: "Deleted subcategories and related products, kept parent category",
+        message:
+          "Deleted subcategories and related products, kept parent category",
         parentCategoryId: id,
         deletedSubCategoryCount: subCategories.length,
       });
@@ -284,149 +282,160 @@ export const searchCategory = async (req, res) => {
       query.name = { $regex: name, $options: "i" };
     }
 
-    const categories = await categoryModel
-      .find(query)
-      .sort({ categorySort: 1 })
-      .skip((page - 1) * pageSize)
-      .limit(pageSize)
-      .populate({
-        path: "subCategories",
-        options: { sort: { categorySort: 1 } },
-      });
+    const categories = await categoryModel.find(query).populate({
+      path: "subCategories",
+      options: { sort: { categorySort: 1 } },
+    });
     return res.status(200).json(categories);
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 };
 
-
-                                    // SUB CATEGORY
+// SUB CATEGORY
 export const getAllSubCategory = async (req, res) => {
-    try {
-      const { parentId } = req.params; 
-       const parentCategory = await categoryModel.findById(parentId);
-      if (!parentCategory) {
-        return res.status(404).json({ error: "Parent category not found" });
-      }
-      
-      const subcategories = await categoryModel.find({ parentId, isActive: true }) .sort({ categorySort: 1 });
-      
-      if (!subcategories) {
-        return res.status(404).json({ error: " Sub Categories not found" });
-      }
-      return res.status(200).json(parentCategory, subcategories);
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
+  try {
+    const { parentId } = req.params;
+    const parentCategory = await categoryModel.findById(parentId);
+    if (!parentCategory) {
+      return res.status(404).json({ error: "Parent category not found" });
     }
-  };
 
-  export const getSubCategoryById = async (req, res) => {
-    try {
-      const { id } = req.params;
-      const subCategory = await categoryModel.findById(id)
-        .populate({
-          path: "subCategories",
-          match: { isActive: true },
-          options: { sort: { categorySort: 1 } },
-        });
-      if (!subCategory) {
-        return res.status(404).json({ error: "Category not found" });
-      }
-      return res.status(200).json(subCategory );
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
-    }
-  };
+    const subcategories = await categoryModel
+      .find({ parentId, isActive: true })
+      .sort({ categorySort: 1 });
 
-  export const showSubCategory = async (req, res) => {
-    try {
-      const { slug } = req.params;
-      const subCategory = await categoryModel.findOne({ slug: slug })
-        .populate({
-          path: "subCategories",
-          match: { isActive: true },
-          options: { sort: { categorySort: 1 } },
-        });
-      if (!subCategory) {
-        return res.status(404).json({ error: "  Sub Category not found" });
-      }
-      return res.status(200).json({ message: "Get sub category successfully", subCategory });
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
+    if (!subcategories) {
+      return res.status(404).json({ error: " Sub Categories not found" });
     }
-  };
+    return res.status(200).json(parentCategory, subcategories);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
 
-  export const showSubCategoryId = async (req, res) => {
-    try {
-      const { id } = req.params;
-      const subCategory = await categoryModel.findById(id)
-        .populate({
-          path: "subCategories",
-          match: { isActive: true },
-          options: { sort: { categorySort: 1 } },
-        });
-      if (!subCategory) {
-        return res.status(404).json({ error: "  Sub Category not found" });
-      }
-      return res.status(200).json({ message: "Get sub category successfully", subCategory });
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
+export const getSubCategoryById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const subCategory = await categoryModel.findById(id).populate({
+      path: "subCategories",
+      match: { isActive: true },
+      options: { sort: { categorySort: 1 } },
+    });
+    if (!subCategory) {
+      return res.status(404).json({ error: "Category not found" });
     }
-  };
+    return res.status(200).json(subCategory);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
 
-  export const updateSubCategory = async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { name, slug, description, categorySort} = req.body;
-      const { error, value } = updateSubCategorySchema.validate(req.body, {
-           abortEarly: false,
-           convert: false,
-         });
-         if (error) {
-           const errors = error.details.map((err) => err.message);
-           return res.status(400).json({ message: errors });
-         }
-      const subCategory = await categoryModel.findByIdAndUpdate(id, { name, slug, description, categorySort }, { new: true });
-      if (!subCategory) {
-        return res.status(404).json({ error: "Sub Category not found" });
-      }
-      return res.status(200).json({ message: "Sub Category updated successfully", subCategory });
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
+export const showSubCategory = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const subCategory = await categoryModel.findOne({ slug: slug }).populate({
+      path: "subCategories",
+      match: { isActive: true },
+      options: { sort: { categorySort: 1 } },
+    });
+    if (!subCategory) {
+      return res.status(404).json({ error: "  Sub Category not found" });
     }
-  };
+    return res
+      .status(200)
+      .json({ message: "Get sub category successfully", subCategory });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
 
-  export const deleteSubCategory = async (req, res) => {
-    try {
-      const { id } = req.params;
-      const subCategory = await categoryModel.findByIdAndUpdate(id, { isActive: false }, { new: true });
-      if (!subCategory) {
-        return res.status(404).json({ error: "Sub Category not found" });
-      } 
-      return res.status(200).json({ message: "Sub Category deleted successfully", subCategory });
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
+export const showSubCategoryId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const subCategory = await categoryModel.findById(id).populate({
+      path: "subCategories",
+      match: { isActive: true },
+      options: { sort: { categorySort: 1 } },
+    });
+    if (!subCategory) {
+      return res.status(404).json({ error: "  Sub Category not found" });
     }
-  };
+    return res
+      .status(200)
+      .json({ message: "Get sub category successfully", subCategory });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
 
-  export const searchSubCategory = async (req, res) => {
-    try {
-      const { name } = req.query;
-      if (!name) {
-        return res.status(400).json({ error: "Name is required" });
-      }
-      const categories = await categoryModel.find({ name: { $regex: name, $options: "i" } })
-        .populate({
-          path: "subCategories",
-          match: { isActive: true },
-          options: { sort: { categorySort: 1 } },
-        });
-      if (!categories) {
-        return res.status(404).json({ error: " Sub Categories not found" });
-      }
-      return res.status(200).json({ message: "Get sub categories successfully", categories });
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
+export const updateSubCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, slug, description, categorySort } = req.body;
+    const { error, value } = updateSubCategorySchema.validate(req.body, {
+      abortEarly: false,
+      convert: false,
+    });
+    if (error) {
+      const errors = error.details.map((err) => err.message);
+      return res.status(400).json({ message: errors });
     }
-  };
-  
+    const subCategory = await categoryModel.findByIdAndUpdate(
+      id,
+      { name, slug, description, categorySort },
+      { new: true }
+    );
+    if (!subCategory) {
+      return res.status(404).json({ error: "Sub Category not found" });
+    }
+    return res
+      .status(200)
+      .json({ message: "Sub Category updated successfully", subCategory });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const deleteSubCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const subCategory = await categoryModel.findByIdAndUpdate(
+      id,
+      { isActive: false },
+      { new: true }
+    );
+    if (!subCategory) {
+      return res.status(404).json({ error: "Sub Category not found" });
+    }
+    return res
+      .status(200)
+      .json({ message: "Sub Category deleted successfully", subCategory });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const searchSubCategory = async (req, res) => {
+  try {
+    const { name } = req.query;
+    if (!name) {
+      return res.status(400).json({ error: "Name is required" });
+    }
+    const categories = await categoryModel
+      .find({ name: { $regex: name, $options: "i" } })
+      .populate({
+        path: "subCategories",
+        match: { isActive: true },
+        options: { sort: { categorySort: 1 } },
+      });
+    if (!categories) {
+      return res.status(404).json({ error: " Sub Categories not found" });
+    }
+    return res
+      .status(200)
+      .json({ message: "Get sub categories successfully", categories });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};

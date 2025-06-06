@@ -4,6 +4,7 @@ import productModel from "../models/product.model";
 import { productSchema } from "../validations/product.validation";
 import { generateSlug } from "../utils/createSlug";
 import brandModel from "../models/brand.model";
+import categoryModel from "../models/category.model";
 
 export const getAllProduct = async (req, res) => {
   try {
@@ -49,14 +50,31 @@ export const getProductBySlug = async (req, res) => {
 export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await productModel.findByIdAndUpdate(
-      id,
-      { isActive: false },
-      { new: true }
-    );
-    if (!product)
-      return res.status(404).json({ message: "Sản phẩm khôn tồn tại" });
-    return res.status(200).json(product);
+
+    // Tìm sản phẩm
+    const product = await productModel.findById(id);
+
+    if (!product) {
+      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+    }
+
+    // Cập nhật trạng thái isActive của sản phẩm
+    product.isActive = false;
+
+    // Nếu có biến thể, cập nhật isActive từng biến thể
+    if (product.variation && product.variation.length > 0) {
+      product.variation.forEach((v) => {
+        v.isActive = false;
+      });
+    }
+
+    // Lưu lại sản phẩm
+    await product.save();
+
+    return res.status(200).json({
+      message: "Đã ẩn sản phẩm và các biến thể thành công",
+      product,
+    });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
@@ -130,7 +148,7 @@ export const generateVariations = async (req, res) => {
     /* ==== 7. Mapping về variation ==== */
     const variation = combos.map((combo) => ({
       _id: new mongoose.Types.ObjectId(),
-      attribute: combo.map((i) => ({
+      attributes: combo.map((i) => ({
         attributeId: i.attributeId,
         attributeName: i.attributeName,
         values: [i.value],
@@ -153,24 +171,30 @@ export const createProductWithVariations = async (req, res) => {
   try {
     const { error, value } = productSchema.validate(req.body, {
       abortEarly: false,
-      convert: false,
+      // convert: false,
     });
     if (error) {
       const errors = error.details.map((err) => err.message);
       return res.status(400).json({ message: errors });
     }
+    let brandName = "";
+    let categoryName = "";
 
     const {
       name,
       image,
       brandId,
-      brandName,
       categoryId,
-      categoryName,
       description,
       attributes,
       variation,
     } = value;
+
+    if (!Array.isArray(attributes)) {
+      return res
+        .status(400)
+        .json({ error: "Trường attributes không tồn tại hoặc không hợp lệ" });
+    }
 
     if (brandId) {
       // Kiểm tra brandId hợp lệ và tồn tại
@@ -214,12 +238,12 @@ export const createProductWithVariations = async (req, res) => {
     const attrIdToName = Object.fromEntries(
       dbAttributes.map((attr) => [attr._id.toString(), attr.name])
     );
-
     // 3. Build attributes mảng cho sản phẩm
     const productAttributes = attributes.map((attr) => ({
       attributeId: attr.attributeId,
       attributeName: attrIdToName[attr.attributeId],
       values: attr.values,
+      isColor: attr.isColor,
     }));
 
     const listProduct = await productModel.find();
@@ -392,6 +416,63 @@ export const searchProduct = async (req, res) => {
     return res.status(200).json(products);
   } catch (error) {
     console.error("Lỗi tìm kiếm sản phẩm:", error);
+    return res.status(500).json({ error: "Lỗi server" });
+  }
+};
+
+export const updateProductStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body; // Trạng thái mới muốn set
+
+    // Tìm sản phẩm
+    const product = await productModel.findById(id);
+
+    if (!product) {
+      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+    }
+    const variation = product.variation;
+    console.log("variation", variation);
+    if (variation?.map((v) => v.stock === 0) && product.isActive === false)
+      return res.status(400).json({ message: "Sản phẩm đã hết hàng" });
+
+    // Cập nhật trạng thái sản phẩm
+    product.isActive = isActive;
+
+    // Cập nhật trạng thái cho tất cả biến thể
+    if (product.variation && product.variation.length > 0) {
+      product.variation.forEach((v) => {
+        v.isActive = isActive;
+      });
+    }
+
+    // Lưu lại sản phẩm
+    await product.save();
+
+    return res.status(200).json({ message: "Cập nhật trạng thái thành công" });
+  } catch (error) {
+    console.error("Lỗi cập nhật trạng thái sản phẩm:", error);
+    return res.status(500).json({ error: "Lỗi server" });
+  }
+};
+
+export const updateVariaionStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { variationId } = req.params;
+    const product = await productModel.findById(id);
+    if (!product)
+      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+    const variation = product.variation.find((v) => v._id == variationId);
+    if (!variation)
+      return res.status(404).json({ message: "Biến thể không tìm thấy" });
+    if (variation.stock == 0 && variation.isActive === false)
+      return res.status(400).json({ message: "Sản phẩm này đã hết hàng" });
+    variation.isActive = !variation.isActive;
+    await product.save();
+    return res.status(200).json(variation);
+  } catch (error) {
+    console.error("Lỗi xóa biến thể:", error);
     return res.status(500).json({ error: "Lỗi server" });
   }
 };
