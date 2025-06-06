@@ -79,23 +79,44 @@ export const getAllCategories = async (req, res) => {
     }
   };
 
-  export const getCategoryById = async (req, res) => {
-    try {
-      const { id } = req.params;
-      const category = await categoryModel.findById(id)
-        .populate({
+  // export const getCategoryById = async (req, res) => {
+  //   try {
+  //     const { id } = req.params;
+  //     const category = await categoryModel.findById(id)
+  //       .populate({
+  //         path: "subCategories",
+  //         match: { isActive: true },
+  //         options: { sort: { categorySort: 1 } },
+  //       });
+  //     if (!category) {
+  //       return res.status(404).json({ error: "Category not found" });
+  //     }
+  //     return res.status(200).json(category);
+  //   } catch (error) {
+  //     return res.status(500).json({ error: error.message });
+  //   }
+  // };
+
+
+export const getCategoryById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const category = await categoryModel.findById(id)
+     .populate({
           path: "subCategories",
           match: { isActive: true },
           options: { sort: { categorySort: 1 } },
         });
-      if (!category) {
-        return res.status(404).json({ error: "Category not found" });
-      }
-      return res.status(200).json(category);
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
-    }
-  };
+    if (!category)
+      return res.status(404).json({ message: "Danh mục không tồn tại" });
+    return res.status(200).json(category);
+  } catch (error) {
+    return res.status(400).json({ message: error.message });
+  }
+};
+
+
+
 
   export const showCategorySlug = async (req, res) => {
     try {
@@ -119,20 +140,21 @@ export const getAllCategories = async (req, res) => {
   export const showCategoryId = async (req, res) => {
     try {
       const { id } = req.params;             // param là :id
-      const category = await categoryModel.findOne({ id: id , isActive: true })
+      const category = await categoryModel.findOne({ _id: id , isActive: true })
         .populate({
           path: "subCategories",
           match: { isActive: true },
           options: { sort: { categorySort: 1 } },
         });
       if (!category) {
-        return res.status(404).json({ error: "Category not found" });
+        return res.status(404).json({ error: "Category not found"});
       }
       return res.status(200).json({ message: "Get category successfully", category });
     } catch (error) {
       return res.status(500).json({ error: error.message });
     }
   };
+
 
  export const updateCategory = async (req, res) => {
   try {

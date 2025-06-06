@@ -70,7 +70,7 @@ export const register = async (req, res) => {
     const user = await authModel.create({
       ...value,
       password: hashPassword,
-      isActive: false,
+      isActive: false, 
     });
 
     return res.status(200).json({ message: "OTP đã được gửi đi", user });
