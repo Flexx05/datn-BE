@@ -171,13 +171,12 @@ export const createProductWithVariations = async (req, res) => {
   try {
     const { error, value } = productSchema.validate(req.body, {
       abortEarly: false,
-      convert: false,
+      // convert: false,
     });
     if (error) {
       const errors = error.details.map((err) => err.message);
       return res.status(400).json({ message: errors });
     }
-
     let brandName = "";
     let categoryName = "";
 
@@ -190,6 +189,12 @@ export const createProductWithVariations = async (req, res) => {
       attributes,
       variation,
     } = value;
+
+    if (!Array.isArray(attributes)) {
+      return res
+        .status(400)
+        .json({ error: "Trường attributes không tồn tại hoặc không hợp lệ" });
+    }
 
     if (brandId) {
       // Kiểm tra brandId hợp lệ và tồn tại
@@ -233,7 +238,6 @@ export const createProductWithVariations = async (req, res) => {
     const attrIdToName = Object.fromEntries(
       dbAttributes.map((attr) => [attr._id.toString(), attr.name])
     );
-
     // 3. Build attributes mảng cho sản phẩm
     const productAttributes = attributes.map((attr) => ({
       attributeId: attr.attributeId,
