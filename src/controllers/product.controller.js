@@ -8,13 +8,29 @@ import categoryModel from "../models/category.model";
 
 export const getAllProduct = async (req, res) => {
   try {
-    const { _page = 1, _limit = 10, _sort = "createdAt", _order } = req.query;
+    const {
+      _page = 1,
+      _limit = 10,
+      _sort = "createdAt",
+      _order,
+      isActive,
+    } = req.query;
+
+    // Tạo query điều kiện
+    const query = {};
+    if (isActive !== undefined) {
+      // isActive từ query thường là string, cần chuyển thành boolean
+      query.isActive = isActive === "true";
+    }
+
     const options = {
-      page: parseInt(_page),
-      limit: parseInt(_limit),
+      page: parseInt(_page, 10),
+      limit: parseInt(_limit, 10),
       sort: { [_sort]: _order === "desc" ? -1 : 1 },
     };
-    const product = await productModel.paginate({}, options);
+
+    const product = await productModel.paginate(query, options);
+
     return res.status(200).json(product);
   } catch (error) {
     return res.status(400).json({
