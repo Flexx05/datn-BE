@@ -4,23 +4,14 @@ import { attributeSchema } from "../validations/attribute.validation";
 
 export const getAllAttribute = async (req, res) => {
   try {
-    const attributes = await attributeModel.find();
-    return res.status(200).json(attributes);
-  } catch (error) {
-    return res.status(400).json({ message: error.message });
-  }
-};
-
-export const searchAttribute = async (req, res) => {
-  try {
-    const { name } = req.query;
-
+    const { search, isActive } = req.query;
     const query = {};
-
-    if (typeof name === "string" && name.trim() !== "") {
-      query.name = { $regex: name, $options: "i" };
+    if (isActive !== undefined) {
+      query.isActive = isActive === "true";
     }
-
+    if (typeof search === "string" && search.trim() !== "") {
+      query.name = { $regex: search, $options: "i" };
+    }
     const attributes = await attributeModel.find(query);
     return res.status(200).json(attributes);
   } catch (error) {
