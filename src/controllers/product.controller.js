@@ -14,6 +14,7 @@ export const getAllProduct = async (req, res) => {
       _sort = "createdAt",
       _order,
       isActive,
+      search,
     } = req.query;
 
     // Tạo query điều kiện
@@ -21,6 +22,14 @@ export const getAllProduct = async (req, res) => {
     if (isActive !== undefined) {
       // isActive từ query thường là string, cần chuyển thành boolean
       query.isActive = isActive === "true";
+    }
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { brandName: { $regex: search, $options: "i" } },
+        { categoryName: { $regex: search, $options: "i" } },
+      ];
     }
 
     const options = {
@@ -414,24 +423,6 @@ export const updateProduct = async (req, res) => {
     });
   } catch (error) {
     console.error("Lỗi cập nhật sản phẩm:", error);
-    return res.status(500).json({ error: "Lỗi server" });
-  }
-};
-
-export const searchProduct = async (req, res) => {
-  try {
-    const query = {};
-    for (const key in req.query) {
-      if (key.endsWith("_like")) {
-        const field = key.replace("_like", "");
-        const value = req.query[key];
-        query[field] = { $regex: value, $options: "i" };
-      }
-    }
-    const products = await productModel.find(query);
-    return res.status(200).json(products);
-  } catch (error) {
-    console.error("Lỗi tìm kiếm sản phẩm:", error);
     return res.status(500).json({ error: "Lỗi server" });
   }
 };

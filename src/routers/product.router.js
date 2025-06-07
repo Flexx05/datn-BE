@@ -6,7 +6,6 @@ import {
   getAllProduct,
   getProductById,
   getProductBySlug,
-  searchProduct,
   updateProduct,
   updateProductStatus,
   updateVariaionStatus,
@@ -23,6 +22,5 @@ router.post("/product/generate-variations", generateVariations);
 router.post("/product/add", createProductWithVariations);
 router.patch("/product/edit/status/:id", updateProductStatus);
 router.patch("/product/edit/:id", updateProduct);
-router.get("/product/search", searchProduct);
 
 export default router;
