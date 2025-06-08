@@ -275,26 +275,6 @@ export const deleteCategory = async (req, res) => {
   }
 };
 
-export const searchCategory = async (req, res) => {
-  try {
-    const { name, page = 1, pageSize = 10 } = req.query;
-
-    const query = {};
-
-    if (typeof name === "string" && name.trim() !== "") {
-      query.name = { $regex: name, $options: "i" };
-    }
-
-    const categories = await categoryModel.find(query).populate({
-      path: "subCategories",
-      options: { sort: { categorySort: 1 } },
-    });
-    return res.status(200).json(categories);
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
-
 // SUB CATEGORY
 export const getAllSubCategory = async (req, res) => {
   try {
