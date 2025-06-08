@@ -324,13 +324,13 @@ export const updateProduct = async (req, res) => {
       const errors = error.details.map((err) => err.message);
       return res.status(400).json({ message: errors });
     }
+    let brandName = "";
+    let categoryName = "";
     const {
       name,
       image,
       brandId,
-      brandName,
       categoryId,
-      categoryName,
       description,
       attributes,
       variation,
