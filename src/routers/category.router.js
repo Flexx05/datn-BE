@@ -6,7 +6,6 @@ import {
   getAllSubCategory,
   getCategoryById,
   getSubCategoryById,
-  searchCategory,
   searchSubCategory,
   showCategoryId,
   showCategorySlug,
@@ -25,7 +24,6 @@ router.get("/category/show/:slug", showCategorySlug);
 router.get("/category/:id", showCategoryId); //show theo id
 router.patch("/category/edit/:id", updateCategory);
 router.delete("/category/delete/:id", deleteCategory);
-router.get("/category/search", searchCategory);
 
 // router subCategories
 router.get("/category/get-all-subcategory/:parentId", getAllSubCategory);
