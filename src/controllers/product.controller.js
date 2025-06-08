@@ -8,13 +8,38 @@ import categoryModel from "../models/category.model";
 
 export const getAllProduct = async (req, res) => {
   try {
-    const { _page = 1, _limit = 10, _sort = "createdAt", _order } = req.query;
+    const {
+      _page = 1,
+      _limit = 10,
+      _sort = "createdAt",
+      _order,
+      isActive,
+      search,
+    } = req.query;
+
+    // Tạo query điều kiện
+    const query = {};
+    if (isActive !== undefined) {
+      // isActive từ query thường là string, cần chuyển thành boolean
+      query.isActive = isActive === "true";
+    }
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { brandName: { $regex: search, $options: "i" } },
+        { categoryName: { $regex: search, $options: "i" } },
+      ];
+    }
+
     const options = {
-      page: parseInt(_page),
-      limit: parseInt(_limit),
+      page: parseInt(_page, 10),
+      limit: parseInt(_limit, 10),
       sort: { [_sort]: _order === "desc" ? -1 : 1 },
     };
-    const product = await productModel.paginate({}, options);
+
+    const product = await productModel.paginate(query, options);
+
     return res.status(200).json(product);
   } catch (error) {
     return res.status(400).json({
@@ -299,13 +324,13 @@ export const updateProduct = async (req, res) => {
       const errors = error.details.map((err) => err.message);
       return res.status(400).json({ message: errors });
     }
+    let brandName = "";
+    let categoryName = "";
     const {
       name,
       image,
       brandId,
-      brandName,
       categoryId,
-      categoryName,
       description,
       attributes,
       variation,
@@ -398,24 +423,6 @@ export const updateProduct = async (req, res) => {
     });
   } catch (error) {
     console.error("Lỗi cập nhật sản phẩm:", error);
-    return res.status(500).json({ error: "Lỗi server" });
-  }
-};
-
-export const searchProduct = async (req, res) => {
-  try {
-    const query = {};
-    for (const key in req.query) {
-      if (key.endsWith("_like")) {
-        const field = key.replace("_like", "");
-        const value = req.query[key];
-        query[field] = { $regex: value, $options: "i" };
-      }
-    }
-    const products = await productModel.find(query);
-    return res.status(200).json(products);
-  } catch (error) {
-    console.error("Lỗi tìm kiếm sản phẩm:", error);
     return res.status(500).json({ error: "Lỗi server" });
   }
 };
