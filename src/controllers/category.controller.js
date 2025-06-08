@@ -65,12 +65,16 @@ export const createCategory = async (req, res) => {
 
 export const getAllCategories = async (req, res) => {
   try {
-    // if(value.parentId){
-    //   const parent = await categoryModel.findOne({ _id: value.parentId, isActive: true });
-    //   if (!parent) {
-    //     return res.status(404).json({ error: "Parent category not found" });
-    //   }
-    // }
+
+    const { isActive, search } = req.query;
+    const query = {};
+    if (isActive !== undefined) {
+      query.isActive = isActive === "true";
+    }
+    if (typeof search === "string" && search.trim() !== "") {
+      query.name = { $regex: search, $options: "i" };
+    };
+
     const categories = await categoryModel
       .find({ parentId: null })
       .populate({
@@ -87,7 +91,6 @@ export const getAllCategories = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
 export const getCategoryById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -159,7 +162,7 @@ export const showCategoryId = async (req, res) => {
       const parentId = cate.parentId || null; // Lấy parentId của category hiện tại
       const sumCate = await categoryModel.countDocuments({ parentId });
       if (value.categorySort > sumCate || value.categorySort < 1) {
-        return res.status(400).json({ message: "Category Sort does not exist" });
+        return res.status(400).json({ message: "Category Sort not valid" });
       }
       if (
         value.categorySort &&
@@ -267,26 +270,6 @@ export const deleteCategory = async (req, res) => {
     } else {
       return res.status(400).json({ error: "Invalid mode parameter" });
     }
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
-
-export const searchCategory = async (req, res) => {
-  try {
-    const { name, page = 1, pageSize = 10 } = req.query;
-
-    const query = {};
-
-    if (typeof name === "string" && name.trim() !== "") {
-      query.name = { $regex: name, $options: "i" };
-    }
-
-    const categories = await categoryModel.find(query).populate({
-      path: "subCategories",
-      options: { sort: { categorySort: 1 } },
-    });
-    return res.status(200).json(categories);
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
