@@ -10,7 +10,7 @@ const router = express.Router();
 
 router.get("/admin/users", getAllUsers);
 
-router.get("/admin/users/:id", getUserById);
+router.get("/admin/users/id/:id", getUserById);
 
 router.patch("/admin/users/:id/status", updateUserStatus);
 
