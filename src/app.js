@@ -14,6 +14,7 @@ import userRouter from "./routers/admin.user.router";
 import voucherRouter from "./routers/voucher.router";
 import staffRrouter from "./routers/staff.router";
 import paymentRouter from "./routers/payment.router";
+import orderRouter from "./routers/order.router";
 
 const app = express();
 
@@ -26,7 +27,8 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
 mongoose.connect(
@@ -45,5 +47,6 @@ app.use("/api", userRouter);
 app.use("/api", voucherRouter);
 app.use("/api", staffRrouter);
 app.use("/api", paymentRouter);
+app.use("/api", orderRouter);
 
 export const viteNodeApp = app;

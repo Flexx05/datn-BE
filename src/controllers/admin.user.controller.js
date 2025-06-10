@@ -34,19 +34,7 @@ export const getAllUsers = async (req, res) => {
     const totalUsers = await authModel.countDocuments(filter);
     const totalPages = Math.ceil(totalUsers / limit);
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        users,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalUsers,
-          limit,
-        },
-      },
-      message: "Lấy danh sách người dùng thành công",
-    });
+    return res.status(200).json(users);
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -69,11 +57,7 @@ export const getUserById = async (req, res) => {
       });
     }
 
-    return res.status(200).json({
-      success: true,
-      data: user,
-      message: "Lấy thông tin người dùng thành công",
-    });
+    return res.status(200).json(user);
   } catch (error) {
     return res.status(500).json({
       success: false,

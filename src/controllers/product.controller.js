@@ -8,13 +8,38 @@ import categoryModel from "../models/category.model";
 
 export const getAllProduct = async (req, res) => {
   try {
-    const { _page = 1, _limit = 10, _sort = "createdAt", _order } = req.query;
+    const {
+      _page = 1,
+      _limit = 10,
+      _sort = "createdAt",
+      _order,
+      isActive,
+      search,
+    } = req.query;
+
+    // Tạo query điều kiện
+    const query = {};
+    if (isActive !== undefined) {
+      // isActive từ query thường là string, cần chuyển thành boolean
+      query.isActive = isActive === "true";
+    }
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { brandName: { $regex: search, $options: "i" } },
+        { categoryName: { $regex: search, $options: "i" } },
+      ];
+    }
+
     const options = {
-      page: parseInt(_page),
-      limit: parseInt(_limit),
+      page: parseInt(_page, 10),
+      limit: parseInt(_limit, 10),
       sort: { [_sort]: _order === "desc" ? -1 : 1 },
     };
-    const product = await productModel.paginate({}, options);
+
+    const product = await productModel.paginate(query, options);
+
     return res.status(200).json(product);
   } catch (error) {
     return res.status(400).json({
@@ -171,13 +196,12 @@ export const createProductWithVariations = async (req, res) => {
   try {
     const { error, value } = productSchema.validate(req.body, {
       abortEarly: false,
-      convert: false,
+      // convert: false,
     });
     if (error) {
       const errors = error.details.map((err) => err.message);
       return res.status(400).json({ message: errors });
     }
-
     let brandName = "";
     let categoryName = "";
 
@@ -190,6 +214,12 @@ export const createProductWithVariations = async (req, res) => {
       attributes,
       variation,
     } = value;
+
+    if (!Array.isArray(attributes)) {
+      return res
+        .status(400)
+        .json({ error: "Trường attributes không tồn tại hoặc không hợp lệ" });
+    }
 
     if (brandId) {
       // Kiểm tra brandId hợp lệ và tồn tại
@@ -233,7 +263,6 @@ export const createProductWithVariations = async (req, res) => {
     const attrIdToName = Object.fromEntries(
       dbAttributes.map((attr) => [attr._id.toString(), attr.name])
     );
-
     // 3. Build attributes mảng cho sản phẩm
     const productAttributes = attributes.map((attr) => ({
       attributeId: attr.attributeId,
@@ -295,13 +324,13 @@ export const updateProduct = async (req, res) => {
       const errors = error.details.map((err) => err.message);
       return res.status(400).json({ message: errors });
     }
+    let brandName = "";
+    let categoryName = "";
     const {
       name,
       image,
       brandId,
-      brandName,
       categoryId,
-      categoryName,
       description,
       attributes,
       variation,
@@ -398,51 +427,38 @@ export const updateProduct = async (req, res) => {
   }
 };
 
-export const searchProduct = async (req, res) => {
-  try {
-    const query = {};
-    for (const key in req.query) {
-      if (key.endsWith("_like")) {
-        const field = key.replace("_like", "");
-        const value = req.query[key];
-        query[field] = { $regex: value, $options: "i" };
-      }
-    }
-    const products = await productModel.find(query);
-    return res.status(200).json(products);
-  } catch (error) {
-    console.error("Lỗi tìm kiếm sản phẩm:", error);
-    return res.status(500).json({ error: "Lỗi server" });
-  }
-};
-
 export const updateProductStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { isActive } = req.body; // Trạng thái mới muốn set
 
-    // Tìm sản phẩm
     const product = await productModel.findById(id);
 
     if (!product) {
       return res.status(404).json({ message: "Sản phẩm không tồn tại" });
     }
-    const variation = product.variation;
-    console.log("variation", variation);
-    if (variation?.map((v) => v.stock === 0) && product.isActive === false)
+
+    // Kiểm tra nếu tất cả biến thể đều hết hàng
+    const allOutOfStock =
+      product.variation?.length > 0 &&
+      product.variation.every((v) => v.stock === 0);
+
+    if (allOutOfStock) {
       return res.status(400).json({ message: "Sản phẩm đã hết hàng" });
+    }
 
     // Cập nhật trạng thái sản phẩm
     product.isActive = isActive;
 
-    // Cập nhật trạng thái cho tất cả biến thể
+    // Cập nhật trạng thái cho các biến thể có hàng
     if (product.variation && product.variation.length > 0) {
       product.variation.forEach((v) => {
-        v.isActive = isActive;
+        if (v.stock > 0) {
+          v.isActive = isActive;
+        }
       });
     }
 
-    // Lưu lại sản phẩm
     await product.save();
 
     return res.status(200).json({ message: "Cập nhật trạng thái thành công" });
@@ -454,21 +470,46 @@ export const updateProductStatus = async (req, res) => {
 
 export const updateVariaionStatus = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { variationId } = req.params;
+    const { id, variationId } = req.params;
+
     const product = await productModel.findById(id);
-    if (!product)
+    if (!product) {
       return res.status(404).json({ message: "Sản phẩm không tồn tại" });
-    const variation = product.variation.find((v) => v._id == variationId);
-    if (!variation)
+    }
+
+    const variation = product.variation.find(
+      (v) => v._id.toString() === variationId
+    );
+
+    if (!variation) {
       return res.status(404).json({ message: "Biến thể không tìm thấy" });
-    if (variation.stock == 0 && variation.isActive === false)
+    }
+
+    // Nếu hết hàng và đang tắt rồi thì không cho bật lại
+    if (variation.stock === 0 && variation.isActive === false) {
       return res.status(400).json({ message: "Sản phẩm này đã hết hàng" });
+    }
+
+    // Toggle trạng thái của biến thể
     variation.isActive = !variation.isActive;
+
+    // Kiểm tra lại trạng thái của tất cả biến thể
+    const hasActiveVariation = product.variation.some(
+      (v) => v.isActive === true
+    );
+
+    // Nếu không còn biến thể nào active thì tắt luôn sản phẩm
+    product.isActive = hasActiveVariation;
+
     await product.save();
-    return res.status(200).json(variation);
+
+    return res.status(200).json({
+      message: "Cập nhật trạng thái biến thể thành công",
+      variation,
+      productStatus: product.isActive,
+    });
   } catch (error) {
-    console.error("Lỗi xóa biến thể:", error);
+    console.error("Lỗi cập nhật trạng thái biến thể:", error);
     return res.status(500).json({ error: "Lỗi server" });
   }
 };

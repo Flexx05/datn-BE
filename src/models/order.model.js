@@ -1,197 +1,124 @@
-import { model, Schema } from "mongoose";
+import mongoose, {Schema, model } from "mongoose";
 
-// Schema cho OrderItem (Sản phẩm trong đơn hàng)
-const orderItemSchema = new Schema(
-  {
-    variationId: {
-      type: Schema.Types.ObjectId,
-      ref: "Variation",
-      required: [true, "Variation ID là bắt buộc"],
+const orderItemSchema = new Schema({
+    productId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product",
+        required: true,
     },
-    productName: {
-      type: String,
-      required: [true, "Tên sản phẩm là bắt buộc"],
-    },
+    variantAttributes: [
+        {
+        attributeName: { type: String, required: true },
+        value: { type: String, required: true },
+        },
+    ],
     quantity: {
-      type: Number,
-      required: [true, "Số lượng sản phẩm là bắt buộc"],
-      min: [1, "Số lượng sản phẩm phải lớn hơn 0"],
+        type: Number,
+        required: true,
+        min: 0,
     },
-    priceAtOrder: {
-      type: Number,
-      required: [true, "Đơn giá sản phẩm là bắt buộc"],
-      min: [0, "Đơn giá không thể âm"],
-    },
-    totalPrice: {
-      type: Number,
-      required: [true, "Thành tiền là bắt buộc"],
-      min: [0, "Thành tiền không thể âm"],
-    },
-  },
-  {
-    _id: true, // Cho phép MongoDB tự động tạo _id cho mỗi OrderItem
-  }
-);
+    price: {
+        type: Number,
+        required: true,
+        min: 0
+    }
+},{_id: false}
+)
 
-// Schema chính cho Order (Đơn hàng)
-const orderSchema = new Schema(
-  {
+const orderSchema = new mongoose.Schema({
     userId: {
-      type: Schema.Types.ObjectId,
-      ref: "Auth",
-      required: [true, "User ID là bắt buộc"],
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Auth',
+      required: false
     },
     orderCode: {
       type: String,
-      required: [true, "Mã đơn hàng là bắt buộc"],
-      unique: true,
+      required: true,
+      unique: true
     },
-    voucherId: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Voucher",
-      },
-    ],
+    voucherId: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Voucher'
+    }],
     shippingAddress: {
-      country: {
-        type: String,
-        required: [true, "Quốc gia là bắt buộc"],
-      },
-      city: {
-        type: String,
-        required: [true, "Thành phố là bắt buộc"],
-      },
-      address: {
-        type: String,
-        required: [true, "Địa chỉ chi tiết là bắt buộc"],
-      },
+      country: { type: String, required: true },
+      city: { type: String, required: true },
+      address: { type: String, required: true }
     },
     items: {
       type: [orderItemSchema],
-      required: [true, "Đơn hàng phải có ít nhất một sản phẩm"],
-      validate: {
-        validator: function (items) {
-          return Array.isArray(items) && items.length > 0;
-        },
-        message: "Đơn hàng phải có ít nhất một sản phẩm",
-      },
+      required: true
     },
     subtotal: {
       type: Number,
-      required: [true, "Tổng tiền sản phẩm là bắt buộc"],
-      min: [0, "Tổng tiền sản phẩm không thể âm"],
+      required: true,
+      min: 0
     },
     shippingFee: {
       type: Number,
-      required: [true, "Phí vận chuyển là bắt buộc"],
-      min: [0, "Phí vận chuyển không thể âm"],
+      required: true,
+      min: 0
     },
     discountAmount: {
       type: Number,
-      default: 0,
-      min: [0, "Số tiền giảm giá không thể âm"],
+      required: true,
+      min: 0
     },
     totalAmount: {
       type: Number,
-      required: [true, "Tổng tiền đơn hàng là bắt buộc"],
-      min: [0, "Tổng tiền đơn hàng không thể âm"],
+      required: true,
+      min: 0
     },
     status: {
       type: String,
-      enum: ["Chờ xử lý", "Đang giao hàng", "Thành công", "Đã hủy"],
-      default: "Chờ xử lý",
+      enum: ['Chờ xác nhận', 'Đã xác nhận', 'Đang giao hàng', 'Đã giao hàng', 'Đã hủy'],
+      default: 'Chờ xác nhận'
     },
     paymentStatus: {
       type: String,
-      enum: ["Chưa thanh toán", "Đã thanh toán", "Đã hoàn tiền"],
-      default: "Chưa thanh toán",
+      enum: ['Chưa thanh toán', 'Đã thanh toán', 'Thất bại' ,'Đã hoàn tiền'],
+      default: 'Chưa thanh toán'
     },
     paymentMethod: {
       type: String,
-      required: [true, "Phương thức thanh toán là bắt buộc"],
-      enum: {
-        values: ["VNPAY", "COD", "MOMO"],
-        message: "Phương thức thanh toán không hợp lệ",
-      },
+      required: true
     },
     deliveryDate: {
-      type: Date,
+      type: Date
     },
-  },
-  {
-    timestamps: true, // Tự động thêm createdAt và updatedAt
+  }, {
+    timestamps: true,
     versionKey: false,
-  }
-);
-
-// Tạo tự động mã đơn hàng trước khi lưu
-orderSchema.pre("save", async function (next) {
-  if (!this.orderCode) {
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const day = date.getDate().toString().padStart(2, "0");
-    const random = Math.floor(Math.random() * 10000)
-      .toString()
-      .padStart(4, "0");
-    this.orderCode = `DH${year}${month}${day}-${random}`;
-  }
-  next();
 });
 
-// Middleware để tự động tính toán totalPrice cho mỗi OrderItem và subtotal cho Order
-orderSchema.pre("save", function (next) {
-  // Tính totalPrice cho mỗi item
-  this.items.forEach((item) => {
-    item.totalPrice = item.quantity * item.priceAtOrder;
-  });
-
-  // Tính subtotal
-  this.subtotal = this.items.reduce((sum, item) => sum + item.totalPrice, 0);
-
-  // Tính totalAmount
-  this.totalAmount = this.subtotal + this.shippingFee - this.discountAmount;
-
-  next();
-});
-
-// Middleware để đảm bảo tính nhất quán của trạng thái thanh toán
-orderSchema.pre("save", function (next) {
-  // Nếu đơn hàng là COD, mặc định là chưa thanh toán
-  if (this.paymentMethod === "COD" && !this.isModified("paymentStatus")) {
-    this.paymentStatus = "Chưa thanh toán";
-  }
-
-  // Kiểm tra tính hợp lệ của trạng thái thanh toán
-  const validStatusTransitions = {
-    "Chưa thanh toán": ["Đã thanh toán", "Đã hoàn tiền"],
-    "Đã thanh toán": ["Đã hoàn tiền"],
-    "Đã hoàn tiền": [],
-  };
-
-  if (this.isModified("paymentStatus")) {
-    const oldStatus = this._original
-      ? this._original.paymentStatus
-      : "Chưa thanh toán";
-    const newStatus = this.paymentStatus;
-
-    if (!validStatusTransitions[oldStatus].includes(newStatus)) {
-      const error = new Error(
-        `Không thể chuyển trạng thái thanh toán từ ${oldStatus} sang ${newStatus}`
-      );
-      return next(error);
+// Thêm middleware để tự động tạo orderCode
+orderSchema.pre('save', async function(next) {
+    if (!this.orderCode) {
+      const date = new Date();
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+  
+      const lastOrder = await this.constructor.findOne({
+        orderCode: new RegExp(`DH${year}${month}${day}-\\d{3}$`)
+      }).sort({ orderCode: -1 });
+  
+      let sequence = '001';
+      if (lastOrder) {
+        const lastSequence = parseInt(lastOrder.orderCode.slice(-3));
+        sequence = String(lastSequence + 1).padStart(3, '0');
+      }
+  
+      this.orderCode = `DH${year}${month}${day}-${sequence}`;
     }
-  }
-
-  next();
-});
-
-// Lưu trạng thái cũ trước khi cập nhật
-orderSchema.pre("save", function (next) {
-  if (this.isModified()) {
-    this._original = this.toObject();
-  }
-  next();
-});
+  
+    // Nếu không có userId thì đánh dấu là đơn hàng khách vãng lai
+    if (!this.userId) {
+      this.isGuestOrder = true;
+    }
+  
+    next();
+  });
+  
 
 export default model("Order", orderSchema);
