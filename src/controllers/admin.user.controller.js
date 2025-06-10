@@ -57,14 +57,7 @@ export const getUserById = async (req, res) => {
       });
     }
 
-    return res.status(200).json(
-      //   {
-      //   success: true,
-      //   data: user,
-      //   message: "Lấy thông tin người dùng thành công",
-      // }
-      user
-    );
+    return res.status(200).json(user);
   } catch (error) {
     return res.status(500).json({
       success: false,

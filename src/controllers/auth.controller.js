@@ -29,7 +29,7 @@ const sendEmail = async (email) => {
   await otpModel.create({
     email,
     otp: hashOTP,
-    dueDate: Date.now() + 5 * 60 * 1000,
+    dueDate: Date.now() + 3 * 60 * 1000,
   });
 
   //sendEmail
@@ -70,7 +70,7 @@ export const register = async (req, res) => {
     const user = await authModel.create({
       ...value,
       password: hashPassword,
-      isActive: false, 
+      isActive: false,
     });
 
     return res.status(200).json({ message: "OTP đã được gửi đi", user });
@@ -213,40 +213,7 @@ export const forgotPassword = async (req, res) => {
         message: "Email không tồn tại trong hệ thống",
       });
     }
-    // Xóa OTP cũ nếu có
-    await otpModel.findOneAndDelete({ email });
-    // Tạo OTP mới
-    const OTP = otpGenerator.generate(6, {
-      digits: true,
-      lowerCaseAlphabets: false,
-      upperCaseAlphabets: false,
-      specialChars: false,
-    });
-    console.log(OTP);
-    // Mã hóa OTP
-    const hashOTP = await bcrypt.hash(OTP, 10);
-    // Lưu OTP vào database
-    await otpModel.create({
-      email,
-      otp: hashOTP,
-      dueDate: Date.now() + 5 * 60 * 1000, // OTP hết hạn sau 5 phút
-    });
-
-    // Gửi email chứa OTP
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: "binovaweb73@gmail.com",
-        pass: "kcjf jurr rjva hqfu",
-      },
-    });
-
-    await transporter.sendMail({
-      from: "binovaweb73@gmail.com",
-      to: email,
-      subject: "Yêu cầu đặt lại mật khẩu",
-      text: `Mã xác thực để đặt lại mật khẩu của bạn là: ${OTP}. Mã này sẽ hết hạn sau 5 phút.`,
-    });
+    sendEmail(email);
 
     return res.status(200).json({
       success: true,
