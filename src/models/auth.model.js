@@ -20,10 +20,7 @@ const authSchema = new Schema(
     address: {
       type: String,
     },
-    avatar: {
-      type: String,
-      default: null,
-    },
+
     role: {
       type: String,
       enum: ["staff", "admin", "user"],
