@@ -12,6 +12,7 @@ const updateCategorySchema = Joi.object({
   description: Joi.string(),
   categorySort: Joi.number(),
   isActive: Joi.boolean(),
+  parentId: Joi.allow(null),
 });
 
 const createSubCategorySchema = Joi.object({

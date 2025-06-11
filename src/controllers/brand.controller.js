@@ -1,4 +1,5 @@
 import brandModel from "../models/brand.model";
+import productModel from "../models/product.model";
 import { generateSlug } from "../utils/createSlug";
 import {
   createBrandSchema,
@@ -110,17 +111,35 @@ export const showBrand = async (req, res) => {
 export const deleteBrand = async (req, res) => {
   try {
     const { id } = req.params;
-    const brand = await brandModel.findByIdAndUpdate(
-      id,
-      { isActive: false },
-      { new: true }
-    );
+
+    const brand = await brandModel.findOne({ _id: id, isActive: true });
     if (!brand) {
-      return res.status(404).json({ error: "Brand not found" });
+      return res.status(404).json({ error: "brand not found" });
     }
-    return res
-      .status(200)
-      .json({ message: "Brand deleted successfully", brand });
+
+    const unBrand = await brandModel.findOneAndUpdate(
+      { slug: "thuong-hieu-khong-xac-dinh" },
+      {
+          $setOnInsert: {
+            name: "Thương hiệu không xác định",
+            slug: "thuong-hieu-khong-xac-dinh",
+            isActive: true,
+            parentId: null,
+          },
+        },
+        { upsert: true, new: true }
+      );
+
+    await productModel.updateMany(
+      { brandId: id },
+      { brandId: unBrand._id ,
+        brandName: unBrand.name
+      }
+    );
+    res.status(200).json({
+      message: "Xoá mềm thương hiệu thành công, sản phẩm chuyển sang thương hiệu không xác định",
+      brand: unBrand,
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
