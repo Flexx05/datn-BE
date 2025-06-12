@@ -159,12 +159,14 @@ export const updateUsserInfo = async (req, res) => {
         message: error.details[0].message,
       });
     }
-
+    const { fullName, phone, address } = value;
     const updatedUser = await authModel.findByIdAndUpdate(
       id,
       {
-        ...value,
-        updatedBy: req.user?.id || null, // req.user được gán từ middleware auth
+        fullName,
+        phone: phone || null,
+        address: address || null,
+        updatedBy: req.user?.id || null,
       },
       { new: true }
     );
