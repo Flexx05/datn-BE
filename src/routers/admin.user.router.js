@@ -2,6 +2,7 @@ import express from "express";
 import {
   getAllUsers,
   getUserById,
+  resetUserPassword,
   updateUserActiveStatus,
   updateUserStatus,
   updateUsserInfo,
@@ -17,7 +18,7 @@ router.get("/admin/users/id/:id", getUserById);
 router.patch("/admin/users/:id/status", updateUserStatus);
 
 router.patch("/admin/users/:id/active-status", updateUserActiveStatus);
-
-router.patch("/admin/users/edit/:id", verifyToken, updateUsserInfo);
+router.patch("/admin/users/:id/update-password", resetUserPassword);
+router.patch("/admin/users/edit/:id", verifyToken, updateUserInfo);
 
 export default router;

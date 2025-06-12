@@ -1,4 +1,5 @@
 import authModel from "../models/auth.model";
+import bcrypt from "bcryptjs";
 import { updateUserInfoSchema } from "../validations/auth.validation";
 
 export const getAllUsers = async (req, res) => {
@@ -18,6 +19,7 @@ export const getAllUsers = async (req, res) => {
         { fullName: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
         { phone: { $regex: search, $options: "i" } },
+        
       ];
     }
 
@@ -148,7 +150,62 @@ export const updateUserActiveStatus = async (req, res) => {
   }
 };
 
-export const updateUsserInfo = async (req, res) => {
+export const resetUserPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { passwordOld , passwordNew } = req.body;
+
+      if (!passwordOld || !passwordNew) {
+      return res.status(400).json({
+        success: false,
+        message: "Mật khẩu cũ và mật khẩu mới là bắt buộc",
+      });
+    }
+
+     const hashedPassword = await bcrypt.hash(passwordNew, 10);
+     
+    // Kiểm tra xem người dùng có tồn tại không
+
+    const user =  await authModel.findOne({ _id: id });
+     const isValid = await bcrypt.compare( passwordOld , user.password);
+    if (!isValid) {
+      return res.status(400).json({ error: "Mật khẩu cũ không đúng" });
+    }
+    await authModel.findOneAndUpdate(
+      { _id: id },
+      { password: hashedPassword },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
+    }
+
+    // kiểm tra tránh trùng lặp mật khẩu mới và cũ 
+    if (passwordOld === passwordNew) {
+      return res.status(400).json({
+        success: false,
+        message: "Mật khẩu mới không được trùng với mật khẩu cũ",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Đặt lại mật khẩu thành công",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi khi đặt lại mật khẩu",
+      error: error.message,
+    });
+  }
+};
+
+export const updateUserInfo = async (req, res) => {
   try {
     const { id } = req.params;
     const { error, value } = updateUserInfoSchema.validate(req.body);
