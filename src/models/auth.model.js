@@ -1,9 +1,9 @@
-import { model, Schema } from "mongoose";
+import mongoose, { model, Schema } from "mongoose";
 
 const authSchema = new Schema(
   {
     fullName: {
-      type: String
+      type: String,
     },
     email: {
       type: String,
@@ -33,12 +33,16 @@ const authSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // hoặc 'Admin' nếu bạn phân biệt
+      default: null,
+    },
   },
   {
     timestamps: true,
     versionKey: false,
   }
 );
-
 
 export default model("Auth", authSchema);
