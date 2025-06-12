@@ -33,6 +33,10 @@ const authSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    resetPasswordVerified: {
+      type: Boolean,
+      default: false,
+    }
   },
   {
     timestamps: true,
