@@ -1,4 +1,5 @@
 import authModel from "../models/auth.model";
+import { updateUserInfoSchema } from "../validations/auth.validation";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -142,6 +143,41 @@ export const updateUserActiveStatus = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Lỗi khi cập nhật trạng thái hoạt động của người dùng",
+      error: error.message,
+    });
+  }
+};
+
+export const updateUsserInfo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error, value } = updateUserInfoSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message,
+      });
+    }
+    const updatedUser = await authModel.findByIdAndUpdate(
+      id,
+      { ...value },
+      { new: true }
+    );
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      data: updatedUser,
+      message: "Cập nhật thòng tin người dùng thành công",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi khi cập nhật thông tin người dùng",
       error: error.message,
     });
   }
