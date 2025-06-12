@@ -5,7 +5,7 @@ import {
   resetUserPassword,
   updateUserActiveStatus,
   updateUserStatus,
-  updateUsserInfo,
+  updateUserInfo,
 } from "../controllers/admin.user.controller.js";
 import { verifyToken } from "../middlewares/checkAuth.js";
 
