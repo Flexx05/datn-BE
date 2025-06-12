@@ -49,10 +49,18 @@ const resetPasswordSchema = Joi.object({
     }),
 });
 
+const updateUserInfoSchema = Joi.object({
+  fullName: Joi.string().min(3).max(30).optional(),
+  email: Joi.string().email().optional(),
+  phone: Joi.string().optional().allow(null, ""),
+  address: Joi.string().optional().allow(null, ""),
+});
+
 export {
   registerSchema,
   verifyOtpSchema,
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  updateUserInfoSchema,
 };
