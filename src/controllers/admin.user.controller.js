@@ -160,13 +160,23 @@ export const updateUsserInfo = async (req, res) => {
       });
     }
     const { fullName, phone, address } = value;
+    const updatedBy = req.user?.id || null;
+    const userUpdated = await authModel.findById(updatedBy).select("fullName");
+    if (!userUpdated) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng đã cập nhật",
+      });
+    }
+
     const updatedUser = await authModel.findByIdAndUpdate(
       id,
       {
         fullName,
         phone: phone || null,
         address: address || null,
-        updatedBy: req.user?.id || null,
+        updatedBy,
+        userUpdated: userUpdated.fullName,
       },
       { new: true }
     );

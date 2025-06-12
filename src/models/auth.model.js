@@ -38,10 +38,13 @@ const authSchema = new Schema(
       ref: "User", // hoặc 'Admin' nếu bạn phân biệt
       default: null,
     },
+    userUpdated: {
+      type: String,
+    },
     resetPasswordVerified: {
       type: Boolean,
       default: false,
-    }
+    },
   },
   {
     timestamps: true,
