@@ -124,74 +124,74 @@ const orderSchema = new Schema(
   }
 );
 
-// Tạo tự động mã đơn hàng trước khi lưu
-orderSchema.pre("save", async function (next) {
-  if (!this.orderCode) {
-    const date = new Date();
-    const year = date.getFullYear().toString().slice(-2);
-    const month = (date.getMonth() + 1).toString().padStart(2, "0");
-    const day = date.getDate().toString().padStart(2, "0");
-    const random = Math.floor(Math.random() * 10000)
-      .toString()
-      .padStart(4, "0");
-    this.orderCode = `DH${year}${month}${day}-${random}`;
-  }
-  next();
-});
+// // Tạo tự động mã đơn hàng trước khi lưu
+// orderSchema.pre("save", async function (next) {
+//     if (!this.orderCode) {
+//         const date = new Date();
+//         const year = date.getFullYear().toString().slice(-2);
+//         const month = (date.getMonth() + 1).toString().padStart(2, "0");
+//         const day = date.getDate().toString().padStart(2, "0");
+//         const random = Math.floor(Math.random() * 10000)
+//             .toString()
+//             .padStart(4, "0");
+//         this.orderCode = `DH${year}${month}${day}-${random}`;
+//     }
+//     next();
+// });
 
-// Middleware để tự động tính toán totalPrice cho mỗi OrderItem và subtotal cho Order
-orderSchema.pre("save", function (next) {
-  // Tính totalPrice cho mỗi item
-  this.items.forEach((item) => {
-    item.totalPrice = item.quantity * item.priceAtOrder;
-  });
+// // Middleware để tự động tính toán totalPrice cho mỗi OrderItem và subtotal cho Order
+// orderSchema.pre("save", function (next) {
+//     // Tính totalPrice cho mỗi item
+//     this.items.forEach((item) => {
+//         item.totalPrice = item.quantity * item.priceAtOrder;
+//     });
 
-  // Tính subtotal
-  this.subtotal = this.items.reduce((sum, item) => sum + item.totalPrice, 0);
+//     // Tính subtotal
+//     this.subtotal = this.items.reduce((sum, item) => sum + item.totalPrice, 0);
 
-  // Tính totalAmount
-  this.totalAmount = this.subtotal + this.shippingFee - this.discountAmount;
+//     // Tính totalAmount
+//     this.totalAmount = this.subtotal + this.shippingFee - this.discountAmount;
 
-  next();
-});
+//     next();
+// });
 
-// Middleware để đảm bảo tính nhất quán của trạng thái thanh toán
-orderSchema.pre("save", function (next) {
-  // Nếu đơn hàng là COD, mặc định là chưa thanh toán
-  if (this.paymentMethod === "COD" && !this.isModified("paymentStatus")) {
-    this.paymentStatus = "Chưa thanh toán";
-  }
+// // Middleware để đảm bảo tính nhất quán của trạng thái thanh toán
+// orderSchema.pre("save", function (next) {
+//     if (this.paymentMethod === "COD") {
+//         this.paymentStatus = "Chưa thanh toán";
+//         return next();
+//     }
+//     // // Nếu đơn hàng là COD, mặc định là chưa thanh toán
+//     // if (this.paymentMethod === "COD" && !this.isModified("paymentStatus")) {
+//     //     this.paymentStatus = "Chưa thanh toán";
+//     // }
 
-  // Kiểm tra tính hợp lệ của trạng thái thanh toán
-  const validStatusTransitions = {
-    "Chưa thanh toán": ["Đã thanh toán", "Đã hoàn tiền"],
-    "Đã thanh toán": ["Đã hoàn tiền"],
-    "Đã hoàn tiền": [],
-  };
+//     // Kiểm tra tính hợp lệ của trạng thái thanh toán
+//     const validStatusTransitions = {
+//         "Chưa thanh toán": ["Đã thanh toán", "Đã hoàn tiền"],
+//         "Đã thanh toán": ["Đã hoàn tiền"],
+//         "Đã hoàn tiền": [],
+//     };
 
-  if (this.isModified("paymentStatus")) {
-    const oldStatus = this._original
-      ? this._original.paymentStatus
-      : "Chưa thanh toán";
-    const newStatus = this.paymentStatus;
+//     if (this.isModified("paymentStatus")) {
+//         const oldStatus = this._original ? this._original.paymentStatus : "Chưa thanh toán";
+//         const newStatus = this.paymentStatus;
 
-    if (!validStatusTransitions[oldStatus].includes(newStatus)) {
-      const error = new Error(
-        `Không thể chuyển trạng thái thanh toán từ ${oldStatus} sang ${newStatus}`
-      );
-      return next(error);
-    }
-  }
+//         if (!validStatusTransitions[oldStatus].includes(newStatus)) {
+//             const error = new Error(`Không thể chuyển trạng thái thanh toán từ ${oldStatus} sang ${newStatus}`);
+//             return next(error);
+//         }
+//     }
 
-  next();
-});
+//     next();
+// });
 
-// Lưu trạng thái cũ trước khi cập nhật
-orderSchema.pre("save", function (next) {
-  if (this.isModified()) {
-    this._original = this.toObject();
-  }
-  next();
-});
+// // Lưu trạng thái cũ trước khi cập nhật
+// orderSchema.pre("save", function (next) {
+//     if (this.isModified()) {
+//         this._original = this.toObject();
+//     }
+//     next();
+// });
 
 export default model("Order", orderSchema);
