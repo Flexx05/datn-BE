@@ -1,5 +1,6 @@
 import authModel from "../models/auth.model";
 import bcrypt from "bcryptjs";
+import { updateUserInfoSchema } from "../validations/auth.validation";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -149,7 +150,6 @@ export const updateUserActiveStatus = async (req, res) => {
   }
 };
 
-
 export const resetUserPassword = async (req, res) => {
   try {
     const { id } = req.params;
@@ -191,9 +191,6 @@ export const resetUserPassword = async (req, res) => {
         message: "Mật khẩu mới không được trùng với mật khẩu cũ",
       });
     }
-    // kiểm tra mật khẩu cũ đúng mới cho nhậ mât khẩu mới
-
-   console.log("user", user);
 
     return res.status(200).json({
       success: true,
@@ -203,6 +200,60 @@ export const resetUserPassword = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Lỗi khi đặt lại mật khẩu",
+      error: error.message,
+    });
+  }
+};
+
+export const updateUserInfo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error, value } = updateUserInfoSchema.validate(req.body);
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message,
+      });
+    }
+    const { fullName, phone, address } = value;
+    const updatedBy = req.user?.id || null;
+    const userUpdated = await authModel.findById(updatedBy).select("fullName");
+    if (!userUpdated) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng đã cập nhật",
+      });
+    }
+
+    const updatedUser = await authModel.findByIdAndUpdate(
+      id,
+      {
+        fullName,
+        phone: phone || null,
+        address: address || null,
+        updatedBy,
+        userUpdated: userUpdated.fullName,
+      },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: updatedUser,
+      message: "Cập nhật thông tin người dùng thành công",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi khi cập nhật thông tin người dùng",
       error: error.message,
     });
   }
