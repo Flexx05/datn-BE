@@ -1,7 +1,7 @@
 import { model, Schema } from "mongoose";
-import { attributeSchema } from "../validations/attribute.validation";
+import mongoosePaginate from "mongoose-paginate-v2";
 
-const attributeSChema = new Schema(
+const attributeSchema = new Schema(
   {
     name: {
       type: String,
@@ -27,4 +27,4 @@ const attributeSChema = new Schema(
 );
 attributeSchema.plugin(mongoosePaginate);
 
-export default model("Attribute", attributeSChema);
+export default model("Attribute", attributeSchema);
