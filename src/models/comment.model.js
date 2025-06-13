@@ -7,17 +7,33 @@ const commentSchema = new mongoose.Schema({
         ref: "Product", 
         required: true
     },
+
+    variationId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false
+    },
     // ID người dùng bình luận
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Auth",
         required: true
     },
+
+    orderId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Order",
+        required: true
+    },
     // Nội dung bình luận
     content: {
         type: String,
-        required: true,
-        max: 500
+        required: false,
+        maxlength: 500
+    },
+
+    images: {
+        type: [String],
+        default: [],
     },
     // Đánh giá sao
     rating: {
@@ -26,19 +42,14 @@ const commentSchema = new mongoose.Schema({
         min: 1,
         max: 5
     },
-    // Thời gian bình luận
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
     // Trạng thái của bình luận: Chưa duyệt và được duyệt
     status: {
         type: String,
-        enum: ['hidden', 'visible'],
-        default: 'hidden'
+        enum: ['Chờ phê duyệt', 'Đã phê duyệt', 'Từ chối'],
+        default: 'Chờ phê duyệt'
     },
     // Nội dung trả lời bình luận của admin
-    replyContent: {
+    adminReply: {
         type: String,
         default: ""
     },
@@ -47,6 +58,9 @@ const commentSchema = new mongoose.Schema({
         type: Date,
         default: null
     }
+},   {
+    timestamps: true,
+    versionKey: false
 })
 
 export default mongoose.model("Comment", commentSchema);

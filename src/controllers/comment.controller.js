@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Comment from "../models/comment.model";
 import Product from "../models/product.model";
 import Order from "../models/fake.order";
@@ -6,129 +7,91 @@ import { sendMail } from "../utils/sendMail";
 // Hiển thị danh sách bình luận (có thể lọc theo người dùng,sản phẩm, trạng thái, thời gian )
 export const getAllComment = async (req, res) => {
   try {
-    const { status, productId, userId, startDate, endDate, userName, productName, rating } = req.query;
-    // Khởi tạo filter gắn vào đối tượng rỗng
+    const {
+      status,
+      rating,
+      startDate,
+      endDate,
+      userName,
+      productName,
+      _page = 1,
+      _limit = 10,
+    } = req.query;
+
     const filter = {};
-    
-    // Hàm chuẩn hóa chuỗi để so sánh không phân biệt hoa thường và bỏ dấu tiếng Việt
-    function normalizeString(str) {
-      return str
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // bỏ dấu tiếng Việt
-        .replace(/đ/g, "d").replace(/Đ/g, "D")
-        .replace(/\s+/g, " ") // nhiều dấu cách thành 1 dấu cách
-        .trim();
-    }
 
-    
-    // Kiểm tra xem admin có bỏ trống id trên URL hoặc thay thế id bằng dấu cách hay không
-    if (productId !== undefined) {
-      if (productId.trim() === '') {
-        return res.status(400).json({ message: "Sản phẩm không được để trống." });
-      }
-      filter.productId = productId;
-    }
-
-     // Kiểm tra xem admin có bỏ trống id trên URL hoặc thay thế id bằng dấu cách hay không
-    if (userId !== undefined) {
-      if (userId.trim() === '') {
-        return res.status(400).json({ message: "Người dùng không được để trống." });
-      }
-      filter.userId = userId;
-    }
-    
-    // Lọc số sao đánh giá
-    if(rating !== undefined && rating !== "") {
-        filter.rating = Number(rating);
-    } 
-    
-   
-    // Kiểm tra status xem có bị thay đổi không đúng định dạng là "hidden" và "visible" không
-    if (status !== undefined) {
-      if (status.trim() === '') {
-        return res.status(400).json({ message: "Trạng thái không được để trống." });
-      }
-      const allowedStatus = ["hidden", "visible"];
+    // Lọc theo trạng thái
+    if (status) {
+      const allowedStatus = ["Chờ phê duyệt", "Đã phê duyệt", "Từ chối"];
       if (!allowedStatus.includes(status)) {
-        return res.status(400).json({
-          message: `Trạng thái không hợp lệ.`,
-        });
+        return res.status(400).json({ message: "Trạng thái không hợp lệ." });
       }
       filter.status = status;
     }
 
-    // Kiểm tra xem có điền thiếu trên URL 1 trong 2 startDate và endDate không
-    if ((startDate && !endDate) || (!startDate && endDate)) {
-      return res.status(400).json({
-        message: "Thời gian phải có ngày bắt đầu và ngày kết thúc.",
-      });
+    // Lọc theo số sao
+    if (rating) {
+      filter.rating = Number(rating);
     }
-    
 
-  // Kiểm tra nếu cả startDate và endDate được cung cấp từ query params
-      if (startDate && endDate) {
-      // Chuyển đổi chuỗi ngày từ query sang đối tượng Date
+    // Lọc theo ngày
+    if ((startDate && !endDate) || (!startDate && endDate)) {
+      return res.status(400).json({ message: "Thiếu ngày bắt đầu hoặc kết thúc." });
+    }
+    if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
-
-      // Nếu ngày không hợp lệ (ví dụ như sai định dạng), trả về lỗi 400
-      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-          return res.status(400).json({ 
-          message: "Định dạng ngày không hợp lệ. Vui lòng nhập đúng định dạng YYYY-MM-DD." 
-          });
+      if (isNaN(start) || isNaN(end)) {
+        return res.status(400).json({ message: "Định dạng ngày không hợp lệ." });
       }
-
-      // Kiểm tra logic thời gian: ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc
-      if (start > end) {
-          return res.status(400).json({ 
-          message: "Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc." 
-          });
-      }
-
-      // Thiết lập giờ cho ngày bắt đầu là 00:00:00 và ngày kết thúc là 23:59:59 để lọc trong cả ngày
       start.setHours(0, 0, 0, 0);
       end.setHours(23, 59, 59, 999);
-
-      // Thêm điều kiện lọc vào query: chỉ lấy những bình luận được tạo trong khoảng thời gian này
       filter.createdAt = { $gte: start, $lte: end };
-      }
+    }
 
-     let comment = await Comment.find(filter).populate("productId", "name").populate("userId", "fullName email");
-    
-     // Lọc theo tên người dùng nếu có
+    // Truy vấn danh sách bình luận
+    let comments = await Comment.find(filter)
+      .populate("productId", "name")
+      .populate("userId", "fullName email");
+
+    // Chuẩn hóa tiếng Việt không dấu
+    const normalize = (str) =>
+      str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
+
+    // Lọc theo tên người dùng
     if (userName) {
-      const normalizedUserName = normalizeString(userName);
-      comment = comment.filter(c =>
-        c.userId?.fullName &&
-        normalizeString(c.userId.fullName).includes(normalizedUserName)
+      const normalizedInput = normalize(userName);
+      comments = comments.filter((c) =>
+        c.userId?.fullName && normalize(c.userId.fullName).includes(normalizedInput)
       );
     }
 
-    // Lọc theo tên sản phẩm nếu có
+    // Lọc theo tên sản phẩm
     if (productName) {
-      const normalizedProductName = normalizeString(productName);
-      comment = comment.filter(c =>
-        c.productId?.name &&
-        normalizeString(c.productId.name).includes(normalizedProductName)
+      const normalizedInput = normalize(productName);
+      comments = comments.filter((c) =>
+        c.productId?.name && normalize(c.productId.name).includes(normalizedInput)
       );
     }
 
-    const hasFilter = status || productId || userId || (startDate && endDate) || userName || productName;
+    const total = comments.length;
+    const page = parseInt(_page);
+    const limit = parseInt(_limit);
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const paginatedComments = comments.slice(start, end);
 
-      if (comment.length === 0) {
-        if (hasFilter) {
-          return res.status(404).json({ message: "Không tìm thấy bình luận nào phù hợp với điều kiện lọc." });
-        } else {
-          return res.status(404).json({ message: "Không có dữ liệu." });
-        }
-      }
-    return res.status(200).json(comment);
-
-  } catch (error) {
-    return res.status(500).json({
-      message: error.message,
+    return res.status(200).json({
+      data: paginatedComments,
+      pagination: {
+        _page: page,
+        _limit: limit,
+        _total: total,
+        _totalPages: Math.ceil(total / limit),
+      },
     });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -136,14 +99,9 @@ export const getCommentById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Kiểm tra id có tồn tại không
-    if (!id || id.trim() === '') {
-      return res.status(400).json({ message: "ID bình luận không được để trống." });
-    }
-
     const comment = await Comment.findById(id)
       .populate("productId", "name")
-      .populate("userId", "fullName email");
+      .populate("userId", "fullName email")
 
     if (!comment) {
       return res.status(404).json({ message: "Không tìm thấy bình luận." });
@@ -156,107 +114,164 @@ export const getCommentById = async (req, res) => {
 };
 
 
+
+
 // Thêm bình luận, đánh giá cho sản phẩm(Chỉ cho phép người dùng đã mua hàng và đăng nhập mới có thể bình luận)
 export const addComment = async (req, res) => {
   try {
-    const { productId, content, rating } = req.body;
+    const { orderId, productId, content, rating } = req.body;
     const userId = req.user._id; 
 
-    if (req.body.userId && req.body.userId !== String(req.user._id)) {
-      return res.status(403).json({
-        message: "Hệ thống sẽ tự lấy ID từ tài khoản đăng nhập."
+    // 1. Kiểm tra dữ liệu đầu vào
+    if (!orderId) {
+      return res.status(400).json({ 
+        message: "Vui lòng chọn đơn hàng cần đánh giá." 
       });
     }
 
-    if (!productId || !rating) {
-      return res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin." });
+    if (!productId) {
+      return res.status(400).json({ 
+        message: "Vui lòng chọn sản phẩm cần đánh giá." 
+      });
     }
 
-    if (typeof content === "string" && content.length > 500) {
-      return res.status(400).json({ message: "Bình luận không được quá 500 ký tự." });
+    if (!rating) {
+      return res.status(400).json({ 
+        message: "Vui lòng chọn số sao đánh giá." 
+      });
     }
 
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-      return res.status(400).json({ message: "Điểm đánh giá phải là số nguyên từ 1 đến 5." });
+    // 2. Kiểm tra tính hợp lệ của rating (1-5 sao)
+    const ratingNumber = Number(rating);
+    if (!Number.isInteger(ratingNumber) || ratingNumber < 1 || ratingNumber > 5) {
+      return res.status(400).json({ 
+        message: "Điểm đánh giá phải là số nguyên từ 1 đến 5 sao." 
+      });
     }
 
-    const productExists = await Product.exists({ _id: productId });
-    if (!productExists) {
-      return res.status(400).json({ message: "Sản phẩm không tồn tại." });
+    // 3. Kiểm tra độ dài bình luận (nếu có)
+    if (content && content.length > 500) {
+      return res.status(400).json({ 
+        message: "Bình luận không được vượt quá 500 ký tự." 
+      });
     }
 
+    // Lấy URL ảnh từ Cloudinary
+    const images = req.files?.map(file => file.path) || [];
 
-    // Kiểm tra xem người dùng đã mua sản phẩm này chưa
-    const orderExists = await Order.exists({
+    // Kiểm tra số lượng ảnh
+    if (images.length > 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Chỉ được upload tối đa 5 ảnh"
+      });
+    }
+
+    
+    // 5. Kiểm tra đơn hàng tồn tại và đã hoàn thành
+    const order = await Order.findOne({
+      _id: orderId,
       userId,
-      productId,
-      status: 'completed' 
+      status: "Thành công",
+      paymentStatus: "Đã thanh toán"
     });
 
-    if (!orderExists) {
+    if (!order) {
       return res.status(403).json({
-        message: "Bạn chưa mua sản phẩm này, không thể đánh giá."
+        message: "Không tìm thấy đơn hàng hoặc đơn hàng chưa hoàn thành."
       });
     }
 
+    // 6. Kiểm tra sản phẩm có trong đơn hàng không
+    const matchedItem = order.items.find(item =>
+      item.productId?.toString() === new mongoose.Types.ObjectId(productId).toString()
+    );
+
+  
+
+    if (!matchedItem) {
+      return res.status(403).json({
+        message: "Sản phẩm này không có trong đơn hàng."
+      });
+    }
+
+    // 7. Kiểm tra xem người dùng đã đánh giá sản phẩm này trong đơn hàng chưa
+    const existingComment = await Comment.findOne({
+      userId,
+      orderId,
+      productId
+    });
+
+    if (existingComment) {
+      return res.status(400).json({
+        message: "Bạn đã đánh giá sản phẩm này trong đơn hàng này."
+      });
+    }
+   
+    // 8. Tạo bình luận mới
     const comment = await Comment.create({
       productId,
+      variationId: matchedItem.variationId || null, // Nếu có variantId thì lưu, nếu không thì để null
       userId,
-      content,
-      rating,
-      status: "hidden"
+      orderId,
+      content: content || "",
+      images,
+      rating: ratingNumber,
+      status: "Chờ phê duyệt"
     });
 
+    // 9. Cập nhật rating trung bình của sản phẩm
+    const allRatings = await Comment.find({ 
+      productId, 
+      status: "Đã phê duyệt" 
+    }).select("rating");
 
-       // Lấy tất cả rating hiện tại của sản phẩm
+    const totalRatings = allRatings.length;
+    const sumRatings = allRatings.reduce((sum, item) => sum + Number(item.rating), 0);
+    const avgRating = totalRatings > 0 ? sumRatings / totalRatings : 0;
 
-       const allRatings = await Comment.find({ productId, status: "visible" }).select("rating");
-       const totalRatings = allRatings.length;
-       const sumRatings = allRatings.reduce((sum, item) => sum + Number(item.rating), 0);
-       const avgRating = sumRatings / totalRatings;
-   
-       // Tính ratingCount theo từng mức sao
-       const ratingCount = { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 };
-       allRatings.forEach(({ rating }) => {
-         ratingCount[rating] = (ratingCount[rating] || 0) + 1;
-       });
-   
-       // Cập nhật sản phẩm với averageRating, reviewCount và ratingCount
-       const updatedProduct = await Product.findByIdAndUpdate(
-         productId,
-         {
-           averageRating: avgRating,
-           reviewCount: totalRatings,
-           ratingCount: ratingCount
-         },
-         { new: true }
-       );
-   
-       return res.status(200).json({
-         message: "Đánh giá thành công",
-         comment,
-         updatedProduct
-       });
+    // Tính ratingCount theo từng mức sao
+    const ratingCount = { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 };
+    allRatings.forEach(({ rating }) => {
+      ratingCount[rating] = (ratingCount[rating] || 0) + 1;
+    });
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productId,
+      {
+        averageRating: avgRating,
+        reviewCount: totalRatings,
+        ratingCount: ratingCount
+      },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      message: "Đánh giá thành công và đang chờ duyệt.",
+      comment,
+      updatedProduct
+    });
 
   } catch (error) {
-    return res.status(500).json({ message: "Đã xảy ra lỗi khi gửi đánh giá.", error: error.message });
+    return res.status(500).json({ 
+      message: "Đã xảy ra lỗi khi gửi đánh giá. Vui lòng thử lại sau.",
+      error: error.message 
+    });
   }
 };
+
 
 // Cập nhập trạng thái duyệt của bình luận
 export const updateCommentStatus = async (req, res) => {
   try {
-    // Truyền id của bình luận
     const { id } = req.params;
     const { status } = req.body;
 
-    // Kiểm tra id tồn tại
     if (!id || id.trim() === "") {
       return res.status(400).json({ message: "ID bình luận không được để trống." });
     }
 
-    // Kiểm tra giá trị hợp lệ cho status
-    const allowedStatus = ["visible", "hidden"];
+    const allowedStatus = ["Chờ phê duyệt", "Đã phê duyệt", "Từ chối"];
     if (!allowedStatus.includes(status)) {
       return res.status(400).json({ message: "Trạng thái không hợp lệ"});
     }
@@ -264,7 +279,7 @@ export const updateCommentStatus = async (req, res) => {
     const updatedComment = await Comment.findByIdAndUpdate(
       id,
       { status: status },
-      { new: true } // Trả về document sau khi cập nhật
+      { new: true }
     );
 
     if (!updatedComment) {
@@ -273,7 +288,11 @@ export const updateCommentStatus = async (req, res) => {
     
     // Cập nhập lại số sao trung bình mỗi lần duyệt bình luận
     const productId = updatedComment.productId;
-    const allRatings = await Comment.find({ productId, status: "visible" }).select("rating");
+    const allRatings = await Comment.find({ 
+      productId, 
+      status: "Đã phê duyệt" 
+    }).select("rating");
+
     const totalRatings = allRatings.length;
     const sumRatings = allRatings.reduce((sum, item) => sum + Number(item.rating), 0);
     const avgRating = totalRatings > 0 ? sumRatings / totalRatings : 0;
@@ -303,31 +322,31 @@ export const updateCommentStatus = async (req, res) => {
   }
 };
 
-
 // Admin trả lời lại bình luận của người dùng
 export const replyToComment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { replyContent } = req.body;
+    const { adminReply } = req.body;
 
-    if (!replyContent || replyContent.trim() === "") {
+    if (!adminReply || adminReply.trim() === "") {
       return res.status(400).json({ message: "Nội dung trả lời không được để trống." });
     }
 
-    const existingComment = await Comment.findById(id).populate("userId", "email fullName");
+    const existingComment = await Comment.findById(id)
+      .populate("userId", "email fullName");
 
     if (!existingComment) {
       return res.status(404).json({ message: "Bình luận không tồn tại." });
     }
 
-    if (existingComment.status !== "visible") {
+    if (existingComment.status !== "Đã phê duyệt") {
       return res.status(400).json({ message: "Chỉ được trả lời bình luận đã được duyệt." });
     }
 
     const updatedComment = await Comment.findByIdAndUpdate(
       id,
       {
-        replyContent,
+        adminReply,
         replyAt: new Date()
       },
       { new: true }
@@ -343,7 +362,7 @@ export const replyToComment = async (req, res) => {
           <p>Bình luận của bạn đã được admin phản hồi:</p>
           <blockquote>${existingComment.content}</blockquote>
           <p><b>Phản hồi từ admin:</b></p>
-          <blockquote>${replyContent}</blockquote>
+          <blockquote>${adminReply}</blockquote>
           <p>Trân trọng,<br/>Đội ngũ hỗ trợ khách hàng</p>
         `
       });
@@ -362,27 +381,27 @@ export const replyToComment = async (req, res) => {
 // Lấy tất cả bình luận của người dùng theo sản phẩm(Chỉ lấy bình luận đã được duyệt)
 export const getCommentsForClient = async (req, res) => {
   try {
-    // Truyền id của sản phẩm
     const { id } = req.params;
     const productId = id;
+    
     if (!productId || productId.trim() === "") {
       return res.status(400).json({ message: "ID sản phẩm không được để trống." });
     }
-    // Kiểm tra sản phẩm tồn tại
+
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ message: "Sản phẩm không tồn tại." });
     }
 
-    // Lấy tất cả bình luận đã được duyệt
     const comments = await Comment.find({ 
       productId, 
-      status: "visible" 
+      status: "Đã phê duyệt" 
     })
-    .sort({ createdAt: -1 }).populate({
-      path: "userId  productId",         // trường tham chiếu trong Comment
-      select: "fullName email name"  // chỉ lấy những trường cần thiết của user
-    }); // Mới nhất trước
+    .sort({ createdAt: -1 })
+    .populate({
+      path: "userId productId",
+      select: "fullName email name"
+    });
     
     if (comments.length === 0) {
       return res.status(404).json({ message: "Không có bình luận nào cho sản phẩm này." });
@@ -397,4 +416,3 @@ export const getCommentsForClient = async (req, res) => {
     return res.status(500).json({ message: "Lỗi khi lấy bình luận", error: error.message });
   }
 };
-

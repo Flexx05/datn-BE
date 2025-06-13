@@ -11,6 +11,11 @@ import attributeRouter from "./routers/attribute.router";
 import productRouter from "./routers/product.router";
 import userRouter from "./routers/admin.user.router";
 import voucherRouter from "./routers/voucher.router";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -19,6 +24,9 @@ dotenv.config();
 app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
+
+// Cấu hình static file serving
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // mongoose.connect(
 //     `mongodb+srv://root:binova2025@datn-db.nx9ha3d.mongodb.net/${process.env.DB_URL}?retryWrites=true&w=majority&appName=DATN-DB    
