@@ -117,6 +117,20 @@ export const deleteBrand = async (req, res) => {
       return res.status(404).json({ error: "brand not found" });
     }
 
+    // // nếu thương hiệu không có sản phẩm thì mới xoá unBrand
+    const hasProduct = await productModel.findOne({ brandId: id });
+    if (!hasProduct) {
+      const deletedBrand = await brandModel.findByIdAndUpdate(
+        id,
+        { isActive: false },
+        { new: true }
+      );
+      return res.status(200).json({
+        message: "Xoá thương hiệu thành công",
+        brand: deletedBrand,
+      });
+    }
+
     const unBrand = await brandModel.findOneAndUpdate(
       { slug: "thuong-hieu-khong-xac-dinh" },
       {
@@ -139,7 +153,7 @@ export const deleteBrand = async (req, res) => {
     res.status(200).json({
       message: "Xoá mềm thương hiệu thành công, sản phẩm chuyển sang thương hiệu không xác định",
       brand: unBrand,
-    });
+    }); 
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
