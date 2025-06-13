@@ -22,7 +22,7 @@ const variationSchema = Joi.object({
 });
 
 export const productSchema = Joi.object({
-  name: Joi.string().required().min(3).trim(),
+  name: Joi.string().required().min(3).trim().max(100),
   description: Joi.string().trim().allow(null),
   image: Joi.array().items(Joi.string()),
   brandId: Joi.string().required(),
