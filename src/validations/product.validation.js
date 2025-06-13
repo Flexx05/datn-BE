@@ -12,9 +12,9 @@ const productAttributeSchema = Joi.object({
 const variationSchema = Joi.object({
   _id: Joi.string(),
   attributes: Joi.array().items(productAttributeSchema).min(1),
-  regularPrice: Joi.number().required(),
+  regularPrice: Joi.number().min(1000).max(1000000000).required(),
   salePrice: Joi.number(),
-  stock: Joi.number().required(),
+  stock: Joi.number().min(0).max(10000).required(),
   image: Joi.string(),
   isActive: Joi.boolean().default(true),
   createdAt: Joi.string(),
