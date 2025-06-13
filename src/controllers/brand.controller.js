@@ -39,7 +39,14 @@ export const createBrand = async (req, res) => {
 
 export const getAllBrands = async (req, res) => {
   try {
-    const { search, isActive } = req.query;
+    const {
+      _page = 1,
+      _limit = 10,
+      _sort = "createdAt",
+      _order,
+      isActive,
+      search,
+    } = req.query;
     const query = {};
     if (typeof search === "string" && search.trim() !== "") {
       query.name = { $regex: search, $options: "i" };
@@ -47,7 +54,13 @@ export const getAllBrands = async (req, res) => {
     if (isActive !== undefined) {
       query.isActive = isActive === "true";
     }
-    const brands = await brandModel.find(query);
+    const options = {
+      page: parseInt(_page, 10),
+      limit: parseInt(_limit, 10),
+      sort: { [_sort]: _order === "desc" ? -1 : 1 },
+    };
+
+    const brands = await brandModel.paginate(query, options);
     return res.status(200).json(brands);
   } catch (error) {
     return res.status(500).json({ error: error.message });
