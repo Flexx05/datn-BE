@@ -70,6 +70,16 @@ export const createAttribute = async (req, res) => {
       return res.status(400).json({ message: errors });
     }
 
+    // Kiểm tra trùng tên thuộc tính (không phân biệt hoa thường, loại bỏ khoảng trắng)
+    const normalizedName = value.name.trim().toLowerCase();
+    const attributes = await attributeModel.find();
+    const hasNameDuplicate = attributes.some(
+      (attr) => attr.name && attr.name.trim().toLowerCase() === normalizedName
+    );
+    if (hasNameDuplicate) {
+      return res.status(400).json({ message: "Tên thuộc tính đã tồn tại." });
+    }
+
     // Kiểm tra trùng tên value (không phân biệt hoa thường, loại bỏ khoảng trắng)
     const normalized = value.values.map((v) => v.trim().toLowerCase());
     const hasDuplicate = normalized.some((v, i) => normalized.indexOf(v) !== i);
@@ -79,7 +89,6 @@ export const createAttribute = async (req, res) => {
         .json({ message: "Các giá trị value không được trùng tên." });
     }
 
-    const attributes = await attributeModel.find();
     const values = value.values.map((val) => val);
     const attribute = await attributeModel.create({
       ...value,
@@ -107,6 +116,19 @@ export const updateAttribute = async (req, res) => {
       return res.status(400).json({ message: errors });
     }
 
+    // Kiểm tra trùng tên thuộc tính (không phân biệt hoa thường, loại bỏ khoảng trắng, loại trừ chính nó)
+    const normalizedName = value.name.trim().toLowerCase();
+    const attributes = await attributeModel.find();
+    const hasNameDuplicate = attributes.some(
+      (attr) =>
+        attr._id != id &&
+        attr.name &&
+        attr.name.trim().toLowerCase() === normalizedName
+    );
+    if (hasNameDuplicate) {
+      return res.status(400).json({ message: "Tên thuộc tính đã tồn tại." });
+    }
+
     // Kiểm tra trùng tên value (không phân biệt hoa thường, loại bỏ khoảng trắng)
     const normalized = value.values.map((v) => v.trim().toLowerCase());
     const hasDuplicate = normalized.some((v, i) => normalized.indexOf(v) !== i);
@@ -116,7 +138,6 @@ export const updateAttribute = async (req, res) => {
         .json({ message: "Các giá trị value không được trùng tên." });
     }
 
-    const attributes = await attributeModel.find();
     const values = value.values.map((val) => val);
     const attribute = await attributeModel.findByIdAndUpdate(
       id,
