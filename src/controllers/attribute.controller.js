@@ -4,7 +4,14 @@ import { attributeSchema } from "../validations/attribute.validation";
 
 export const getAllAttribute = async (req, res) => {
   try {
-    const { search, isActive } = req.query;
+    const {
+      search,
+      isActive,
+      _page = 1,
+      _limit = 10,
+      _sort = "createdAt",
+      _order,
+    } = req.query;
     const query = {};
     if (isActive !== undefined) {
       query.isActive = isActive === "true";
@@ -12,7 +19,12 @@ export const getAllAttribute = async (req, res) => {
     if (typeof search === "string" && search.trim() !== "") {
       query.name = { $regex: search, $options: "i" };
     }
-    const attributes = await attributeModel.find(query);
+    const options = {
+      page: parseInt(_page, 10),
+      limit: parseInt(_limit, 10),
+      sort: { [_sort]: _order === "desc" ? -1 : 1 },
+    };
+    const attributes = await attributeModel.paginate(query, options);
     return res.status(200).json(attributes);
   } catch (error) {
     return res.status(400).json({ message: error.message });

@@ -1,4 +1,5 @@
 import { model, Schema } from "mongoose";
+import { attributeSchema } from "../validations/attribute.validation";
 
 const attributeSChema = new Schema(
   {
@@ -24,5 +25,6 @@ const attributeSChema = new Schema(
     versionKey: false,
   }
 );
+attributeSchema.plugin(mongoosePaginate);
 
 export default model("Attribute", attributeSChema);
