@@ -65,7 +65,14 @@ export const createCategory = async (req, res) => {
 
 export const getAllCategories = async (req, res) => {
   try {
-    const { isActive, search } = req.query;
+    const {
+      isActive,
+      search,
+      _page = 1,
+      _limit = 10,
+      _sort = "createdAt",
+      _order,
+    } = req.query;
     const query = {};
     if (isActive !== undefined) {
       query.isActive = isActive === "true";
@@ -73,14 +80,16 @@ export const getAllCategories = async (req, res) => {
     if (typeof search === "string" && search.trim() !== "") {
       query.name = { $regex: search, $options: "i" };
     }
-
-    const categories = await categoryModel
-      .find(query)
-      .populate({
+    const options = {
+      page: parseInt(_page, 10),
+      limit: parseInt(_limit, 10),
+      sort: { [_sort]: _order === "desc" ? -1 : 1 },
+      populate: {
         path: "subCategories",
-        options: { sort: { categorySort: 1 } },
-      })
-      .sort({ categorySort: 1 });
+      },
+    };
+
+    const categories = await categoryModel.paginate(query, options);
     if (!categories) {
       return res.status(404).json({ error: "Categories not found" });
     }

@@ -1,4 +1,5 @@
 import mongoose, { model, Schema } from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 
 const categorySchema = new Schema(
   {
@@ -42,6 +43,7 @@ categorySchema.virtual("subCategories", {
   localField: "_id",
   foreignField: "parentId",
 });
+categorySchema.plugin(mongoosePaginate);
 
 export default model("Category", categorySchema);
 
