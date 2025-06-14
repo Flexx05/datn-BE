@@ -3,97 +3,111 @@ import Comment from "../models/comment.model";
 import Product from "../models/product.model";
 import Order from "../models/fake.order";
 import { sendMail } from "../utils/sendMail";
+import {addCommentValidation, updateCommentStatusValidation, replyToCommentValidation} from "../validations/comment.validation";
+
 
 // Hiển thị danh sách bình luận (có thể lọc theo người dùng,sản phẩm, trạng thái, thời gian )
 export const getAllComment = async (req, res) => {
   try {
     const {
+      _page = 1,
+      _limit = 10,
+      _sort = "createdAt",
+      _order = "desc",
+      search,
       status,
       rating,
       startDate,
       endDate,
-      userName,
-      productName,
-      _page = 1,
-      _limit = 10,
     } = req.query;
 
-    const filter = {};
+    const query = {};
 
-    // Lọc theo trạng thái
     if (status) {
-      const allowedStatus = ["Chờ phê duyệt", "Đã phê duyệt", "Từ chối"];
+      const allowedStatus = ["hidden", "visible"];
       if (!allowedStatus.includes(status)) {
         return res.status(400).json({ message: "Trạng thái không hợp lệ." });
       }
-      filter.status = status;
+      query.status = status;
     }
 
-    // Lọc theo số sao
+    // ✅ Lọc theo số sao
     if (rating) {
-      filter.rating = Number(rating);
+      query.rating = Number(rating);
     }
 
-    // Lọc theo ngày
+    // ✅ Lọc theo khoảng thời gian
     if ((startDate && !endDate) || (!startDate && endDate)) {
       return res.status(400).json({ message: "Thiếu ngày bắt đầu hoặc kết thúc." });
     }
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
+
       if (isNaN(start) || isNaN(end)) {
         return res.status(400).json({ message: "Định dạng ngày không hợp lệ." });
       }
+
+      if (start > end) {
+        return res.status(400).json({ message: "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc." });
+      }
+
       start.setHours(0, 0, 0, 0);
       end.setHours(23, 59, 59, 999);
-      filter.createdAt = { $gte: start, $lte: end };
+      query.createdAt = { $gte: start, $lte: end };
     }
 
-    // Truy vấn danh sách bình luận
-    let comments = await Comment.find(filter)
-      .populate("productId", "name")
-      .populate("userId", "fullName email");
-
-    // Chuẩn hóa tiếng Việt không dấu
+    // ✅ Tạo điều kiện tìm kiếm tổng quát
     const normalize = (str) =>
       str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
+    
+    const searchNormalized = search ? normalize(search) : null;
 
-    // Lọc theo tên người dùng
-    if (userName) {
-      const normalizedInput = normalize(userName);
-      comments = comments.filter((c) =>
-        c.userId?.fullName && normalize(c.userId.fullName).includes(normalizedInput)
-      );
+    const options = {
+      page: parseInt(_page, 10),
+      limit: parseInt(_limit, 10),
+      sort: { [_sort]: _order === "desc" ? -1 : 1 },
+      populate: [
+        { path: "productId", select: "name" },
+        { path: "userId", select: "fullName email" },
+      ],
+    };
+
+    const allComments = await Comment.paginate(query, options);
+
+    // ✅ Lọc thêm theo tên sản phẩm hoặc người dùng sau khi populate (do MongoDB không join sâu)
+    if (searchNormalized) {
+      allComments.docs = allComments.docs.filter((c) => {
+        const product = c.productId?.name ? normalize(c.productId.name) : "";
+        const user = c.userId?.fullName ? normalize(c.userId.fullName) : "";
+        const email = c.userId?.email ? normalize(c.userId.email) : "";
+    
+        return (
+          product.includes(searchNormalized) ||
+          user.includes(searchNormalized) ||
+          email.includes(searchNormalized)
+        );
+      });
+    
+      allComments.totalDocs = allComments.docs.length;
+      allComments.totalPages = Math.ceil(allComments.totalDocs / options.limit);
     }
-
-    // Lọc theo tên sản phẩm
-    if (productName) {
-      const normalizedInput = normalize(productName);
-      comments = comments.filter((c) =>
-        c.productId?.name && normalize(c.productId.name).includes(normalizedInput)
-      );
-    }
-
-    const total = comments.length;
-    const page = parseInt(_page);
-    const limit = parseInt(_limit);
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const paginatedComments = comments.slice(start, end);
+    
 
     return res.status(200).json({
-      data: paginatedComments,
+      data: allComments.docs,
       pagination: {
-        _page: page,
-        _limit: limit,
-        _total: total,
-        _totalPages: Math.ceil(total / limit),
+        _page: allComments.page,
+        _limit: allComments.limit,
+        _total: allComments.totalDocs,
+        _totalPages: allComments.totalPages,
       },
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
 };
+
 
 export const getCommentById = async (req, res) => {
   try {
@@ -119,56 +133,18 @@ export const getCommentById = async (req, res) => {
 // Thêm bình luận, đánh giá cho sản phẩm(Chỉ cho phép người dùng đã mua hàng và đăng nhập mới có thể bình luận)
 export const addComment = async (req, res) => {
   try {
-    const { orderId, productId, content, rating } = req.body;
+    const {error, value} = addCommentValidation.validate(req.body, {
+      abortEarly: false,
+      convert: false,
+    });
+    if (error) {
+      const errors = error.details.map((err) => err.message);
+      return res.status(400).json({ message: errors });
+    }
+    const { orderId, productId, content, rating, images } = value;
     const userId = req.user._id; 
 
-    // 1. Kiểm tra dữ liệu đầu vào
-    if (!orderId) {
-      return res.status(400).json({ 
-        message: "Vui lòng chọn đơn hàng cần đánh giá." 
-      });
-    }
-
-    if (!productId) {
-      return res.status(400).json({ 
-        message: "Vui lòng chọn sản phẩm cần đánh giá." 
-      });
-    }
-
-    if (!rating) {
-      return res.status(400).json({ 
-        message: "Vui lòng chọn số sao đánh giá." 
-      });
-    }
-
-    // 2. Kiểm tra tính hợp lệ của rating (1-5 sao)
-    const ratingNumber = Number(rating);
-    if (!Number.isInteger(ratingNumber) || ratingNumber < 1 || ratingNumber > 5) {
-      return res.status(400).json({ 
-        message: "Điểm đánh giá phải là số nguyên từ 1 đến 5 sao." 
-      });
-    }
-
-    // 3. Kiểm tra độ dài bình luận (nếu có)
-    if (content && content.length > 500) {
-      return res.status(400).json({ 
-        message: "Bình luận không được vượt quá 500 ký tự." 
-      });
-    }
-
-    // Lấy URL ảnh từ Cloudinary
-    const images = req.files?.map(file => file.path) || [];
-
-    // Kiểm tra số lượng ảnh
-    if (images.length > 5) {
-      return res.status(400).json({
-        success: false,
-        message: "Chỉ được upload tối đa 5 ảnh"
-      });
-    }
-
-    
-    // 5. Kiểm tra đơn hàng tồn tại và đã hoàn thành
+    // Kiểm tra đơn hàng tồn tại và đã hoàn thành
     const order = await Order.findOne({
       _id: orderId,
       userId,
@@ -182,12 +158,10 @@ export const addComment = async (req, res) => {
       });
     }
 
-    // 6. Kiểm tra sản phẩm có trong đơn hàng không
+    // Kiểm tra sản phẩm có trong đơn hàng không
     const matchedItem = order.items.find(item =>
       item.productId?.toString() === new mongoose.Types.ObjectId(productId).toString()
     );
-
-  
 
     if (!matchedItem) {
       return res.status(403).json({
@@ -195,35 +169,23 @@ export const addComment = async (req, res) => {
       });
     }
 
-    // 7. Kiểm tra xem người dùng đã đánh giá sản phẩm này trong đơn hàng chưa
-    const existingComment = await Comment.findOne({
-      userId,
-      orderId,
-      productId
-    });
 
-    if (existingComment) {
-      return res.status(400).json({
-        message: "Bạn đã đánh giá sản phẩm này trong đơn hàng này."
-      });
-    }
-   
-    // 8. Tạo bình luận mới
+    // Tạo bình luận mới với trạng thái visible
     const comment = await Comment.create({
       productId,
-      variationId: matchedItem.variationId || null, // Nếu có variantId thì lưu, nếu không thì để null
+      variationId: matchedItem.variationId || null,
       userId,
       orderId,
       content: content || "",
-      images,
-      rating: ratingNumber,
-      status: "Chờ phê duyệt"
+      images: images || [],
+      rating,
+      status: "visible" // Mặc định là visible
     });
 
-    // 9. Cập nhật rating trung bình của sản phẩm
+    // Cập nhật rating trung bình của sản phẩm
     const allRatings = await Comment.find({ 
       productId, 
-      status: "Đã phê duyệt" 
+      status: "visible" // Chỉ tính các bình luận visible
     }).select("rating");
 
     const totalRatings = allRatings.length;
@@ -247,7 +209,7 @@ export const addComment = async (req, res) => {
     );
 
     return res.status(200).json({
-      message: "Đánh giá thành công và đang chờ duyệt.",
+      message: "Đánh giá thành công.",
       comment,
       updatedProduct
     });
@@ -265,16 +227,17 @@ export const addComment = async (req, res) => {
 export const updateCommentStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
-
-    if (!id || id.trim() === "") {
-      return res.status(400).json({ message: "ID bình luận không được để trống." });
+    const { error, value } = updateCommentStatusValidation.validate(req.body, {
+      abortEarly: false,
+      convert: false,
+    });
+    if (error) {
+      const errors = error.details.map((err) => err.message);
+      return res.status(400).json({ message: errors });
     }
 
-    const allowedStatus = ["Chờ phê duyệt", "Đã phê duyệt", "Từ chối"];
-    if (!allowedStatus.includes(status)) {
-      return res.status(400).json({ message: "Trạng thái không hợp lệ"});
-    }
+    const { status } = value;
+
 
     const updatedComment = await Comment.findByIdAndUpdate(
       id,
@@ -290,7 +253,7 @@ export const updateCommentStatus = async (req, res) => {
     const productId = updatedComment.productId;
     const allRatings = await Comment.find({ 
       productId, 
-      status: "Đã phê duyệt" 
+      status: "visible" // Chỉ tính các bình luận đã phê duyệt
     }).select("rating");
 
     const totalRatings = allRatings.length;
@@ -326,12 +289,17 @@ export const updateCommentStatus = async (req, res) => {
 export const replyToComment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { adminReply } = req.body;
-
-    if (!adminReply || adminReply.trim() === "") {
-      return res.status(400).json({ message: "Nội dung trả lời không được để trống." });
-    }
-
+     const { error, value } = replyToCommentValidation.validate(req.body, {
+       abortEarly: false,
+       convert: false,
+     });
+     if (error) {
+       const errors = error.details.map((err) => err.message);
+       return res.status(400).json({ message: errors });
+     }
+     
+    const { adminReply } = value;
+   
     const existingComment = await Comment.findById(id)
       .populate("userId", "email fullName");
 
@@ -339,7 +307,7 @@ export const replyToComment = async (req, res) => {
       return res.status(404).json({ message: "Bình luận không tồn tại." });
     }
 
-    if (existingComment.status !== "Đã phê duyệt") {
+    if (existingComment.status !== "visible") {
       return res.status(400).json({ message: "Chỉ được trả lời bình luận đã được duyệt." });
     }
 
@@ -395,7 +363,7 @@ export const getCommentsForClient = async (req, res) => {
 
     const comments = await Comment.find({ 
       productId, 
-      status: "Đã phê duyệt" 
+      status: "visible" 
     })
     .sort({ createdAt: -1 })
     .populate({

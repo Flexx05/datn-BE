@@ -1,6 +1,7 @@
-import mongoose, {Schema} from "mongoose";
+import {mongoose, Schema} from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 
-const commentSchema = new mongoose.Schema({
+const commentSchema = new Schema({
     // ID sản phẩm được bình luận
     productId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -45,8 +46,8 @@ const commentSchema = new mongoose.Schema({
     // Trạng thái của bình luận: Chưa duyệt và được duyệt
     status: {
         type: String,
-        enum: ['Chờ phê duyệt', 'Đã phê duyệt', 'Từ chối'],
-        default: 'Chờ phê duyệt'
+        enum: ['hidden', 'visible'],
+        default: 'visible'
     },
     // Nội dung trả lời bình luận của admin
     adminReply: {
@@ -62,5 +63,7 @@ const commentSchema = new mongoose.Schema({
     timestamps: true,
     versionKey: false
 })
+
+commentSchema.plugin(mongoosePaginate);
 
 export default mongoose.model("Comment", commentSchema);
