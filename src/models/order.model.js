@@ -98,13 +98,13 @@ const orderSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["Chờ xử lý", "Đang giao hàng", "Thành công", "Đã hủy"],
-      default: "Chờ xử lý",
+      enum: ["Cho xac nhan", "Da xac nhan", "Dang giao hang", "Da giao hang", "Da huy"],
+      default: "Cho xac nhan",
     },
     paymentStatus: {
       type: String,
-      enum: ["Chưa thanh toán", "Đã thanh toán", "Đã hoàn tiền"],
-      default: "Chưa thanh toán",
+      enum: ["Chua thanh toan", "Da thanh toan", "Da hoan tien", "That bai"],
+      default: "Chua thanh toan",
     },
     paymentMethod: {
       type: String,
