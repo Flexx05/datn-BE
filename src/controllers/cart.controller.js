@@ -161,6 +161,7 @@ export const getCart = async (req, res) => {
           product: {
             _id: product._id,
             name: product.name,
+            slug: product.slug,
             description: product.description,
             category: product.categoryName,
             brand: product.brandName,
