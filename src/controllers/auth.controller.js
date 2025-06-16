@@ -71,6 +71,7 @@ export const register = async (req, res) => {
       ...value,
       password: hashPassword,
       isActive: false,
+      isVerify: false,
     });
 
     return res.status(200).json({ message: "OTP đã được gửi đi", user });
@@ -104,7 +105,7 @@ export const verifyOtp = async (req, res) => {
     }
     const newUser = await authModel.findOneAndUpdate(
       { email },
-      { isActive: true },
+      { isActive: true , isVerify: true },
       { new: true }
     );
 
@@ -148,6 +149,9 @@ export const login = async (req, res) => {
         .status(400)
         .json({ error: "OTP đã được gửi! Vui lòng kiểm tra email" });
     }
+    if(!user.isVerify || user.isVerify === false) {
+      return res.status(400).json({ error: "Vui lòng kiểm tra email" });
+    } 
     user.password = undefined; // Không trả về mật khẩu trong response
     const accessToken = jwt.sign(
       { id: user._id },
