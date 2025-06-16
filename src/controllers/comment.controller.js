@@ -31,12 +31,16 @@ export const getAllComment = async (req, res) => {
       query.status = status;
     }
 
-    // ✅ Lọc theo số sao
+    // Validate rating từ 1-5
     if (rating) {
-      query.rating = Number(rating);
+      const ratingNum = parseInt(rating);
+      if (ratingNum < 1 || ratingNum > 5) {
+        return res.status(400).json({ message: "Số sao phải từ 1 đến 5" });
+      }
+      query.rating = ratingNum;
     }
 
-    // ✅ Lọc theo khoảng thời gian
+    // Lọc theo khoảng thời gian
     if ((startDate && !endDate) || (!startDate && endDate)) {
       return res.status(400).json({ message: "Thiếu ngày bắt đầu hoặc kết thúc." });
     }
@@ -57,7 +61,7 @@ export const getAllComment = async (req, res) => {
       query.createdAt = { $gte: start, $lte: end };
     }
 
-    // ✅ Tạo điều kiện tìm kiếm tổng quát
+    // Tạo điều kiện tìm kiếm tổng quát
     const normalize = (str) =>
       str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
     
@@ -75,7 +79,7 @@ export const getAllComment = async (req, res) => {
 
     const allComments = await Comment.paginate(query, options);
 
-    // ✅ Lọc thêm theo tên sản phẩm hoặc người dùng sau khi populate (do MongoDB không join sâu)
+    // Lọc thêm theo tên sản phẩm hoặc người dùng sau khi populate (do MongoDB không join sâu)
     if (searchNormalized) {
       allComments.docs = allComments.docs.filter((c) => {
         const product = c.productId?.name ? normalize(c.productId.name) : "";
@@ -88,21 +92,9 @@ export const getAllComment = async (req, res) => {
           email.includes(searchNormalized)
         );
       });
-    
-      allComments.totalDocs = allComments.docs.length;
-      allComments.totalPages = Math.ceil(allComments.totalDocs / options.limit);
     }
-    
 
-    return res.status(200).json({
-      data: allComments.docs,
-      pagination: {
-        _page: allComments.page,
-        _limit: allComments.limit,
-        _total: allComments.totalDocs,
-        _totalPages: allComments.totalPages,
-      },
-    });
+    return res.status(200).json(allComments.docs);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -326,15 +318,32 @@ export const replyToComment = async (req, res) => {
         to: existingComment.userId.email,
         subject: "Phản hồi bình luận từ Binova Shop",
         html: `
-          <p>Xin chào ${existingComment.userId.fullName || "bạn"},</p>
-          <p>Bình luận của bạn đã được admin phản hồi:</p>
-          <blockquote>${existingComment.content}</blockquote>
-          <p><b>Phản hồi từ admin:</b></p>
-          <blockquote>${adminReply}</blockquote>
-          <p>Trân trọng,<br/>Đội ngũ hỗ trợ khách hàng</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
+            <h2 style="color: #1890ff; text-align: center;">Phản hồi bình luận từ <span style="color: #ff4d4f;">Binova Shop</span></h2>
+    
+            <p>Xin chào <strong>${existingComment.userId.fullName || "bạn"}</strong>,</p>
+    
+            <p>Chúng tôi rất cảm ơn bạn đã để lại bình luận cho sản phẩm. Dưới đây là nội dung mà bạn đã gửi:</p>
+    
+            <div style="background-color: #fff; border-left: 4px solid #1890ff; padding: 10px 15px; margin: 10px 0; font-style: italic; color: #333;">
+              ${existingComment.content}
+            </div>
+    
+            <p><strong>Phản hồi từ admin:</strong></p>
+            <div style="background-color: #fff; border-left: 4px solid #52c41a; padding: 10px 15px; margin: 10px 0; color: #333;">
+              ${adminReply}
+            </div>
+    
+            <p style="margin-top: 24px;">Nếu bạn có bất kỳ câu hỏi nào, đừng ngần ngại liên hệ với chúng tôi.</p>
+    
+            <p style="margin-top: 32px;">Trân trọng,<br/>
+            <strong>Đội ngũ hỗ trợ khách hàng</strong><br/>
+            Binova Shop</p>
+          </div>
         `
       });
     }
+    
 
     return res.status(200).json({
       message: "Trả lời bình luận thành công.",
@@ -351,10 +360,6 @@ export const getCommentsForClient = async (req, res) => {
   try {
     const { id } = req.params;
     const productId = id;
-    
-    if (!productId || productId.trim() === "") {
-      return res.status(400).json({ message: "ID sản phẩm không được để trống." });
-    }
 
     const product = await Product.findById(productId);
     if (!product) {
