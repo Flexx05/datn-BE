@@ -150,47 +150,54 @@ export const resetUserPassword = async (req, res) => {
   try {
     const { id } = req.params;
     const { passwordOld, passwordNew } = req.body;
+      
+    const trimpasswordOld = typeof passwordOld === 'string' ? passwordOld.trim() : '';
+    const trimpasswordNew = typeof passwordNew === 'string' ? passwordNew.trim() : '';
 
-    if (!passwordOld || !passwordNew) {
+    if (!trimpasswordOld || !trimpasswordNew) {
       return res.status(400).json({
         success: false,
         message: "Mật khẩu cũ và mật khẩu mới là bắt buộc",
       });
     }
-
-    const hashedPassword = await bcrypt.hash(passwordNew, 10);
-
-    // Kiểm tra xem người dùng có tồn tại không
-
-    const user = await authModel.findOne({ _id: id });
-    const isValid = await bcrypt.compare(passwordOld, user.password);
-    if (!isValid) {
-      return res.status(400).json({ error: "Mật khẩu cũ không đúng" });
-    }
-    await authModel.findOneAndUpdate(
-      { _id: id },
-      { password: hashedPassword },
-      { new: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({
+    if(trimpasswordNew.length < 8) {
+      return res.status(400).json({
         success: false,
-        message: "Không tìm thấy người dùng",
+        message: "Mật khẩu phải có ít nhất 8 ký tự",
       });
     }
 
-    // kiểm tra tránh trùng lặp mật khẩu mới và cũ
-    if (passwordOld === passwordNew) {
+       const user = await authModel.findOne({ _id: id });
+      if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy người dùng",
+       });
+      } 
+  
+        // kiểm tra tránh trùng lặp mật khẩu mới và cũ
+    if (trimpasswordOld === trimpasswordNew) {
       return res.status(400).json({
         success: false,
         message: "Mật khẩu mới không được trùng với mật khẩu cũ",
       });
     }
 
+     const hashedPassword = await bcrypt.hash(trimpasswordNew, 10);
+      user.password = hashedPassword;
+       await user.save(); 
+
+    const isValid = await bcrypt.compare(trimpasswordOld, user.password);
+    if (!isValid) {
+      return res.status(400).json({ success: false, message: "Sai mật khẩu cũ" });
+    }
+
+  console.log(`User ${id} đã đổi mật khẩu thành công lúc ${new Date()}`);
+
     return res.status(200).json({
       success: true,
       message: "Đặt lại mật khẩu thành công",
+
     });
   } catch (error) {
     return res.status(500).json({
