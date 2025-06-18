@@ -166,7 +166,6 @@ const orderSchema = new mongoose.Schema({
 //     }
 //     next();
 // });
-});
 
 // Thêm middleware để tự động tạo orderCode
 orderSchema.pre('save', async function(next) {
