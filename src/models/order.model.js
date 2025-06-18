@@ -102,21 +102,13 @@ const orderSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["Chờ xác nhận",      // Tạo đơn
-            "Đã xác nhận",        // Admin duyệt
-            "Đang giao hàng",     // Admin cập nhật
-            "Đã giao hàng",       // Admin cập nhật
-            "Hoàn thành",         // Client xác nhận hoặc hệ thống auto
-            "Đã hủy",             // Hủy
-            "Yêu cầu hoàn hàng",   // Client gửi yêu cầu
-            "Đã chấp nhận hoàn hàng", // Admin duyệt hoàn hàng
-            "Từ chối hoàn hàng"  ],
-      default: "Chờ xử lý",
+      enum: ["Cho xac nhan", "Da xac nhan", "Dang giao hang", "Da giao hang", "Da huy"],
+      default: "Cho xac nhan",
     },
     paymentStatus: {
       type: String,
-      enum: ["Chưa thanh toán", "Đã thanh toán", "Đã hoàn tiền"],
-      default: "Chưa thanh toán",
+      enum: ["Chua thanh toan", "Da thanh toan", "Da hoan tien", "That bai"],
+      default: "Chua thanh toan",
     },
     paymentMethod: {
       type: String,

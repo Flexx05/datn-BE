@@ -381,11 +381,10 @@ export const updateOrderStatus = async (req, res) => {
         }
 
         const validStatusTransitions = {
-            "Chờ xử lý": ["Đang giao hàng", "Đã hủy"],
-            "Đang giao hàng": ["Đã giao hàng", "Đã hủy"],
-            "Đã giao hàng": ["Thành công"],
-            "Thành công": [],
-            "Đã hủy": [],
+          "Cho xac nhan": ["Da xac nhan", "Dang giao hang", "Da huy"],
+          "Dang giao hang": ["Da giao hang", "Da huy"],
+          "Da giao hang": [],
+          "Da huy": [],
         };
 
         if (status !== order.status) {
@@ -504,9 +503,10 @@ export const updatePaymentStatus = async (req, res) => {
 
         if (paymentStatus && paymentStatus !== order.paymentStatus) {
             const validPaymentTransitions = {
-                "Chưa thanh toán": ["Đã thanh toán"],
-                "Đã thanh toán": ["Đã hoàn tiền"],
-                "Đã hoàn tiền": [],
+                "Chua thanh toan": ["Da thanh toan", "That bai"],
+                "That bai": [],
+                "Da thanh toan": ["Da hoan tien"],
+                "Da hoan tien": [],
             };
 
             const allowedNext = validPaymentTransitions[order.paymentStatus];
