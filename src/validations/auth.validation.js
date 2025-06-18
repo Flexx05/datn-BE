@@ -54,7 +54,7 @@ const resetPasswordSchema = Joi.object({
 
 const updateUserInfoSchema = Joi.object({
   fullName: Joi.string().min(3).max(30).optional(),
-  phone: Joi.string().optional().allow(null, ""),
+  phone: Joi.string().optional().allow(null, "").max(10).min(0),
   address: Joi.string().optional().allow(null, ""),
 });
 
