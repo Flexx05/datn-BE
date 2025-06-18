@@ -1,20 +1,24 @@
-import express from "express";
+import { Router } from "express";
+import { isAdmin, isAdmin, isAdminOrStaff, verifyToken } from "../middlewares/checkAuth.js";
 import {
-    getOrders,
+    createOrder,
+    getAllOrders,
     getOrderById,
+    getOrderByUserId,
+    getOrderByUserIdForAdminOrStaff,
     updateOrderStatus,
+    updatePaymentStatus
 } from "../controllers/order.controller.js";
-import { verifyToken } from "../middlewares/checkAuth.js";
 
-const router = express.Router();
+const router = Router();
 
-
-// Routes cho cả user và admin
-router.get("/order", verifyToken, getOrders); // Lấy danh sách đơn hàng (phân quyền trong controller)
-router.get("/order/:id", verifyToken, getOrderById); // Xem chi tiết đơn hàng (phân quyền trong controller)
-
-// Routes chỉ dành cho admin và staff
-router.patch("/order/status/:id", verifyToken, updateOrderStatus); // Cập nhật trạng thái đơn hàng
-
+router.post("/order", createOrder);
+router.get("/order", verifyToken, isAdminOrStaff, getAllOrders);
+router.get("/order/user", verifyToken, getOrderByUserId);
+router.get("/order/:id", verifyToken, getOrderById);
+router.patch("/order/status/:id", verifyToken, updateOrderStatus);
+router.get("/order/user/:userId", verifyToken, isAdminOrStaff, getOrderByUserIdForAdminOrStaff);
+router.get("/order/id/:id", verifyToken, getOrderById);
+router.patch("/order/:id", verifyToken, isAdmin, updateOrderStatus);
 
 export default router;
