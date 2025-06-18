@@ -39,7 +39,11 @@ const orderSchema = new Schema(
     userId: {
       type: Schema.Types.ObjectId,
       ref: "Auth",
-      required: [true, "User ID là bắt buộc"],
+    },
+    guestInfo: {
+      name: { type: String, required: true },
+      email: { type: String, required: true },
+      phone: { type: String, required: true },
     },
     orderCode: {
       type: String,
@@ -98,7 +102,15 @@ const orderSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["Chờ xử lý", "Đang giao hàng", "Thành công", "Đã hủy"],
+      enum: ["Chờ xác nhận",      // Tạo đơn
+            "Đã xác nhận",        // Admin duyệt
+            "Đang giao hàng",     // Admin cập nhật
+            "Đã giao hàng",       // Admin cập nhật
+            "Hoàn thành",         // Client xác nhận hoặc hệ thống auto
+            "Đã hủy",             // Hủy
+            "Yêu cầu hoàn hàng",   // Client gửi yêu cầu
+            "Đã chấp nhận hoàn hàng", // Admin duyệt hoàn hàng
+            "Từ chối hoàn hàng"  ],
       default: "Chờ xử lý",
     },
     paymentStatus: {

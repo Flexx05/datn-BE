@@ -7,15 +7,15 @@ import {
     getOrderByUserId,
     getOrderByUserIdForAdminOrStaff,
     updateOrderStatus,
+    updatePaymentStatus
 } from "../controllers/order.controller.js";
 
 const router = Router();
 
-router.post("/order", verifyToken, createOrder);
+router.post("/order", createOrder);
 router.get("/order", verifyToken, isAdminOrStaff, getAllOrders);
 router.get("/order/user", verifyToken, getOrderByUserId);
-router.get("/order/user/:userId", verifyToken, isAdminOrStaff, getOrderByUserIdForAdminOrStaff);
 router.get("/order/:id", verifyToken, getOrderById);
-router.patch("/order/:id", verifyToken, isAdmin, updateOrderStatus);
+router.patch("/order/status/:id", verifyToken, updateOrderStatus);
 
 export default router;
