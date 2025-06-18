@@ -6,6 +6,7 @@ import {
   verifyOtp,
   forgotPassword,
   resetPassword,
+  verifyResetOtp,
 } from "../controllers/auth.controller";
 
 const router = Router();
@@ -15,6 +16,7 @@ router.post("/verify-otp", verifyOtp);
 router.post("/login", login);
 router.post("/loginGoogle", loginGoogle);
 router.post("/forgot-password", forgotPassword);
+router.post("/verify-reset-otp", verifyResetOtp);
 router.post("/reset-password", resetPassword);
 
 export default router;
