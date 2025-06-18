@@ -147,10 +147,10 @@ export const login = async (req, res) => {
       sendEmail(email);
       return res
         .status(400)
-        .json({ error: "OTP đã được gửi! Vui lòng kiểm tra email" });
+        .json({ error: "Tài khoản này đã bị khoá" });
     }
     if(!user.isVerify || user.isVerify === false) {
-      return res.status(400).json({ error: "Vui lòng kiểm tra email" });
+      return res.status(400).json({ error: "OTP đã được gửi! Vui lòng kiểm tra email" });
     } 
     user.password = undefined; // Không trả về mật khẩu trong response
     const accessToken = jwt.sign(
