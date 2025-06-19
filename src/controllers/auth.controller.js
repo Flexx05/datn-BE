@@ -143,15 +143,16 @@ export const login = async (req, res) => {
     if (!isValid) {
       return res.status(400).json({ error: "Sai mật khẩu" });
     }
-    if (!user.isActive || user.isActive === false) {
-      sendEmail(email);
-      return res
-        .status(400)
-        .json({ error: "Tài khoản này đã bị khoá" });
-    }
     if(!user.isVerify || user.isVerify === false) {
+      sendEmail(email);
       return res.status(400).json({ error: "OTP đã được gửi! Vui lòng kiểm tra email" });
     } 
+    if (!user.isActive || user.isActive === false) {
+      return res
+        .status(400)
+        .json({ error: "Tài khoản này bị khoá " });
+    }
+    
     user.password = undefined; // Không trả về mật khẩu trong response
     const accessToken = jwt.sign(
       { id: user._id },
