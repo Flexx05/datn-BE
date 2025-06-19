@@ -32,14 +32,14 @@ export const getAllAttribute = async (req, res) => {
     const countProduct = await Promise.all(
       attributes.docs.map(async (attr) => {
         const count = await productModel.countDocuments({
-          attributes: attr._id,
+          attributes: { $elemMatch: { attributeId: attr._id } },
         });
         return { attributeId: attr._id,
                  productCount: count
              };
       })
     )
-    return res.status(200).json({attributes, docs: countProduct});
+    return res.status(200).json({attributes , countProduct});
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
@@ -73,11 +73,8 @@ export const deleteAttribute = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: "ID thuộc tính không hợp lệ" });
-    }
-    const product = await productModel.findOne({ attributes: new mongoose.Types.ObjectId(id)});
-   if (product) {
+    const product = await productModel.findOne({ attributes: { $elemMatch: { attributeId: id } },});
+   if(product) {
     return res.status(400).json({ message: "Thuộc tính này còn sản phẩm, không thể xoá" });
    }
     const attribute = await attributeModel.findByIdAndUpdate(
