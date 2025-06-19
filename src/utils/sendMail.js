@@ -19,7 +19,7 @@ export const sendMail = async ({ to, subject, html }) => {
       });
       console.log("Email đã được gửi thành công", info.response);
   } catch (error) {
-      console.error("Lỗi gửi email:", messageerror.message);
+      console.error("Lỗi gửi email:", error.message);
   }
  
 };

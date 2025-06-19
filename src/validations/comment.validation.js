@@ -12,6 +12,7 @@ export const addCommentValidation = Joi.object({
 // Validation cho trả lời bình luận
 export const replyToCommentValidation = Joi.object({
   adminReply: Joi.string().required().max(500).trim(),
+  sendEmail: Joi.boolean().default(false)
 });
 
 // Validation cho cập nhật trạng thái bình luận

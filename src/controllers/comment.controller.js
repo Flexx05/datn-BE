@@ -290,7 +290,7 @@ export const replyToComment = async (req, res) => {
        return res.status(400).json({ message: errors });
      }
      
-    const { adminReply } = value;
+    const { adminReply, sendEmail } = value;
    
     const existingComment = await Comment.findById(id)
       .populate("userId", "email fullName");
@@ -312,37 +312,47 @@ export const replyToComment = async (req, res) => {
       { new: true }
     );
 
-    // Gửi email thông báo cho user
-    if (existingComment.userId?.email) {
-      await sendMail({
-        to: existingComment.userId.email,
-        subject: "Phản hồi bình luận từ Binova Shop",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
-            <h2 style="color: #1890ff; text-align: center;">Phản hồi bình luận từ <span style="color: #ff4d4f;">Binova Shop</span></h2>
-    
-            <p>Xin chào <strong>${existingComment.userId.fullName || "bạn"}</strong>,</p>
-    
-            <p>Chúng tôi rất cảm ơn bạn đã để lại bình luận cho sản phẩm. Dưới đây là nội dung mà bạn đã gửi:</p>
-    
-            <div style="background-color: #fff; border-left: 4px solid #1890ff; padding: 10px 15px; margin: 10px 0; font-style: italic; color: #333;">
-              ${existingComment.content}
-            </div>
-    
-            <p><strong>Phản hồi từ admin:</strong></p>
-            <div style="background-color: #fff; border-left: 4px solid #52c41a; padding: 10px 15px; margin: 10px 0; color: #333;">
-              ${adminReply}
-            </div>
-    
-            <p style="margin-top: 24px;">Nếu bạn có bất kỳ câu hỏi nào, đừng ngần ngại liên hệ với chúng tôi.</p>
-    
-            <p style="margin-top: 32px;">Trân trọng,<br/>
-            <strong>Đội ngũ hỗ trợ khách hàng</strong><br/>
-            Binova Shop</p>
+  // Kiểm tra xem đây có phải là phản hồi lần đầu không
+    const isFirstReply = !existingComment.adminReply;
+
+  // Gửi email thông báo cho user (nếu có tích checkbox gửi mail)
+  if (sendEmail && existingComment.userId?.email) {
+    await sendMail({
+      to: existingComment.userId.email,
+      subject: isFirstReply
+        ? "Phản hồi bình luận từ Binova Shop"
+        : "Cập nhật phản hồi bình luận từ Binova Shop",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
+          <h2 style="color: #1890ff; text-align: center;">
+            ${isFirstReply ? "Phản hồi từ Binova Shop" : "Cập nhật phản hồi từ Binova Shop"} 
+            <span style="color: #ff4d4f;">Binova Shop</span>
+          </h2>
+
+          <p>Xin chào <strong>${existingComment.userId.fullName || "bạn"}</strong>,</p>
+          <p>Cảm ơn bạn đã dành thời gian để chia sẻ cảm nhận của mình về sản phẩm của chúng tôi. Dưới đây là nội dung bạn đã gửi và phản hồi của chúng tôi:</p>
+
+          <div style="background-color: #fff; border-left: 4px solid #1890ff; padding: 10px 15px; margin: 10px 0; font-style: italic; color: #333;">
+            ${existingComment.content}
           </div>
-        `
-      });
-    }
+
+          <p><strong>${isFirstReply ? "Phản hồi từ Binova Shop" : "Phản hồi đã được cập nhật"}:</strong></p>
+          <div style="background-color: #fff; border-left: 4px solid #52c41a; padding: 10px 15px; margin: 10px 0; color: #333;">
+            ${adminReply}
+          </div>
+
+          <p style="margin-top: 24px;">Nếu bạn có bất kỳ câu hỏi nào, đừng ngần ngại liên hệ với chúng tôi.</p>
+
+         <p style="margin-top: 32px;">
+          Trân trọng,<br/>
+          <strong>Binova Shop</strong><br/>
+          <i>Chăm sóc khách hàng</i>
+        </p>
+        </div>
+      `
+    });
+  }
+
     
 
     return res.status(200).json({
