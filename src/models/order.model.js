@@ -9,11 +9,11 @@ const orderItemSchema = new Schema({
     variationId: {
       type: Schema.Types.ObjectId,
       ref: "Variation",
-      required: [true, "Variation ID là bắt buộc"],
+      required: true
     },
     productName: {
       type: String,
-      required: [true, "Tên sản phẩm là bắt buộc"],
+      required: true
     },
     quantity: {
         type: Number,
@@ -27,8 +27,8 @@ const orderItemSchema = new Schema({
     },
     totalPrice: {
       type: Number,
-      required: [true, "Thành tiền là bắt buộc"],
-      min: [0, "Thành tiền không thể âm"],
+      required: true,
+      min: 0
     },
 },{_id: true}
 )
