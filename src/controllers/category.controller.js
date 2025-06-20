@@ -216,87 +216,45 @@ export const updateCategory = async (req, res) => {
 export const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const mode = req.query.mode || "full"; // Mặc định xoá cả cha và con
-    const force = req.query.force === "true";
-    if(force){
-      const category = await categoryModel.findById(id);
-      if(!category){
-        return res.status(404).json({ error: "Category not found" });
-      }
-
-      if(category.isActive === false){
-        await categoryModel.findByIdAndDelete(id);
-        return res.status(200).json({ message: "Category deleted successfully" });
-      }
-    }
-    // 1. Kiểm tra danh mục cha tồn tại
-    const category = await categoryModel.findOne({ _id: id, isActive: true });
+    const category = await categoryModel.findById(id);
     if (!category) {
       return res.status(404).json({ error: "Category not found" });
     }
-
-    // 2. Nếu là xoá cả cha hoặc xoá con giữ cha
-    if (mode === "full" || mode === "keepParent") {
-      // 3. Tạo hoặc lấy danh mục "không xác định"
-      const unCategorized = await categoryModel.findOneAndUpdate(
-        { slug: "danh-muc-khong-xac-dinh" },
-        {
-          $setOnInsert: {
-            name: "Danh mục không xác định",
-            slug: "danh-muc-khong-xac-dinh",
-            isActive: true,
-            parentId: null,
-          },
-        },
-        { upsert: true, new: true }
-      );
-
-      // 4. Tìm tất cả danh mục con trực tiếp
-      const subCategories = await categoryModel.find({
-        parentId: id,
-        isActive: true,
+    if (category.isActive === false) {
+      await categoryModel.findByIdAndDelete(id);
+      await categoryModel.deleteMany({ parentId: id });
+      return res.status(200).json({ message: "Category deleted successfully" });
+    }
+    if (category.isActive === true) {
+      // Xóa mềm: chuyển isActive = false cho category và các subCategories
+      await categoryModel.findByIdAndUpdate(id, { isActive: false });
+      await categoryModel.updateMany({ parentId: id }, { isActive: false });
+      // Chuyển sản phẩm sang danh mục không xác định
+      let unCategorized = await categoryModel.findOne({
+        slug: "danh-muc-khong-xac-dinh",
       });
-
-      const subCategoryIds = subCategories.map((sub) => sub._id);
-      const affectedCategoryIds = [category._id, ...subCategoryIds];
-
-      // 5. Xoá mềm danh mục con
-      await categoryModel.updateMany(
-        { _id: { $in: subCategoryIds } },
-        { isActive: false }
-      );
-
-      // 6. Nếu là "full", xoá mềm luôn cả danh mục cha
-      if (mode === "full") {
-        await categoryModel.findByIdAndUpdate(id, { isActive: false });
-
-        await brandModel.deleteOne({ _id: id, isActive: false })
-
-        // 7. Chuyển tất cả sản phẩm của cha và con sang danh mục không xác định
-        await productModel.updateMany(
-          { categoryId: { $in: affectedCategoryIds }, isActive: true },
-          { categoryId: unCategorized._id, categoryName: unCategorized.name }
-        );
-
-        return res.status(200).json({
-          message:
-            "Đã xoá mềm danh mục cha và con, sản phẩm chuyển sang danh mục không xác định",
-          categoryId: id,
-          moveToCategoryId: unCategorized._id,
-          deletedSubCategoryCount: subCategories.length,
+      if (!unCategorized) {
+        unCategorized = await categoryModel.create({
+          name: "Danh mục không xác định",
+          slug: "danh-muc-khong-xac-dinh",
+          isActive: true,
+          parentId: null,
         });
       }
-
-      // 8. Nếu là "keepParent", chỉ xoá con – giữ nguyên cha
+      const subCategories = await categoryModel.find({ parentId: id });
+      const subCategoryIds = subCategories.map((sub) => sub._id);
+      const affectedCategoryIds = [category._id, ...subCategoryIds];
+      await productModel.updateMany(
+        { categoryId: { $in: affectedCategoryIds }, isActive: true },
+        { categoryId: unCategorized._id, categoryName: unCategorized.name }
+      );
       return res.status(200).json({
-        message: "Đã xoá mềm danh mục con, giữ nguyên danh mục cha",
-        parentCategoryId: id,
+        message: "Category soft deleted successfully",
+        categoryId: id,
+        moveToCategoryId: unCategorized._id,
         deletedSubCategoryCount: subCategories.length,
       });
     }
-
-    // 9. Trường hợp mode không hợp lệ
-    return res.status(400).json({ error: "Invalid mode parameter" });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
