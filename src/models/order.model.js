@@ -6,30 +6,42 @@ const orderItemSchema = new Schema({
         ref: "Product",
         required: true,
     },
-    variantAttributes: [
-        {
-        attributeName: { type: String, required: true },
-        value: { type: String, required: true },
-        },
-    ],
+    variationId: {
+      type: Schema.Types.ObjectId,
+      ref: "Variation",
+      required: [true, "Variation ID là bắt buộc"],
+    },
+    productName: {
+      type: String,
+      required: [true, "Tên sản phẩm là bắt buộc"],
+    },
     quantity: {
         type: Number,
         required: true,
         min: 0,
     },
-    price: {
+    priceAtOrder: {
         type: Number,
         required: true,
         min: 0
-    }
-},{_id: false}
+    },
+    totalPrice: {
+      type: Number,
+      required: [true, "Thành tiền là bắt buộc"],
+      min: [0, "Thành tiền không thể âm"],
+    },
+},{_id: true}
 )
 
 const orderSchema = new mongoose.Schema({
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Auth',
-      required: false
+      type: Schema.Types.ObjectId,
+      ref: "Auth",
+    },
+    recipientInfo: {
+      name: { type: String, required: true },
+      email: { type: String, required: true },
+      phone: { type: String, required: true },
     },
     orderCode: {
       type: String,
@@ -61,8 +73,8 @@ const orderSchema = new mongoose.Schema({
     },
     discountAmount: {
       type: Number,
-      required: true,
-      min: 0
+      min: 0,
+      default: 0,
     },
     totalAmount: {
       type: Number,
@@ -71,54 +83,67 @@ const orderSchema = new mongoose.Schema({
     },
     status: {
       type: String,
-      enum: ['Chờ xác nhận', 'Đã xác nhận', 'Đang giao hàng', 'Đã giao hàng', 'Đã hủy'],
-      default: 'Chờ xác nhận'
+      enum: [
+              "Cho xac nhan",
+              "Da xac nhan",
+              "Dang giao hang",
+              "Da giao hang",
+              "Hoan thanh",
+              "Da huy",
+            ],
+      default: 'Cho xac nhan'
     },
     paymentStatus: {
       type: String,
-      enum: ['Chưa thanh toán', 'Đã thanh toán', 'Thất bại' ,'Đã hoàn tiền'],
-      default: 'Chưa thanh toán'
+      enum: ['Chua thanh toan', 'Da thanh toan', 'Da hoan tien'],
+      default: 'Chua thanh toan'
     },
     paymentMethod: {
       type: String,
       required: true
     },
+    expectedDeliveryDate: {
+      type: Date,
+      default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    },
     deliveryDate: {
-      type: Date
+      type: Date,
+      default: null
+    },
+    returnRequest: {
+      returnStatus: {
+        type: String,
+        enum: [
+          "Khong yeu cau",
+          "Yeu cau hoan hang",
+          "Da duyet",
+          "Tu choi",
+        ],
+        default: "Khong yeu cau"
+      },
+      clientReason: {
+        type: String,
+        default: null          // lý do của khách hàng khi yêu cầu hoàn hàng
+      },
+      adminNote: {
+        type: String,
+        default: null          // ghi chú của admin về yêu cầu hoàn hàng
+      },
+      refundMethod: {
+        type: String,
+        enum: ["COD", "Vi"],
+        default: null
+      },
+    },
+    completedBy: {
+      type: String,
+      enum: ["user", "system", null],
+      default: null
     },
   }, {
     timestamps: true,
     versionKey: false,
-});
-
-// Thêm middleware để tự động tạo orderCode
-orderSchema.pre('save', async function(next) {
-    if (!this.orderCode) {
-      const date = new Date();
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-  
-      const lastOrder = await this.constructor.findOne({
-        orderCode: new RegExp(`DH${year}${month}${day}-\\d{3}$`)
-      }).sort({ orderCode: -1 });
-  
-      let sequence = '001';
-      if (lastOrder) {
-        const lastSequence = parseInt(lastOrder.orderCode.slice(-3));
-        sequence = String(lastSequence + 1).padStart(3, '0');
-      }
-  
-      this.orderCode = `DH${year}${month}${day}-${sequence}`;
-    }
-  
-    // Nếu không có userId thì đánh dấu là đơn hàng khách vãng lai
-    if (!this.userId) {
-      this.isGuestOrder = true;
-    }
-  
-    next();
-  });
-  
+  }
+);
 
 export default model("Order", orderSchema);

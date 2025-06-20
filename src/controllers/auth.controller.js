@@ -105,7 +105,7 @@ export const verifyOtp = async (req, res) => {
     }
     const newUser = await authModel.findOneAndUpdate(
       { email },
-      { isActive: true , isVerify: true },
+      { isActive: true, isVerify: true },
       { new: true }
     );
 
@@ -143,16 +143,15 @@ export const login = async (req, res) => {
     if (!isValid) {
       return res.status(400).json({ error: "Sai mật khẩu" });
     }
-    if (!user.isActive || user.isActive === false) {
+    if(!user.isVerify || user.isVerify === false) {
       sendEmail(email);
+      return res.status(400).json({ error: "OTP đã được gửi! Vui lòng kiểm tra email" });
+    } 
+    if (!user.isActive || user.isActive === false) {
       return res
         .status(400)
-        .json({ error: "OTP đã được gửi! Vui lòng kiểm tra email" });
-    }
-    if(!user.isVerify || user.isVerify === false) {
-      return res.status(400).json({ error: "Vui lòng kiểm tra email" });
-    } 
-    user.password = undefined; // Không trả về mật khẩu trong response
+        .json({ error: "Tài khoản này bị khoá " });
+    }    
     const accessToken = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET_KEY || "binova",
@@ -160,11 +159,56 @@ export const login = async (req, res) => {
         expiresIn: "1d",
       }
     );
+    const refreshToken = jwt.sign(
+      { id: user._id },
+      process.env.JWT_REFRESH_SECRET || "refresh_binova",
+      {
+        expiresIn: "7d",
+      }
+    );
+    user.refreshToken = refreshToken;
+    await user.save();
+    user.password = undefined; // Không trả về mật khẩu trong response
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
     return res
       .status(200)
       .json({ message: "Đăng nhập thành công", user, accessToken });
   } catch (error) {
     return res.status(500).json({ error: error.message });
+  }
+};
+
+export const refreshToken = async (req, res) => {
+  const { refreshToken } = req.cookies;
+  if (!refreshToken) {
+    return res.status(401).json({ error: "Refresh token không hợp lệ" });
+  }
+  try {
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.JWT_REFRESH_SECRET || "refresh_binova"
+    );
+    const user = await authModel.findById(decoded.id);
+    if (!user || user.refreshToken !== refreshToken) {
+      return res.status(403).json({ error: "Refresh token không hợp lệ" });
+    }
+    const newAccessToken = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET_KEY || "binova",
+      {
+        expiresIn: "1d",
+      }
+    );
+    return res.status(200).json({
+      accessToken: newAccessToken,
+    });
+  } catch (error) {
+    return res.status(403).json({ error: error.message });
   }
 };
 
@@ -207,7 +251,7 @@ export const forgotPassword = async (req, res) => {
       });
     }
     const { email } = req.body;
-    
+
     const user = await authModel.findOne({ email });
     if (!user) {
       return res.status(404).json({
@@ -232,16 +276,20 @@ export const forgotPassword = async (req, res) => {
 
 export const verifyResetOtp = async (req, res) => {
   try {
-    const {email, otp } = req.body;
+    const { email, otp } = req.body;
 
     const otpRecord = await otpModel.findOne({ email });
     if (!otpRecord) {
-      return res.status(400).json({ success: false, message: "Không tìm thấy OTP" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Không tìm thấy OTP" });
     }
 
     const isMatch = await bcrypt.compare(otp, otpRecord.otp);
     if (!isMatch) {
-      return res.status(400).json({ success: false, message: "OTP không đúng" });
+      return res
+        .status(400)
+        .json({ success: false, message: "OTP không đúng" });
     }
 
     const user = await authModel.findOne({ email });
@@ -263,11 +311,15 @@ export const resetPassword = async (req, res) => {
 
     const user = await authModel.findOne({ email });
     if (!user) {
-      return res.status(404).json({ success: false, message: "Người dùng không tồn tại" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Người dùng không tồn tại" });
     }
 
     if (!user.resetPasswordVerified) {
-      return res.status(403).json({ success: false, message: "Bạn cần xác thực OTP trước" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Bạn cần xác thực OTP trước" });
     }
 
     user.password = await bcrypt.hash(newPassword, 10);

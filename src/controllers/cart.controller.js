@@ -155,7 +155,22 @@ export const getCart = async (req, res) => {
         const itemTotal = (variant.salePrice > 0 ? variant.salePrice : variant.regularPrice) * item.quantity;
 
         return {
-          variant, // Trả về toàn bộ thông tin của variant để frontend có thể sử dụng
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+          product: {
+            _id: product._id,
+            name: product.name,
+            slug: product.slug,
+            description: product.description,
+            category: product.categoryName,
+            brand: product.brandName,
+            images: product.image,
+            isActive: product.isActive,
+            createdAt: product.createdAt,
+            updatedAt: product.updatedAt,
+          },
+          variant,
           itemTotal,
         };
       })
@@ -175,6 +190,7 @@ export const getCart = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
+
   
   
 
