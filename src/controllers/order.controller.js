@@ -8,19 +8,9 @@ import nodemailer from "nodemailer";
 
 export const createOrder = async (req, res) => {
     try {
-        const { userId, voucherCode = [], guestInfo, shippingAddress, items, shippingFee, paymentMethod } = req.body;
+        const { userId, voucherCode = [], recipientInfo, shippingAddress, items, shippingFee, paymentMethod } = req.body;
 
         const voucherIds = [];
-
-        const user = await User.findById(userId);
-
-        if(!user) {
-            return res.status(404).json({ error: "Người dùng không tồn tại" });
-        }
-
-        if (!userId && (!guestInfo?.name || !guestInfo?.phone)) {
-            return res.status(400).json({ error: "Khách vãng lai phải cung cấp tên và số điện thoại." });
-        }
 
         if (!items || !Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ error: "Đơn hàng phải có ít nhất một sản phẩm" });
@@ -38,11 +28,15 @@ export const createOrder = async (req, res) => {
                 if (!product) {
                     return res.status(404).json({ error: `Không tìm thấy sản phẩm chứa biến thể ${item.variationId}` });
                 }
-////////////// chưa kiểm tra trạng thái sản phẩm
+
                 // 2. Lấy biến thể
                 const variation = product.variation.id(item.variationId);
                 if (!variation) {
                     return res.status(404).json({ error: `Không tìm thấy biến thể ${item.variationId}` });
+                }
+
+                if(!variation.isActive) {
+                    return res.status(400).json({ error: `Biến thể ${variation._id} của sản phẩm ${product.name} không khả dụng` });
                 }
 
                 // 3. Kiểm tra số lượng
@@ -156,7 +150,7 @@ export const createOrder = async (req, res) => {
             const orderCode = generateOrderCode();
             const order = new Order({
                 userId: userId || undefined,
-                guestInfo: !userId ? guestInfo : undefined,
+                recipientInfo,
                 orderCode,
                 voucherId: voucherIds,
                 shippingAddress,
@@ -165,10 +159,9 @@ export const createOrder = async (req, res) => {
                 shippingFee: shippingFeeValue,
                 discountAmount,
                 totalAmount,
-                status: "Chờ xử lý",
-                paymentStatus: "Chưa thanh toán",
+                status: "Cho xac nhan",
+                paymentStatus: "Chua thanh toan",
                 paymentMethod,
-                deliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
             });
 
             const orderSave = await order.save();
@@ -196,12 +189,12 @@ export const createOrder = async (req, res) => {
 
                 await transporter.sendMail({
                     from: '"Binova" <binovaweb73@gmail.com>',
-                    to: req.user.email,
+                    to: recipientInfo.email,
                     subject: `Xác nhận đơn hàng ${orderSave.orderCode}`,
                     html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
                     <h2 style="color: #4CAF50; text-align: center">🎉 Đặt hàng thành công!</h2>
-                    <p>Xin chào <strong>${orderSave.name || "Quý khách"}</strong>,</p>
+                    <p>Xin chào <strong>${orderSave.recipientInfo.name || "Quý khách"}</strong>,</p>
                     <p>Chúng tôi đã nhận được đơn hàng <strong>${orderSave.orderCode}</strong> của bạn.</p>
                     
                     <h3>📦 Thông tin đơn hàng:</h3>
@@ -210,7 +203,7 @@ export const createOrder = async (req, res) => {
                         <li><strong>Trạng thái:</strong> ${orderSave.status}</li>
                         <li><strong>Phương thức thanh toán:</strong> ${orderSave.paymentMethod}</li>
                         <li><strong>Trạng thái thanh toán:</strong> ${orderSave.paymentStatus}</li>
-                        <li><strong>Ngày giao dự kiến:</strong> ${new Date(orderSave.deliveryDate).toLocaleDateString(
+                        <li><strong>Ngày giao dự kiến:</strong> ${new Date(orderSave.expectedDeliveryDate).toLocaleDateString(
                             "vi-VN"
                         )}</li>
                     </ul>
@@ -291,6 +284,10 @@ export const getOrderById = async (req, res) => {
     const userIdFromToken = req.user.id;
     const userRole = req.user.role;
 
+    if (!userIdFromToken) {
+        return res.status(400).json({ error: "Đăng nhập để tiếp tục" });
+    }
+
     try {
         const order = await Order.findById(req.params.id);
 
@@ -313,6 +310,11 @@ export const getOrderById = async (req, res) => {
 export const getOrderByUserId = async (req, res) => {
     try {
         const userId = req.user.id;
+
+        if (!userId) {
+            return res.status(400).json({ error: "Đăng nhập để tiếp tục" });
+        }
+
         if (!mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ error: "ID người dùng không hợp lệ" });
         }
@@ -327,21 +329,6 @@ export const getOrderByUserId = async (req, res) => {
         return res.status(400).json({ error: error.message });
     }
 };
-
-export const getOrderByUserIdForAdminOrStaff = async (req, res) => {
-    const {userId} = req.params;
-
-    if(!mongoose.Types.ObjectId.isValid(userId)) {
-        return res.status(400).json({ error: "ID người dùng không hợp lệ" });
-    }
-
-    try {
-        const orders = await Order.find({ userId}).sort({createdAt: -1});
-        return res.status(200).json(orders);
-    }catch (error) {
-        return res.status(400).json({ error: error.message });
-    }
-}
 
 export const updateOrderStatus = async (req, res) => {
     try {
@@ -376,27 +363,30 @@ export const updateOrderStatus = async (req, res) => {
             return res.status(400).json({ error: "Không có thay đổi để cập nhật" });
         }
 
-        if (status === "Thành công" && order.paymentStatus === "Chưa thanh toán") {
-            return res.status(400).json({ error: "Không thể đánh dấu đơn hàng là 'Thành công' khi chưa thanh toán." });
-        }
-
         const validStatusTransitions = {
-          "Cho xac nhan": ["Da xac nhan", "Dang giao hang", "Da huy"],
-          "Dang giao hang": ["Da giao hang", "Da huy"],
-          "Da giao hang": [],
-          "Da huy": [],
+            "Cho xac nhan": ["Da xac nhan"],
+            "Da xac nhan": ["Dang giao hang"],
+            "Dang giao hang": ["Da giao hang"],
+            "Da giao hang": ["Hoan thanh"],
+            "Hoan thanh": [],
+            "Da huy": [],
         };
 
         if (status !== order.status) {
-            const allowedNextStatuses = validStatusTransitions[order.status];
+            const allowedNextStatuses = validStatusTransitions[order.status] || [];
             if (!allowedNextStatuses.includes(status)) {
                 return res.status(400).json({
                     error: `Không thể chuyển trạng thái từ "${order.status}" sang "${status}"`,
                 });
             }
+    
+            if (status === "Hoan thanh" && order.paymentStatus === "Chua thanh toan") {
+                return res.status(400).json({ error: "Không thể đánh dấu đơn hàng là 'Hoan thanh' khi chưa thanh toán." });
+            }
+
             order.status = status;
 
-            if(status === "Đã giao hàng"){
+            if(status === "Da giao hang"){
                 order.deliveryDate = new Date();
             }
         }
@@ -405,22 +395,24 @@ export const updateOrderStatus = async (req, res) => {
         console.log("Order updated status:", order);
 
         const subjectMap = {
-            "Đang giao hàng": `Đơn hàng ${order.orderCode} đang trên đường giao đến bạn`,
-            "Đã giao hàng": `Đơn hàng ${order.orderCode} đã được giao`,
-            "Thành công": `Đơn hàng ${order.orderCode} hoàn tất`,
-            "Đã hủy": `Đơn hàng ${order.orderCode} đã bị hủy`,
+            "Cho xac nhan": `Đơn hàng ${order.orderCode} đang chờ xác nhận`,
+            "Da xac nhan": `Đơn hàng ${order.orderCode} đã được xác nhận`,
+            "Dang giao hang": `Đơn hàng ${order.orderCode} đang được giao`,
+            "Da giao hang": `Đơn hàng ${order.orderCode} đã được giao`,
+            "Hoan thanh": `Đơn hàng ${order.orderCode} hoàn tất`,
+            "Da huy": `Đơn hàng ${order.orderCode} đã bị hủy`,
         };
 
         const messageMap = {
-            "Đang giao hàng": `Đơn hàng của bạn đang được vận chuyển. Vui lòng giữ liên lạc để nhận hàng sớm nhất.`,
-            "Đã giao hàng": `Đơn hàng của bạn đã được giao. Vui lòng kiểm tra và xác nhận nếu có bất kỳ vấn đề gì.`,
-            "Thành công": `Cảm ơn bạn! Đơn hàng đã hoàn tất. Rất mong được phục vụ bạn lần sau.`,
-            "Đã hủy": `Đơn hàng của bạn đã bị hủy. Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ đội ngũ hỗ trợ của chúng tôi`,
+            "Cho xac nhan": `Chúng tôi đã nhận được đơn hàng của bạn và đang chờ xác nhận.`,
+            "Da xac nhan": `Đơn hàng của bạn đã được xác nhận và đang được chuẩn bị để giao.`,
+            "Dang giao hang": `Đơn hàng của bạn đang được vận chuyển. Vui lòng giữ liên lạc để nhận hàng sớm nhất.`,
+            "Da giao hang": `Đơn hàng của bạn đã được giao. Vui lòng kiểm tra và xác nhận nếu có bất kỳ vấn đề gì.`,
+            "Hoan thanh": `Cảm ơn bạn! Đơn hàng đã hoàn tất. Rất mong được phục vụ bạn lần sau.`,
+            "Da huy": `Đơn hàng của bạn đã bị hủy. Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ đội ngũ hỗ trợ của chúng tôi.`,
         };
 
         if (!subjectMap[order.status]) return res.status(400).json({ error: "Trạng thái không hợp lệ" });
-
-        const user = await User.findById(order.userId);
 
         const transporter = nodemailer.createTransport({
             service: "gmail",
@@ -432,12 +424,12 @@ export const updateOrderStatus = async (req, res) => {
 
         await transporter.sendMail({
             from: '"Binova" <binovaweb73@gmail.com>',
-            to: user.email,
+            to: order.recipientInfo.email,
             subject: subjectMap[order.status],
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
                     <h2 style="color: #4CAF50;">Cập nhật đơn hàng ${order.orderCode}</h2>
-                    <p>Xin chào <strong>${order.name || "Quý khách"}</strong>,</p>
+                    <p>Xin chào <strong>${order.recipientInfo.name || "Quý khách"}</strong>,</p>
                     <p>${messageMap[order.status]}</p>
 
                     <p style="margin-top: 30px;">Nếu bạn có bất kỳ câu hỏi nào, hãy phản hồi email này để được hỗ trợ.</p>
@@ -487,24 +479,19 @@ export const updatePaymentStatus = async (req, res) => {
             return res.status(400).json({ error: "Không có thay đổi để cập nhật" });
         }
 
-        if (paymentStatus === "Đã thanh toán") {
+        if (paymentStatus === "Da thanh toan") {
             if (order.paymentMethod === "COD") {
-                if (!["Đã giao hàng", "Thành công"].includes(order.status)) {
+                if (!["Da giao hang"].includes(order.status)) {
                 return res.status(400).json({
-                    error: "Chỉ cập nhật 'Đã thanh toán' cho đơn COD sau khi giao hàng thành công",
+                    error: "Chỉ cập nhật 'Da thanh toan' cho đơn COD sau khi đã giao hàng",
                 });
                 }
             }
         }
 
-        if (paymentStatus === "Đã hoàn tiền" && !["Đã hủy"].includes(order.status)) {
-            return res.status(400).json({ error: "Chỉ có thể hoàn tiền cho đơn đã hủy." });
-        }
-
         if (paymentStatus && paymentStatus !== order.paymentStatus) {
             const validPaymentTransitions = {
-                "Chua thanh toan": ["Da thanh toan", "That bai"],
-                "That bai": [],
+                "Chua thanh toan": ["Da thanh toan"],
                 "Da thanh toan": ["Da hoan tien"],
                 "Da hoan tien": [],
             };
@@ -534,8 +521,6 @@ export const updatePaymentStatus = async (req, res) => {
 
         if (!paymentSubjectMap[order.paymentStatus]) return res.status(400).json({ error: "Trạng thái thanh toán không hợp lệ" });
 
-        const user = await User.findById(order.userId);
-
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
@@ -546,12 +531,12 @@ export const updatePaymentStatus = async (req, res) => {
 
         await transporter.sendMail({ 
             from: '"Binova" <binovaweb73@gmail.com>',
-            to: user.email,
+            to: recipientInfo.email,
             subject: paymentSubjectMap[order.paymentStatus],
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
                     <h2 style="color: #2196F3;">Thanh toán đơn hàng ${order.orderCode}</h2>
-                    <p>Xin chào <strong>${order.name || "Quý khách"}</strong>,</p>
+                    <p>Xin chào <strong>${orderSave.recipientInfo.name || "Quý khách"}</strong>,</p>
                     <p>${paymentMessageMap[order.paymentStatus]}</p>
 
                     <p style="margin-top: 30px;">Nếu bạn có bất kỳ câu hỏi nào, hãy phản hồi email này để được hỗ trợ.</p>
@@ -565,6 +550,106 @@ export const updatePaymentStatus = async (req, res) => {
 
         return res.status(200).json({ message: "Cập nhật trạng thái thanh toán thành công", order });
     } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+};
+
+export const cancelOrder = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { orderCode, email } = req.body;
+
+        const userId = req.user?.id;
+        const userRole = req.user?.role;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: "ID đơn hàng không hợp lệ" });
+        }
+
+        const order = await Order.findById(id);
+        
+        if (!order) {
+            return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
+        }
+
+        const isAdminOrStaff = userRole === "admin" || userRole === "staff";
+        const isOwner = userId && order.userId?.toString() === userId;
+
+        const isGuest = !userId;
+
+        // 2. Nếu là khách chưa đăng nhập -> kiểm tra orderCode và email (không biết có cần OTP không)
+        if (isGuest) {
+            if (!orderCode || !email) {
+                return res.status(400).json({ error: "Khách chưa đăng nhập cần cung cấp orderCode và email để hủy đơn." });
+            }
+
+            if (order.orderCode !== orderCode || order.recipientInfo.email !== email) {
+                return res.status(403).json({ error: "Thông tin xác nhận không đúng. Không thể hủy đơn." });
+            }
+        } else if (!isOwner && !isAdminOrStaff) {
+            // 3. Nếu đã đăng nhập nhưng không phải admin/staff hoặc chủ đơn
+            return res.status(403).json({ error: "Bạn không có quyền hủy đơn hàng này" });
+        }
+
+        // 4. Chỉ cho phép hủy nếu trạng thái là "Chờ xác nhận" hoặc "Đã xác nhận"
+        const cancelableStatus = ["Cho xac nhan", "Da xac nhan"];
+        if (!cancelableStatus.includes(order.status)) {
+            return res.status(400).json({ error: `Chỉ được hủy đơn hàng khi đang ở trạng thái: ${cancelableStatus.join(", ")}` });
+        }
+
+        // 5. Cập nhật trạng thái, hoàn hàng và hoàn voucher
+        // Đang làm cho đơn COD, nếu là đơn thanh toán online thì cần hoàn tiền về ví và cập nhật trạng thái thanh toán là "Da hoan tien"
+        if (order.paymentStatus === "Da thanh toan") {
+            // TODO: gọi hàm hoàn tiền qua cổng thanh toán
+            order.paymentStatus = "Da hoan tien";
+        }
+
+        order.status = "Da huy";
+
+        for (const item of order.items) {
+            await Product.updateOne(
+                { "variation._id": item.variationId },
+                { $inc: { "variation.$.stock": item.quantity } }
+            );
+        }
+
+        if (order.voucherId?.length > 0) {
+            await Voucher.updateMany({ _id: { $in: order.voucherId } }, { $inc: { used: -1 } });
+        }
+
+        await order.save();
+
+        // 6. Gửi email thông báo
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: "binovaweb73@gmail.com",
+                pass: "kcjf jurr rjva hqfu",
+            },
+        });
+
+        await transporter.sendMail({
+            from: '"Binova" <binovaweb73@gmail.com>',
+            to: order.recipientInfo.email,
+            subject: `Đơn hàng ${order.orderCode} đã bị hủy`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                    <h2 style="color: #f44336;">Đơn hàng đã bị hủy</h2>
+                    <p>Xin chào <strong>${order.recipientInfo.name || "Quý khách"}</strong>,</p>
+                    <p>Đơn hàng <strong>${order.orderCode}</strong> của bạn đã được hủy.</p>
+                    <p>Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ với đội ngũ hỗ trợ của chúng tôi.</p>
+                    <div style="text-align: right; margin-top: 40px;">
+                        <p>Trân trọng,</p>
+                        <i><strong>Đội ngũ Binova</strong></i>
+                    </div>
+                </div>
+            `
+        });
+
+        return res.status(200).json({ message: "Đơn hàng đã được hủy thành công", order });
+
+    } catch (error) {
+        console.error("Hủy đơn thất bại:", error.message);
         return res.status(500).json({ error: error.message });
     }
 };

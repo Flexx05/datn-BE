@@ -124,6 +124,18 @@ export const showBrand = async (req, res) => {
 export const deleteBrand = async (req, res) => {
   try {
     const { id } = req.params;
+    const force = req.query.force === "true";
+        if(force){
+          const brand = await brandModel.findById(id);
+          if(!brand){
+            return res.status(404).json({ error: "brand not found" });
+          }
+    
+          if(brand.isActive === false){
+            await brandModel.findByIdAndDelete(id);
+            return res.status(200).json({ message: "brand deleted successfully" });
+          }
+        }
 
     const brand = await brandModel.findOne({ _id: id, isActive: true });
     if (!brand) {
@@ -137,7 +149,7 @@ export const deleteBrand = async (req, res) => {
         id,
         { isActive: false },
         { new: true }
-      );
+      );  
       return res.status(200).json({
         message: "Xoá thương hiệu thành công",
         brand: deletedBrand,
@@ -171,3 +183,4 @@ export const deleteBrand = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
