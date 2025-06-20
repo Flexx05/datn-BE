@@ -118,8 +118,6 @@ export const addToCart = async (req, res) => {
 };
 
 
-  
-
 // API lấy giỏ hàng
 export const getCart = async (req, res) => {
   try {
@@ -139,7 +137,12 @@ export const getCart = async (req, res) => {
     }
 
     if (!cart || cart.length === 0) {
-      return res.status(200).json({ message: "Giỏ hàng của bạn đang trống", cart: [] });
+      return res.status(200).json({ 
+        message: "Giỏ hàng của bạn đang trống", 
+        cart: [],
+        totalAmount: 0,
+        totalItems: 0
+      });
     }
 
     // Lấy thông tin chi tiết từng sản phẩm trong giỏ hàng
@@ -176,23 +179,29 @@ export const getCart = async (req, res) => {
       })
     );
 
-    // Loại bỏ các phần tử null (sản phẩm không còn hợp lệ)
     const filteredCart = cartDetails.filter(Boolean);
 
     if (filteredCart.length === 0) {
-      return res.status(200).json({ message: "Giỏ hàng của bạn đang trống", cart: [] });
+      return res.status(200).json({ 
+        message: "Giỏ hàng của bạn đang trống", 
+        cart: [],
+        totalAmount: 0,
+        totalItems: 0
+      });
     }
 
     const totalAmount = filteredCart.reduce((sum, item) => sum + item.itemTotal, 0);
+    const totalItems = filteredCart.length;
 
-    return res.status(200).json({ cart: filteredCart, totalAmount });
+    return res.status(200).json({ 
+      cart: filteredCart, 
+      totalAmount,
+      totalItems
+    });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
 };
-
-  
-  
 
 export const removeCart = async (req, res) => {
   try {
