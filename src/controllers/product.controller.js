@@ -75,31 +75,28 @@ export const getProductBySlug = async (req, res) => {
 export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-
-    // Tìm sản phẩm
     const product = await productModel.findById(id);
-
     if (!product) {
       return res.status(404).json({ message: "Sản phẩm không tồn tại" });
     }
-
-    // Cập nhật trạng thái isActive của sản phẩm
-    product.isActive = false;
-
-    // Nếu có biến thể, cập nhật isActive từng biến thể
-    if (product.variation && product.variation.length > 0) {
-      product.variation.forEach((v) => {
-        v.isActive = false;
+    if (product.isActive === true) {
+      // Xóa mềm: chuyển isActive = false cho sản phẩm và các biến thể
+      product.isActive = false;
+      if (product.variation && product.variation.length > 0) {
+        product.variation.forEach((v) => {
+          v.isActive = false;
+        });
+      }
+      await product.save();
+      return res.status(200).json({
+        message: "Đã ẩn sản phẩm và các biến thể thành công",
+        product,
       });
+    } else {
+      // Xóa cứng
+      await productModel.findByIdAndDelete(id);
+      return res.status(200).json({ message: "Xóa sản phẩm thành công" });
     }
-
-    // Lưu lại sản phẩm
-    await product.save();
-
-    return res.status(200).json({
-      message: "Đã ẩn sản phẩm và các biến thể thành công",
-      product,
-    });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }

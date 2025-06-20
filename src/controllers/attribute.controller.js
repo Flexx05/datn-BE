@@ -20,16 +20,14 @@ export const getAllAttribute = async (req, res) => {
     if (typeof search === "string" && search.trim() !== "") {
       query.name = { $regex: search, $options: "i" };
     }
-
     const options = {
       page: parseInt(_page, 10),
       limit: parseInt(_limit, 10),
       sort: { [_sort]: _order === "desc" ? -1 : 1 },
     };
     const attributes = await attributeModel.paginate(query, options);
-
-    // Thêm countProduct vào từng thuộc tính
-    const productCount = await Promise.all(
+    // Thêm countProduct vào từng attribute
+    const countProduct = await Promise.all(
       attributes.docs.map(async (attr) => {
         const count = await productModel.countDocuments({
           attributes: { $elemMatch: { attributeId: attr._id } },
@@ -37,7 +35,7 @@ export const getAllAttribute = async (req, res) => {
         return { ...attr.toObject(), countProduct: count };
       })
     );
-    return res.status(200).json({ ...attributes, docs: productCount });
+    return res.status(200).json({ ...attributes, docs: countProduct });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
@@ -70,24 +68,31 @@ export const getAttributeById = async (req, res) => {
 export const deleteAttribute = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const product = await productModel.findOne({
-      attributes: { $elemMatch: { attributeId: id } },
-    });
-    if (product) {
-      return res
-        .status(400)
-        .json({ message: "Thuộc tính này còn sản phẩm, không thể xoá" });
+    const getOneAttribute = await attributeModel.findById(id);
+    if (getOneAttribute.isActive === true) {
+      const productExist = await productModel.findOne({
+        attributes: { $elemMatch: { attributeId: id } },
+      });
+      if (productExist) {
+        return res
+          .status(400)
+          .json({ message: "Thuộc tính đang tồn tại sản phẩm" });
+      }
+      const attribute = await attributeModel.findByIdAndUpdate(
+        id,
+        { isActive: false },
+        { new: true }
+      );
+      if (!attribute)
+        return res.status(404).json({ message: "Thuộc tinh không tồn tại" });
+      return res.status(200).json(attribute);
     }
-    const attribute = await attributeModel.findByIdAndUpdate(
-      id,
-      { isActive: false },
-      { new: true }
-    );
-
+    const attribute = await attributeModel.findByIdAndDelete(id);
     if (!attribute)
       return res.status(404).json({ message: "Thuộc tinh không tồn tại" });
-    return res.status(200).json(attribute);
+    return res
+      .status(200)
+      .json({ message: "Thuộc tính đã được xóa thành công", attribute });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }

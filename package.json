@@ -23,10 +23,13 @@
     "moment-timezone": "^0.5.48",
     "momment": "^0.0.1",
     "mongoose": "^8.13.2",
-    "mongoose-paginate-v2": "^1.9.0",
+    "mongoose-paginate-v2": "^1.9.1",
+    "multer": "^2.0.1",
+    "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^7.0.3",
     "otp-generator": "^4.0.1",
     "qs": "^6.14.0",
+    "socket.io": "^4.8.1",
     "vnpay": "^2.2.0"
   },
   "devDependencies": {

@@ -7,17 +7,7 @@ import mongoose from "mongoose";
 import nodemailer from "nodemailer";
 
 
-// Hàm tạo mã đơn hàng
-const generateOrderCode = () => {
-  const date = new Date();
-  const year = date.getFullYear().toString().slice(-2);
-  const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  const day = date.getDate().toString().padStart(2, "0");
-  const random = Math.floor(Math.random() * 10000)
-    .toString()
-    .padStart(4, "0");
-  return `DH${year}${month}${day}-${random}`;
-};
+
 
 export const createOrder = async (req, res) => {
   const session = await mongoose.startSession();
@@ -25,6 +15,7 @@ export const createOrder = async (req, res) => {
   try {
     const {
       userId,
+      orderCode,
       voucherCode = [],
       recipientInfo,
       shippingAddress,
@@ -47,11 +38,11 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    if (!shippingAddress || !shippingAddress.address || !shippingAddress.city) {
-      return res.status(400).json({ 
-        error: "Địa chỉ giao hàng không đầy đủ" 
-      });
-    }
+    // if (!shippingAddress || !shippingAddress.address || !shippingAddress.city) {
+    //   return res.status(400).json({ 
+    //     error: "Địa chỉ giao hàng không đầy đủ" 
+    //   });
+    // }
 
     // Bắt đầu transaction
     session.startTransaction();
@@ -197,7 +188,7 @@ export const createOrder = async (req, res) => {
 
       // Tính tổng tiền
       const totalAmount = subtotal + shippingFeeValue - discountAmount;
-      const orderCode = generateOrderCode();
+    
 
       // Tính ngày giao hàng dự kiến (7 ngày từ hiện tại)
       const expectedDeliveryDate = new Date();
@@ -207,7 +198,7 @@ export const createOrder = async (req, res) => {
       const order = new Order({
         userId: userId || undefined,
         recipientInfo,
-        orderCode,
+        orderCode: orderCode,
         voucherId: voucherIds,
         shippingAddress,
         items: orderItems,

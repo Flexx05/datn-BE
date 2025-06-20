@@ -124,50 +124,43 @@ export const showBrand = async (req, res) => {
 export const deleteBrand = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const brand = await brandModel.findOne({ _id: id, isActive: true });
+    const brand = await brandModel.findById(id);
     if (!brand) {
-      return res.status(404).json({ error: "brand not found" });
+      return res.status(404).json({ error: "Thương hiệu không tồn tại" });
     }
-
-    // // nếu thương hiệu không có sản phẩm thì mới xoá unBrand
-    const hasProduct = await productModel.findOne({ brandId: id });
-    if (!hasProduct) {
-      const deletedBrand = await brandModel.findByIdAndUpdate(
-        id,
-        { isActive: false },
-        { new: true }
+    if (brand.isActive === true) {
+      // Xóa mềm: chuyển isActive = false cho brand
+      await brandModel.findByIdAndUpdate(id, { isActive: false });
+      // Chuyển sản phẩm sang thương hiệu không xác định
+      let unBrand = await brandModel.findOne({
+        slug: "thuong-hieu-khong-xac-dinh",
+      });
+      if (!unBrand) {
+        unBrand = await brandModel.create({
+          name: "Thương hiệu không xác định",
+          slug: "thuong-hieu-khong-xac-dinh",
+          isActive: true,
+        });
+      }
+      await productModel.updateMany(
+        { brandId: id },
+        { brandId: unBrand._id, brandName: unBrand.name }
       );
       return res.status(200).json({
-        message: "Xoá thương hiệu thành công",
-        brand: deletedBrand,
+        message:
+          "Brand soft deleted successfully, products moved to unknown brand",
+        brandId: id,
+        moveToBrandId: unBrand._id,
       });
+    } else {
+      // Xóa cứng
+      await brandModel.findByIdAndDelete(id);
+      return res
+        .status(200)
+        .json({ message: "Brand hard deleted successfully" });
     }
-
-    const unBrand = await brandModel.findOneAndUpdate(
-      { slug: "thuong-hieu-khong-xac-dinh" },
-      {
-          $setOnInsert: {
-            name: "Thương hiệu không xác định",
-            slug: "thuong-hieu-khong-xac-dinh",
-            isActive: true,
-            parentId: null,
-          },
-        },
-        { upsert: true, new: true }
-      );
-
-    await productModel.updateMany(
-      { brandId: id },
-      { brandId: unBrand._id ,
-        brandName: unBrand.name
-      }
-    );
-    res.status(200).json({
-      message: "Xoá mềm thương hiệu thành công, sản phẩm chuyển sang thương hiệu không xác định",
-      brand: unBrand,
-    }); 
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 };
+
