@@ -57,6 +57,7 @@ const updateUserInfoSchema = Joi.object({
   fullName: Joi.string().min(3).max(30).optional(),
   phone: Joi.string().optional().allow(null, ""),
   address: Joi.string().optional().allow(null, ""),
+  avatar: Joi.string().optional().allow(null, ""),
 });
 
 export {
