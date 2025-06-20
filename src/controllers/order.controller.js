@@ -6,12 +6,9 @@ import { generateOrderCode } from "../services/order.service.js";
 import mongoose from "mongoose";
 import nodemailer from "nodemailer";
 
-
-
-
 export const createOrder = async (req, res) => {
   const session = await mongoose.startSession();
-  
+
   try {
     const {
       userId,
@@ -22,25 +19,30 @@ export const createOrder = async (req, res) => {
       items,
       shippingFee,
       paymentMethod,
-      cartItemIds = [] 
+      cartItemIds = [],
     } = req.body;
 
     // Validation cơ bản
     if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ 
-        error: "Đơn hàng phải có ít nhất một sản phẩm" 
+      return res.status(400).json({
+        error: "Đơn hàng phải có ít nhất một sản phẩm",
       });
     }
 
-    if (!recipientInfo || !recipientInfo.name || !recipientInfo.email || !recipientInfo.phone) {
-      return res.status(400).json({ 
-        error: "Thông tin người nhận không đầy đủ" 
+    if (
+      !recipientInfo ||
+      !recipientInfo.name ||
+      !recipientInfo.email ||
+      !recipientInfo.phone
+    ) {
+      return res.status(400).json({
+        error: "Thông tin người nhận không đầy đủ",
       });
     }
 
     // if (!shippingAddress || !shippingAddress.address || !shippingAddress.city) {
-    //   return res.status(400).json({ 
-    //     error: "Địa chỉ giao hàng không đầy đủ" 
+    //   return res.status(400).json({
+    //     error: "Địa chỉ giao hàng không đầy đủ"
     //   });
     // }
 
@@ -64,7 +66,9 @@ export const createOrder = async (req, res) => {
         );
 
         if (!product) {
-          throw new Error(`Không tìm thấy sản phẩm chứa biến thể ${item.variationId}`);
+          throw new Error(
+            `Không tìm thấy sản phẩm chứa biến thể ${item.variationId}`
+          );
         }
 
         // 2. Lấy biến thể
@@ -74,7 +78,9 @@ export const createOrder = async (req, res) => {
         }
 
         if (!variation.isActive) {
-          throw new Error(`Biến thể ${variation._id} của sản phẩm ${product.name} không khả dụng`);
+          throw new Error(
+            `Biến thể ${variation._id} của sản phẩm ${product.name} không khả dụng`
+          );
         }
 
         // 3. Kiểm tra số lượng
@@ -83,7 +89,9 @@ export const createOrder = async (req, res) => {
         }
 
         if (item.quantity > variation.stock) {
-          throw new Error(`Số lượng sản phẩm ${product.name} trong kho chỉ còn ${variation.stock}`);
+          throw new Error(
+            `Số lượng sản phẩm ${product.name} trong kho chỉ còn ${variation.stock}`
+          );
         }
 
         // 4. Tính giá
@@ -103,7 +111,10 @@ export const createOrder = async (req, res) => {
       }
 
       // Tính subtotal
-      const subtotal = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
+      const subtotal = orderItems.reduce(
+        (sum, item) => sum + item.totalPrice,
+        0
+      );
 
       // Xử lý voucher
       let hasShippingVoucher = false;
@@ -114,7 +125,9 @@ export const createOrder = async (req, res) => {
       // Kiểm tra voucher trùng lặp
       const uniqueVoucher = new Set(voucherCode);
       if (uniqueVoucher.size !== voucherCode.length) {
-        throw new Error("Không được sử dụng voucher giống nhau trong cùng một đơn hàng");
+        throw new Error(
+          "Không được sử dụng voucher giống nhau trong cùng một đơn hàng"
+        );
       }
 
       // Xử lý từng voucher
@@ -136,7 +149,9 @@ export const createOrder = async (req, res) => {
           now < new Date(voucher.startDate) ||
           now > new Date(voucher.endDate)
         ) {
-          throw new Error(`Voucher ${voucher.code} không hợp lệ hoặc đã hết hạn`);
+          throw new Error(
+            `Voucher ${voucher.code} không hợp lệ hoặc đã hết hạn`
+          );
         }
 
         if (voucher.used >= voucher.quantity) {
@@ -144,16 +159,22 @@ export const createOrder = async (req, res) => {
         }
 
         if (voucher.minOrderValues > subtotal) {
-          throw new Error(`Đơn hàng tối thiểu để sử dụng voucher ${voucher.code} là ${voucher.minOrderValues.toLocaleString()}₫`);
+          throw new Error(
+            `Đơn hàng tối thiểu để sử dụng voucher ${
+              voucher.code
+            } là ${voucher.minOrderValues.toLocaleString()}₫`
+          );
         }
 
         // Áp dụng voucher
         if (voucher.voucherType === "product") {
           if (hasProVoucher) {
-            throw new Error("Chỉ được sử dụng 1 voucher giảm giá sản phẩm mỗi đơn hàng");
+            throw new Error(
+              "Chỉ được sử dụng 1 voucher giảm giá sản phẩm mỗi đơn hàng"
+            );
           }
           hasProVoucher = true;
-          
+
           if (voucher.discountType === "fixed") {
             discountAmount += voucher.discountValue;
           } else if (voucher.discountType === "percent") {
@@ -166,10 +187,12 @@ export const createOrder = async (req, res) => {
           }
         } else if (voucher.voucherType === "shipping") {
           if (hasShippingVoucher) {
-            throw new Error("Chỉ được sử dụng 1 voucher giảm phí vận chuyển mỗi đơn hàng");
+            throw new Error(
+              "Chỉ được sử dụng 1 voucher giảm phí vận chuyển mỗi đơn hàng"
+            );
           }
           hasShippingVoucher = true;
-          
+
           if (voucher.discountType === "fixed") {
             shippingFeeValue -= voucher.discountValue;
           } else if (voucher.discountType === "percent") {
@@ -188,7 +211,6 @@ export const createOrder = async (req, res) => {
 
       // Tính tổng tiền
       const totalAmount = subtotal + shippingFeeValue - discountAmount;
-    
 
       // Tính ngày giao hàng dự kiến (7 ngày từ hiện tại)
       const expectedDeliveryDate = new Date();
@@ -209,7 +231,7 @@ export const createOrder = async (req, res) => {
         status: "Cho xac nhan",
         paymentStatus: "Chua thanh toan",
         paymentMethod,
-        expectedDeliveryDate
+        expectedDeliveryDate,
       });
 
       // Lưu order với session
@@ -238,13 +260,15 @@ export const createOrder = async (req, res) => {
         // Xóa cart items nếu có
         if (cartItemIds && cartItemIds.length > 0) {
           const deleteResult = await Cart.deleteMany(
-            { 
+            {
               _id: { $in: cartItemIds },
-              userId: userId 
+              userId: userId,
             },
             { session }
           );
-          console.log(`Đã xóa ${deleteResult.deletedCount} items khỏi giỏ hàng`);
+          console.log(
+            `Đã xóa ${deleteResult.deletedCount} items khỏi giỏ hàng`
+          );
         }
 
         // Commit transaction
@@ -267,20 +291,34 @@ export const createOrder = async (req, res) => {
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
                 <h2 style="color: #4CAF50; text-align: center">🎉 Đặt hàng thành công!</h2>
-                <p>Xin chào <strong>${orderSave.recipientInfo.name || "Quý khách"}</strong>,</p>
-                <p>Chúng tôi đã nhận được đơn hàng <strong>${orderSave.orderCode}</strong> của bạn.</p>
+                <p>Xin chào <strong>${
+                  orderSave.recipientInfo.name || "Quý khách"
+                }</strong>,</p>
+                <p>Chúng tôi đã nhận được đơn hàng <strong>${
+                  orderSave.orderCode
+                }</strong> của bạn.</p>
                 
                 <h3>📦 Thông tin đơn hàng:</h3>
                 <ul>
-                    <li><strong>Mã đơn hàng:</strong> ${orderSave.orderCode}</li>
+                    <li><strong>Mã đơn hàng:</strong> ${
+                      orderSave.orderCode
+                    }</li>
                     <li><strong>Trạng thái:</strong> ${orderSave.status}</li>
-                    <li><strong>Phương thức thanh toán:</strong> ${orderSave.paymentMethod}</li>
-                    <li><strong>Trạng thái thanh toán:</strong> ${orderSave.paymentStatus}</li>
-                    <li><strong>Ngày giao dự kiến:</strong> ${new Date(orderSave.expectedDeliveryDate).toLocaleDateString("vi-VN")}</li>
+                    <li><strong>Phương thức thanh toán:</strong> ${
+                      orderSave.paymentMethod
+                    }</li>
+                    <li><strong>Trạng thái thanh toán:</strong> ${
+                      orderSave.paymentStatus
+                    }</li>
+                    <li><strong>Ngày giao dự kiến:</strong> ${new Date(
+                      orderSave.expectedDeliveryDate
+                    ).toLocaleDateString("vi-VN")}</li>
                 </ul>
 
                 <h3>📍 Địa chỉ giao hàng:</h3>
-                <p>${orderSave.shippingAddress.address}, ${orderSave.shippingAddress.city}, ${orderSave.shippingAddress.country}</p>
+                <p>${orderSave.shippingAddress.address}, ${
+              orderSave.shippingAddress.city
+            }, ${orderSave.shippingAddress.country}</p>
 
                 <h3>🛒 Sản phẩm:</h3>
                 <table style="width: 100%; border-collapse: collapse;">
@@ -299,8 +337,12 @@ export const createOrder = async (req, res) => {
                         <tr>
                         <td style="padding: 8px;">${item.productName}</td>
                         <td style="text-align: center;">${item.quantity}</td>
-                        <td style="text-align: right;">${item.priceAtOrder.toLocaleString("vi-VN")} VNĐ</td>
-                        <td style="text-align: right;">${item.totalPrice.toLocaleString("vi-VN")} VNĐ</td>
+                        <td style="text-align: right;">${item.priceAtOrder.toLocaleString(
+                          "vi-VN"
+                        )} VNĐ</td>
+                        <td style="text-align: right;">${item.totalPrice.toLocaleString(
+                          "vi-VN"
+                        )} VNĐ</td>
                         </tr>
                     `
                       )
@@ -310,10 +352,18 @@ export const createOrder = async (req, res) => {
 
                 <h3>💰 Tóm tắt thanh toán:</h3>
                 <ul>
-                    <li><strong>Tạm tính:</strong> ${orderSave.subtotal.toLocaleString("vi-VN")} VNĐ</li>
-                    <li><strong>Phí vận chuyển:</strong> ${orderSave.shippingFee.toLocaleString("vi-VN")} VNĐ</li>
-                    <li><strong>Giảm giá:</strong> ${orderSave.discountAmount.toLocaleString("vi-VN")} VNĐ</li>
-                    <li><strong>Tổng cộng:</strong> <span style="color: #4CAF50; font-size: 16px;">${orderSave.totalAmount.toLocaleString("vi-VN")} VNĐ</span></li>
+                    <li><strong>Tạm tính:</strong> ${orderSave.subtotal.toLocaleString(
+                      "vi-VN"
+                    )} VNĐ</li>
+                    <li><strong>Phí vận chuyển:</strong> ${orderSave.shippingFee.toLocaleString(
+                      "vi-VN"
+                    )} VNĐ</li>
+                    <li><strong>Giảm giá:</strong> ${orderSave.discountAmount.toLocaleString(
+                      "vi-VN"
+                    )} VNĐ</li>
+                    <li><strong>Tổng cộng:</strong> <span style="color: #4CAF50; font-size: 16px;">${orderSave.totalAmount.toLocaleString(
+                      "vi-VN"
+                    )} VNĐ</span></li>
                 </ul>
 
                 <p style="margin-top: 30px;">Cảm ơn bạn đã mua sắm tại <strong>Binova</strong>! Nếu có bất kỳ thắc mắc nào, hãy phản hồi lại email này để được hỗ trợ.</p>
@@ -327,36 +377,34 @@ export const createOrder = async (req, res) => {
             `,
           });
         } catch (emailError) {
-          console.error('Lỗi gửi email:', emailError);
+          console.error("Lỗi gửi email:", emailError);
           // Không throw error để không ảnh hưởng đến response
         }
 
         return res.status(201).json({
-          message: "Đơn hàng đã được tạo thành công và đã xóa sản phẩm khỏi giỏ hàng",
+          message:
+            "Đơn hàng đã được tạo thành công và đã xóa sản phẩm khỏi giỏ hàng",
           order: orderSave,
-          cartItemsRemoved: cartItemIds.length
+          cartItemsRemoved: cartItemIds.length,
         });
       }
     } else {
       throw new Error("Phương thức thanh toán không được hỗ trợ");
     }
-
   } catch (error) {
-    console.error('Lỗi trong transaction:', error);
-    
+    console.error("Lỗi trong transaction:", error);
+
     // Chỉ abort nếu transaction chưa được commit
     if (session.inTransaction()) {
       await session.abortTransaction();
     }
-    
+
     return res.status(400).json({ error: error.message });
-    
   } finally {
     // Luôn end session
     await session.endSession();
   }
 };
-
 
 export const getAllOrders = async (req, res) => {
   try {
@@ -377,11 +425,10 @@ export const getOrderById = async (req, res) => {
 
   try {
     // Find order và populate product details với variation
-    const order = await Order.findById(req.params.id)
-      .populate({
-        path: 'items.productId',
-        select: 'name variation',
-      });
+    const order = await Order.findById(req.params.id).populate({
+      path: "items.productId",
+      select: "name variation",
+    });
 
     if (!order) {
       return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
@@ -396,18 +443,18 @@ export const getOrderById = async (req, res) => {
     }
 
     // Xử lý items để chỉ lấy variation attributes tương ứng với variationId
-    const processedItems = order.items.map(item => {
+    const processedItems = order.items.map((item) => {
       const product = item.productId;
-      
+
       // Tìm variation cụ thể dựa trên variationId
       const matchedVariation = product.variation.find(
-        v => v._id.toString() === item.variationId.toString()
+        (v) => v._id.toString() === item.variationId.toString()
       );
 
       return {
         ...item.toObject(),
         // Chỉ trả về attributes của variation được chọn
-        variantAttributes: matchedVariation ? matchedVariation.attributes : []
+        variantAttributes: matchedVariation ? matchedVariation.attributes : [],
       };
     });
 
@@ -419,8 +466,6 @@ export const getOrderById = async (req, res) => {
     return res.status(400).json({ error: error.message });
   }
 };
-
-
 
 export const getOrderByUserId = async (req, res) => {
   try {
@@ -646,7 +691,6 @@ export const updateOrderStatus = async (req, res) => {
   }
 };
 
-
 export const updatePaymentStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -794,12 +838,10 @@ export const cancelOrder = async (req, res) => {
     // 2. Nếu là khách chưa đăng nhập -> kiểm tra orderCode và email (không biết có cần OTP không)
     if (isGuest) {
       if (!orderCode || !email) {
-        return res
-          .status(400)
-          .json({
-            error:
-              "Khách chưa đăng nhập cần cung cấp orderCode và email để hủy đơn.",
-          });
+        return res.status(400).json({
+          error:
+            "Khách chưa đăng nhập cần cung cấp orderCode và email để hủy đơn.",
+        });
       }
 
       if (
@@ -820,13 +862,11 @@ export const cancelOrder = async (req, res) => {
     // 4. Chỉ cho phép hủy nếu trạng thái là "Chờ xác nhận" hoặc "Đã xác nhận"
     const cancelableStatus = ["Cho xac nhan", "Da xac nhan"];
     if (!cancelableStatus.includes(order.status)) {
-      return res
-        .status(400)
-        .json({
-          error: `Chỉ được hủy đơn hàng khi đang ở trạng thái: ${cancelableStatus.join(
-            ", "
-          )}`,
-        });
+      return res.status(400).json({
+        error: `Chỉ được hủy đơn hàng khi đang ở trạng thái: ${cancelableStatus.join(
+          ", "
+        )}`,
+      });
     }
 
     // 5. Cập nhật trạng thái, hoàn hàng và hoàn voucher
