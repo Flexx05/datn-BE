@@ -1,4 +1,6 @@
+import mongoose from "mongoose";
 import attributeModel from "../models/attribute.model";
+import productModel from "../models/product.model";
 import { generateSlug } from "../utils/createSlug";
 import { attributeSchema } from "../validations/attribute.validation";
 
@@ -19,13 +21,25 @@ export const getAllAttribute = async (req, res) => {
     if (typeof search === "string" && search.trim() !== "") {
       query.name = { $regex: search, $options: "i" };
     }
+  
     const options = {
       page: parseInt(_page, 10),
       limit: parseInt(_limit, 10),
       sort: { [_sort]: _order === "desc" ? -1 : 1 },
     };
     const attributes = await attributeModel.paginate(query, options);
-    return res.status(200).json(attributes);
+
+    const countProduct = await Promise.all(
+      attributes.docs.map(async (attr) => {
+        const count = await productModel.countDocuments({
+          attributes: { $elemMatch: { attributeId: attr._id } },
+        });
+        return { attributeId: attr._id,
+                 productCount: count
+             };
+      })
+    )
+    return res.status(200).json({attributes , countProduct});
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
@@ -58,11 +72,17 @@ export const getAttributeById = async (req, res) => {
 export const deleteAttribute = async (req, res) => {
   try {
     const { id } = req.params;
+
+    const product = await productModel.findOne({ attributes: { $elemMatch: { attributeId: id } },});
+   if(product) {
+    return res.status(400).json({ message: "Thuộc tính này còn sản phẩm, không thể xoá" });
+   }
     const attribute = await attributeModel.findByIdAndUpdate(
       id,
       { isActive: false },
       { new: true }
     );
+   
     if (!attribute)
       return res.status(404).json({ message: "Thuộc tinh không tồn tại" });
     return res.status(200).json(attribute);

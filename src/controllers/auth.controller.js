@@ -143,16 +143,15 @@ export const login = async (req, res) => {
     if (!isValid) {
       return res.status(400).json({ error: "Sai mật khẩu" });
     }
-    if (!user.isActive || user.isActive === false) {
+    if(!user.isVerify || user.isVerify === false) {
       sendEmail(email);
+      return res.status(400).json({ error: "OTP đã được gửi! Vui lòng kiểm tra email" });
+    } 
+    if (!user.isActive || user.isActive === false) {
       return res
         .status(400)
-        .json({ error: "OTP đã được gửi! Vui lòng kiểm tra email" });
-    }
-    if (!user.isVerify || user.isVerify === false) {
-      return res.status(400).json({ error: "Vui lòng kiểm tra email" });
-    }
-
+        .json({ error: "Tài khoản này bị khoá " });
+    }    
     const accessToken = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET_KEY || "binova",
