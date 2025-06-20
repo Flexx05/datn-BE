@@ -1,19 +1,7 @@
 import { model, Schema } from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 
-const attributeValueSchema = new Schema(
-  {
-    name: {
-      type: String,
-      required: [true, "Tên giá trị không được để trống"],
-    },
-  },
-  {
-    timestamps: true,
-    versionKey: false,
-  }
-);
-
-const attributeSChema = new Schema(
+const attributeSchema = new Schema(
   {
     name: {
       type: String,
@@ -22,7 +10,11 @@ const attributeSChema = new Schema(
     slug: {
       type: String,
     },
-    values: [attributeValueSchema],
+    values: [String],
+    isColor: {
+      type: Boolean,
+      default: false,
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -33,5 +25,6 @@ const attributeSChema = new Schema(
     versionKey: false,
   }
 );
+attributeSchema.plugin(mongoosePaginate);
 
-export default model("Attribute", attributeSChema);
+export default model("Attribute", attributeSchema);

@@ -1,23 +1,43 @@
 import attributeModel from "../models/attribute.model";
+import productModel from "../models/product.model";
 import { generateSlug } from "../utils/createSlug";
 import { attributeSchema } from "../validations/attribute.validation";
 
 export const getAllAttribute = async (req, res) => {
   try {
-    const attributes = await attributeModel.find();
-    return res.status(200).json(attributes);
-  } catch (error) {
-    return res.status(400).json({ message: error.message });
-  }
-};
+    const {
+      search,
+      isActive,
+      _page = 1,
+      _limit = 10,
+      _sort = "createdAt",
+      _order,
+    } = req.query;
+    const query = {};
+    if (isActive !== undefined) {
+      query.isActive = isActive === "true";
+    }
+    if (typeof search === "string" && search.trim() !== "") {
+      query.name = { $regex: search, $options: "i" };
+    }
 
-export const searchAttribute = async (req, res) => {
-  try {
-    const { name_like } = req.query;
-    const attributes = await attributeModel.find({
-      name: { $regex: name_like, $options: "i" },
-    });
-    return res.status(200).json(attributes);
+    const options = {
+      page: parseInt(_page, 10),
+      limit: parseInt(_limit, 10),
+      sort: { [_sort]: _order === "desc" ? -1 : 1 },
+    };
+    const attributes = await attributeModel.paginate(query, options);
+
+    // Thêm countProduct vào từng thuộc tính
+    const docsWithCount = await Promise.all(
+      attributes.docs.map(async (attr) => {
+        const count = await productModel.countDocuments({
+          attributes: { $elemMatch: { attributeId: attr._id } },
+        });
+        return { ...attr.toObject(), countProduct: count };
+      })
+    );
+    return res.status(200).json({ ...attributes, docs: docsWithCount });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
@@ -50,11 +70,21 @@ export const getAttributeById = async (req, res) => {
 export const deleteAttribute = async (req, res) => {
   try {
     const { id } = req.params;
+
+    const product = await productModel.findOne({
+      attributes: { $elemMatch: { attributeId: id } },
+    });
+    if (product) {
+      return res
+        .status(400)
+        .json({ message: "Thuộc tính này còn sản phẩm, không thể xoá" });
+    }
     const attribute = await attributeModel.findByIdAndUpdate(
       id,
       { isActive: false },
       { new: true }
     );
+
     if (!attribute)
       return res.status(404).json({ message: "Thuộc tinh không tồn tại" });
     return res.status(200).json(attribute);
@@ -74,8 +104,18 @@ export const createAttribute = async (req, res) => {
       return res.status(400).json({ message: errors });
     }
 
+    // Kiểm tra trùng tên thuộc tính (không phân biệt hoa thường, loại bỏ khoảng trắng)
+    const normalizedName = value.name.trim().toLowerCase();
+    const attributes = await attributeModel.find();
+    const hasNameDuplicate = attributes.some(
+      (attr) => attr.name && attr.name.trim().toLowerCase() === normalizedName
+    );
+    if (hasNameDuplicate) {
+      return res.status(400).json({ message: "Tên thuộc tính đã tồn tại." });
+    }
+
     // Kiểm tra trùng tên value (không phân biệt hoa thường, loại bỏ khoảng trắng)
-    const normalized = value.value.map((v) => v.trim().toLowerCase());
+    const normalized = value.values.map((v) => v.trim().toLowerCase());
     const hasDuplicate = normalized.some((v, i) => normalized.indexOf(v) !== i);
     if (hasDuplicate) {
       return res
@@ -83,8 +123,7 @@ export const createAttribute = async (req, res) => {
         .json({ message: "Các giá trị value không được trùng tên." });
     }
 
-    const attributes = await attributeModel.find();
-    const values = value.value.map((val) => ({ name: val }));
+    const values = value.values.map((val) => val);
     const attribute = await attributeModel.create({
       ...value,
       slug: generateSlug(
@@ -111,8 +150,21 @@ export const updateAttribute = async (req, res) => {
       return res.status(400).json({ message: errors });
     }
 
+    // Kiểm tra trùng tên thuộc tính (không phân biệt hoa thường, loại bỏ khoảng trắng, loại trừ chính nó)
+    const normalizedName = value.name.trim().toLowerCase();
+    const attributes = await attributeModel.find();
+    const hasNameDuplicate = attributes.some(
+      (attr) =>
+        attr._id != id &&
+        attr.name &&
+        attr.name.trim().toLowerCase() === normalizedName
+    );
+    if (hasNameDuplicate) {
+      return res.status(400).json({ message: "Tên thuộc tính đã tồn tại." });
+    }
+
     // Kiểm tra trùng tên value (không phân biệt hoa thường, loại bỏ khoảng trắng)
-    const normalized = value.value.map((v) => v.trim().toLowerCase());
+    const normalized = value.values.map((v) => v.trim().toLowerCase());
     const hasDuplicate = normalized.some((v, i) => normalized.indexOf(v) !== i);
     if (hasDuplicate) {
       return res
@@ -120,8 +172,7 @@ export const updateAttribute = async (req, res) => {
         .json({ message: "Các giá trị value không được trùng tên." });
     }
 
-    const attributes = await attributeModel.find();
-    const values = value.value.map((val) => ({ name: val }));
+    const values = value.values.map((val) => val);
     const attribute = await attributeModel.findByIdAndUpdate(
       id,
       {

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import Comment from "../models/comment.model";
 import Product from "../models/product.model";
-import Order from "../models/fake.order";
+import Order from "../models/order.model";
 import { sendMail } from "../utils/sendMail";
 import {addCommentValidation, updateCommentStatusValidation, replyToCommentValidation} from "../validations/comment.validation";
 
@@ -94,6 +94,7 @@ export const getAllComment = async (req, res) => {
       });
     }
 
+
     return res.status(200).json(allComments.docs);
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -112,8 +113,35 @@ export const getCommentById = async (req, res) => {
     if (!comment) {
       return res.status(404).json({ message: "Không tìm thấy bình luận." });
     }
+    
+    //  👉 Lấy thông tin biến thể sản phẩm nếu có (ví dụ: màu sắc: #ffffff, kích thước: M)
+    let variationAttributes = [];
 
-    return res.status(200).json(comment);
+    const productId = comment.productId?._id?.toString();
+    const variationId = comment.variationId?.toString();
+
+    if (productId && variationId) {
+      const product = await Product.findById(productId).select("variation").lean();
+
+      const matchedVariant = product?.variation?.find(
+        v => v._id.toString() === variationId
+      );
+
+      variationAttributes = matchedVariant?.attributes?.map(attr => ({
+        name: attr.attributeName,
+        value: attr.values?.[0]
+      })) || [];
+    }
+
+    // 👉 Gắn thêm variationInfo vào kết quả trả về
+    const commentWithVariant = {
+      ...comment.toObject(), // đảm bảo object thuần
+      variationInfo: {
+        attributes: variationAttributes
+      }
+    };
+
+    return res.status(200).json(commentWithVariant);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -140,8 +168,8 @@ export const addComment = async (req, res) => {
     const order = await Order.findOne({
       _id: orderId,
       userId,
-      status: "Thành công",
-      paymentStatus: "Đã thanh toán"
+      status: "Hoan thanh",
+      paymentStatus: "Da thanh toan"
     });
 
     if (!order) {

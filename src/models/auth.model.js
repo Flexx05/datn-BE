@@ -1,4 +1,5 @@
-import { model, Schema } from "mongoose";
+import mongoose, { model, Schema } from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 
 const authSchema = new Schema(
   {
@@ -12,6 +13,7 @@ const authSchema = new Schema(
     },
     password: {
       type: String,
+      required: [true, "Password is required"],
     },
     phone: {
       type: String,
@@ -21,10 +23,11 @@ const authSchema = new Schema(
     },
     avatar: {
       type: String,
+      default: null
     },
     role: {
       type: String,
-      enum: ["staff","admin", "user"],
+      enum: ["staff", "admin", "user"],
       default: "user",
     },
     activeStatus: {
@@ -34,12 +37,33 @@ const authSchema = new Schema(
       type: Boolean,
       default: true,
     },
-
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // hoặc 'Admin' nếu bạn phân biệt
+      default: null,
+    },
+    userUpdated: {
+      type: String,
+    },
+    resetPasswordVerified: {
+      type: Boolean,
+      default: false,
+    },
+    isVerify: {
+      type: Boolean,
+      default: false,
+    },
+    refreshToken: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,
     versionKey: false,
   }
 );
+
+authSchema.plugin(mongoosePaginate);
 
 export default model("Auth", authSchema);
