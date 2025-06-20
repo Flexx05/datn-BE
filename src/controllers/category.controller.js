@@ -217,7 +217,18 @@ export const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
     const mode = req.query.mode || "full"; // Mặc định xoá cả cha và con
+    const force = req.query.force === "true";
+    if(force){
+      const category = await categoryModel.findById(id);
+      if(!category){
+        return res.status(404).json({ error: "Category not found" });
+      }
 
+      if(category.isActive === false){
+        await categoryModel.findByIdAndDelete(id);
+        return res.status(200).json({ message: "Category deleted successfully" });
+      }
+    }
     // 1. Kiểm tra danh mục cha tồn tại
     const category = await categoryModel.findOne({ _id: id, isActive: true });
     if (!category) {
@@ -258,6 +269,8 @@ export const deleteCategory = async (req, res) => {
       // 6. Nếu là "full", xoá mềm luôn cả danh mục cha
       if (mode === "full") {
         await categoryModel.findByIdAndUpdate(id, { isActive: false });
+
+        await brandModel.deleteOne({ _id: id, isActive: false })
 
         // 7. Chuyển tất cả sản phẩm của cha và con sang danh mục không xác định
         await productModel.updateMany(
