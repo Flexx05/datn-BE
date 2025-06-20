@@ -58,6 +58,17 @@ export const getAttributeById = async (req, res) => {
 export const deleteAttribute = async (req, res) => {
   try {
     const { id } = req.params;
+     const force = req.query.force === "true";
+          const attributeDelete = await attributeModel.findById(id);
+          if(!attributeDelete){
+            return res.status(404).json({ error: "Attribute not found" });
+          }
+          if(force){
+            if(attributeDelete.isActive === false){
+              await attributeModel.findByIdAndDelete(id);
+              return res.status(200).json({ message: "Attribute deleted successfully" });
+            }
+          }
     const attribute = await attributeModel.findByIdAndUpdate(
       id,
       { isActive: false },

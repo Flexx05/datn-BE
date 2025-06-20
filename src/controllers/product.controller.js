@@ -75,7 +75,17 @@ export const getProductBySlug = async (req, res) => {
 export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-
+    const force = req.query.force === "true";
+        const productDelete = await productModel.findById(id);
+          if(!productDelete){
+            return res.status(404).json({ error: "Product not found" });
+          }
+          if(force){
+          if(productDelete.isActive === false){
+             await productModel.findByIdAndDelete(id);
+              return res.status(200).json({ message: "Product deleted successfully" });
+              }
+          }
     // Tìm sản phẩm
     const product = await productModel.findById(id);
 
