@@ -219,7 +219,7 @@ export const updateUserInfo = async (req, res) => {
         message: error.details[0].message,
       });
     }
-    const { fullName, phone, address } = value;
+    const { fullName, phone, address,avatar } = value;
     const updatedBy = req.user?.id || null;
     const userUpdated = await authModel.findById(updatedBy).select("fullName");
     if (!userUpdated) {
@@ -235,6 +235,7 @@ export const updateUserInfo = async (req, res) => {
         fullName,
         phone: phone || null,
         address: address || null,
+        avatar: avatar || null,
         updatedBy,
         userUpdated: userUpdated.fullName,
       },
