@@ -29,7 +29,7 @@ export const getAllAttribute = async (req, res) => {
     const attributes = await attributeModel.paginate(query, options);
 
     // Thêm countProduct vào từng thuộc tính
-    const docsWithCount = await Promise.all(
+    const productCount = await Promise.all(
       attributes.docs.map(async (attr) => {
         const count = await productModel.countDocuments({
           attributes: { $elemMatch: { attributeId: attr._id } },
@@ -37,7 +37,7 @@ export const getAllAttribute = async (req, res) => {
         return { ...attr.toObject(), countProduct: count };
       })
     );
-    return res.status(200).json({ ...attributes, docs: docsWithCount });
+    return res.status(200).json({ ...attributes, docs: productCount });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
