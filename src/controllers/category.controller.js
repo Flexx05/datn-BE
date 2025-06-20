@@ -26,30 +26,9 @@ export const createCategory = async (req, res) => {
     if (existingCategory) {
       return res.status(400).json({ message: "Tên danh mục đã tồn tại" });
     }
-    const { categorySort } = req.body;
-    const existingCategorySort = await categoryModel.findOne({ categorySort });
-    if (existingCategorySort) {
-      return res.status(400).json({ message: "Category Sort đã tồn tại" });
-    }
-    const maxOrderCategory = await categoryModel
-      .findOne()
-      .sort({ categorySort: -1 });
-    const nextOrder =
-      maxOrderCategory && typeof maxOrderCategory.categorySort === "number"
-        ? maxOrderCategory.categorySort + 1
-        : 1;
-
-    // const newCategory = new categoryModel({
-    //   name: req.body.name,
-    //   parentId: req.body.parentId || null,
-    //   order: maxOrderCategory ? maxOrderCategory.order + 1 : 1,
-    // });
-
     const cate = await categoryModel.find();
     const newCategory = await categoryModel.create({
       ...value,
-
-      categorySort: nextOrder,
       slug: generateSlug(
         value.name,
         cate.map((category) => category.slug)
@@ -169,26 +148,6 @@ export const updateCategory = async (req, res) => {
       const errors = error.details.map((err) => err.message);
       return res.status(400).json({ message: errors });
     }
-
-    const cate = await categoryModel.findById(id); // Sửa lấy category hiện tại
-    const parentId = cate.parentId || null; // Lấy parentId của category hiện tại
-    const sumCate = await categoryModel.countDocuments({ parentId });
-    if (value.categorySort > sumCate || value.categorySort < 1) {
-      return res.status(400).json({ message: "Category Sort not valid" });
-    }
-    if (value.categorySort && value.categorySort !== cate.categorySort) {
-      const target = await categoryModel.findOne({
-        categorySort: value.categorySort,
-        parentId: cate.parentId || null,
-      });
-
-      if (target) {
-        await categoryModel.findByIdAndUpdate(target._id, {
-          categorySort: cate.categorySort,
-        });
-      }
-    }
-
     // Cập nhật category với slug mới
     const category = await categoryModel.findByIdAndUpdate(
       id,
