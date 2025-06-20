@@ -416,13 +416,6 @@ export const getAllOrders = async (req, res) => {
 };
 
 export const getOrderById = async (req, res) => {
-  const userIdFromToken = req.user.id;
-  const userRole = req.user.role;
-
-  if (!userIdFromToken) {
-    return res.status(400).json({ error: "Đăng nhập để tiếp tục" });
-  }
-
   try {
     // Find order và populate product details với variation
     const order = await Order.findById(req.params.id).populate({
@@ -432,14 +425,6 @@ export const getOrderById = async (req, res) => {
 
     if (!order) {
       return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
-    }
-
-    const isAdminOrStaff = userRole === "admin" || userRole === "staff";
-
-    if (!isAdminOrStaff && order.userId.toString() !== userIdFromToken) {
-      return res
-        .status(403)
-        .json({ error: "Bạn không có quyền truy cập đơn hàng này" });
     }
 
     // Xử lý items để chỉ lấy variation attributes tương ứng với variationId
