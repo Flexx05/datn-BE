@@ -41,7 +41,7 @@ export const getAllBrands = async (req, res) => {
   try {
     const {
       _page = 1,
-      _limit = 10,
+      _limit = 0,
       _sort = "createdAt",
       _order,
       isActive,
@@ -61,7 +61,15 @@ export const getAllBrands = async (req, res) => {
     };
 
     const brands = await brandModel.paginate(query, options);
-    return res.status(200).json(brands);
+
+    const countProduct = await Promise.all(
+      brands.docs.map(async (brand) => {
+        const count = await productModel.countDocuments({ brandId: brand._id });
+        return { ...brand.toObject(), countProduct: count };
+      })
+    );
+
+    return res.status(200).json({ ...brands, docs: countProduct });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -91,10 +99,14 @@ export const updateBrand = async (req, res) => {
       const errors = error.details.map((err) => err.message);
       return res.status(400).json({ message: errors });
     }
-    const { name, logoUrl, isActive } = value;
+    const listBrand = await brandModel.find();
+    const slug = generateSlug(
+      value.name,
+      listBrand?.filter((b) => b._id !== id).map((b) => b.slug)
+    );
     const brand = await brandModel.findByIdAndUpdate(
       id,
-      { name, isActive, logoUrl },
+      { ...value, slug },
       { new: true }
     );
     if (!brand) {
@@ -163,4 +175,3 @@ export const deleteBrand = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-

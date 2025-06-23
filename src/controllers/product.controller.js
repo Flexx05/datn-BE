@@ -379,7 +379,7 @@ export const updateProduct = async (req, res) => {
     const listProduct = await productModel.find();
     const slug = generateSlug(
       name,
-      listProduct?.filter((p) => p._id != productId).map((p) => p.slug)
+      listProduct?.filter((p) => p._id !== productId).map((p) => p.slug)
     );
 
     // Xử lý biến thể: set isActive theo stock

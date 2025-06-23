@@ -150,9 +150,11 @@ export const resetUserPassword = async (req, res) => {
   try {
     const { id } = req.params;
     const { passwordOld, passwordNew } = req.body;
-      
-    const trimpasswordOld = typeof passwordOld === 'string' ? passwordOld.trim() : '';
-    const trimpasswordNew = typeof passwordNew === 'string' ? passwordNew.trim() : '';
+
+    const trimpasswordOld =
+      typeof passwordOld === "string" ? passwordOld.trim() : "";
+    const trimpasswordNew =
+      typeof passwordNew === "string" ? passwordNew.trim() : "";
 
     if (!trimpasswordOld || !trimpasswordNew) {
       return res.status(400).json({
@@ -160,22 +162,22 @@ export const resetUserPassword = async (req, res) => {
         message: "Mật khẩu cũ và mật khẩu mới là bắt buộc",
       });
     }
-    if(trimpasswordNew.length < 8) {
+    if (trimpasswordNew.length < 8) {
       return res.status(400).json({
         success: false,
         message: "Mật khẩu phải có ít nhất 8 ký tự",
       });
     }
 
-       const user = await authModel.findOne({ _id: id });
-      if (!user) {
+    const user = await authModel.findOne({ _id: id });
+    if (!user) {
       return res.status(404).json({
         success: false,
         message: "Không tìm thấy người dùng",
-       });
-      } 
-  
-        // kiểm tra tránh trùng lặp mật khẩu mới và cũ
+      });
+    }
+
+    // kiểm tra tránh trùng lặp mật khẩu mới và cũ
     if (trimpasswordOld === trimpasswordNew) {
       return res.status(400).json({
         success: false,
@@ -183,21 +185,22 @@ export const resetUserPassword = async (req, res) => {
       });
     }
 
-     const hashedPassword = await bcrypt.hash(trimpasswordNew, 10);
-      user.password = hashedPassword;
-       await user.save(); 
+    const hashedPassword = await bcrypt.hash(trimpasswordNew, 10);
+    user.password = hashedPassword;
+    await user.save();
 
     const isValid = await bcrypt.compare(trimpasswordOld, user.password);
     if (!isValid) {
-      return res.status(400).json({ success: false, message: "Sai mật khẩu cũ" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Sai mật khẩu cũ" });
     }
 
-  console.log(`User ${id} đã đổi mật khẩu thành công lúc ${new Date()}`);
+    console.log(`User ${id} đã đổi mật khẩu thành công lúc ${new Date()}`);
 
     return res.status(200).json({
       success: true,
       message: "Đặt lại mật khẩu thành công",
-
     });
   } catch (error) {
     return res.status(500).json({
@@ -219,15 +222,7 @@ export const updateUserInfo = async (req, res) => {
         message: error.details[0].message,
       });
     }
-    const { fullName, phone, address,avatar } = value;
-    const updatedBy = req.user?.id || null;
-    const userUpdated = await authModel.findById(updatedBy).select("fullName");
-    if (!userUpdated) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy người dùng đã cập nhật",
-      });
-    }
+    const { fullName, phone, address, avatar } = value;
 
     const updatedUser = await authModel.findByIdAndUpdate(
       id,
@@ -236,8 +231,6 @@ export const updateUserInfo = async (req, res) => {
         phone: phone || null,
         address: address || null,
         avatar: avatar || null,
-        updatedBy,
-        userUpdated: userUpdated.fullName,
       },
       { new: true }
     );
