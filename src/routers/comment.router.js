@@ -1,15 +1,16 @@
 import {Router} from "express";
 import { addComment, getAllComment, updateCommentStatus, replyToComment, getCommentsForClient, getCommentById } from "../controllers/comment.controller";
-import { verifyToken, checkAdminAndStaff } from "../middlewares/checkComment";
+// import { verifyToken, checkAdminAndStaff } from "../middlewares/checkComment";
+import { verifyToken, isAdminOrStaff } from "../middlewares/checkAuth";
 
 
 const router = Router();
 
 // Routes cho admin/staff
-router.get("/comments", verifyToken, checkAdminAndStaff, getAllComment);
-router.get("/comments/id/:id", verifyToken, checkAdminAndStaff, getCommentById);
-router.patch("/comments/edit/:id", verifyToken, checkAdminAndStaff, updateCommentStatus);
-router.patch("/comments/reply/:id", verifyToken, checkAdminAndStaff, replyToComment);
+router.get("/comments", verifyToken, isAdminOrStaff, getAllComment);
+router.get("/comments/id/:id", verifyToken, isAdminOrStaff, getCommentById);
+router.patch("/comments/edit/:id", verifyToken, isAdminOrStaff, updateCommentStatus);
+router.patch("/comments/reply/:id", verifyToken, isAdminOrStaff, replyToComment);
 
 // Routes cho client
 router.post("/comments/add", verifyToken, addComment);
