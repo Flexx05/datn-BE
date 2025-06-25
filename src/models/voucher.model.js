@@ -57,7 +57,8 @@ const voucherSchema = new Schema(
     },
     voucherStatus: {
       type: String,
-      enum: ["active", "inactive", "expired"]
+      enum: ["active", "inactive", "expired"],
+      default: "inactive"
     },
   },
   {

@@ -167,23 +167,48 @@ export const updateVoucher = async (req, res) => {
 // Xoá voucher
 export const deleteVoucher = async (req, res) => {
   try {
-    const deletedVoucher = await Voucher.findByIdAndDelete(req.params.id);
-    if (!deletedVoucher) {
+    const voucher = await Voucher.findById(req.params.id);
+
+    if (!voucher) {
       return res.status(404).json({
-        message: "Không tìm thấy voucher để xoá",
+        message: "Voucher không tồn tại, vui lòng kiểm tra lại",
       });
     }
-    res.status(200).json({
-      message: "Xoá voucher thành công",
-      data: deletedVoucher,
+
+    const now = new Date();
+
+    // Trả về thông báo chi tiết cho từng trường hợp
+    if (voucher.voucherStatus === "expired" || now > new Date(voucher.endDate)) {
+      return res.status(400).json({
+        message: "Voucher đã hết hạn. Không thể xóa.",
+      });
+    }
+
+    if (voucher.used >= voucher.quantity) {
+      return res.status(400).json({
+        message: "Voucher đã được sử dụng hết số lượng. Không thể xóa.",
+      });
+    }
+
+    if (voucher.voucherStatus !== "inactive") {
+      return res.status(400).json({
+        message: "Chỉ có thể xóa voucher ở trạng thái không hiệu lực (inactive). Vui lòng chuyển trạng thái trước.",
+      });
+    }
+
+    await Voucher.findByIdAndDelete(req.params.id);
+    return res.status(200).json({
+      message: "Xóa voucher thành công.",
     });
+
   } catch (error) {
-    res.status(400).json({
-      message: "Xoá voucher thất bại",
+    return res.status(500).json({
+      message: "Đã xảy ra lỗi. Vui lòng thử lại sau.",
       error: error.message,
     });
   }
 };
+
 
 
 
