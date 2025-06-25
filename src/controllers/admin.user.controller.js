@@ -1,6 +1,7 @@
 import authModel from "../models/auth.model";
 import bcrypt from "bcryptjs";
 import { updateUserInfoSchema } from "../validations/auth.validation";
+import { getSocketInstance } from "../socket";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -87,6 +88,16 @@ export const updateUserStatus = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Không tìm thấy người dùng",
+      });
+    }
+
+    if (!isActive) {
+      const io = getSocketInstance();
+      const userId = updatedUser._id.toString();
+      io.to(userId).emit("account-status", {
+        userId,
+        isActive: false,
+        error: "Tài khoản đã bị khóa",
       });
     }
 

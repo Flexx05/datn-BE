@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose";
+import mongoose, { model, Schema } from "mongoose";
 
 const paymentSchema = new Schema(
   {
@@ -8,7 +8,7 @@ const paymentSchema = new Schema(
       required: true,
     },
     userId: {
-      type: Schema.Types.ObjectId, 
+      type: Schema.Types.ObjectId,
       ref: "Auth",
       required: true,
     },
@@ -38,4 +38,7 @@ const paymentSchema = new Schema(
   }
 );
 
-export default model("Payment", paymentSchema);
+export const paymentModel =
+  mongoose.models.Payment || model("Payment", paymentSchema);
+
+export default paymentModel;

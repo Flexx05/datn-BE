@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose";
+import mongoose, { model, Schema } from "mongoose";
 import mongoosePaginate from "mongoose-paginate-v2";
 
 const attributeSchema = new Schema(
@@ -27,4 +27,7 @@ const attributeSchema = new Schema(
 );
 attributeSchema.plugin(mongoosePaginate);
 
-export default model("Attribute", attributeSchema);
+export const attributeModel =
+  mongoose.models.Attribute || model("Attribute", attributeSchema);
+
+export default attributeModel;

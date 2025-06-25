@@ -1,37 +1,39 @@
-import mongoose, {Schema, model } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 
-const orderItemSchema = new Schema({
+const orderItemSchema = new Schema(
+  {
     productId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Product",
-        required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
     },
     variationId: {
       type: Schema.Types.ObjectId,
       ref: "Variation",
-      required: true
+      required: true,
     },
     productName: {
       type: String,
-      required: true
+      required: true,
     },
     quantity: {
-        type: Number,
-        required: true,
-        min: 0,
+      type: Number,
+      required: true,
+      min: 0,
     },
     priceAtOrder: {
-        type: Number,
-        required: true,
-        min: 0
+      type: Number,
+      required: true,
+      min: 0,
     },
     totalPrice: {
       type: Number,
       required: true,
-      min: 0
+      min: 0,
     },
-},{_id: true}
-)
+  },
+  { _id: true }
+);
 
 const orderSchema = new mongoose.Schema(
   {
@@ -143,5 +145,6 @@ const orderSchema = new mongoose.Schema(
     versionKey: false,
   }
 );
+export const orderModel = mongoose.models.Order || model("Order", orderSchema);
 
-export default model("Order", orderSchema);
+export default orderModel;
