@@ -1,4 +1,5 @@
 import {model,mongoose, Schema} from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 
 const voucherSchema = new Schema(
   {
@@ -64,5 +65,7 @@ const voucherSchema = new Schema(
     versionKey: false,
   }
 )
+
+voucherSchema.plugin(mongoosePaginate);
 
 export default model('Voucher',voucherSchema)

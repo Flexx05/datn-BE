@@ -53,7 +53,7 @@ export const createVoucher = async (req, res) => {
 //Lấy tất cả voucher
 export const getAllVoucher = async (req, res) => {
   try {
-    const { code, status, voucherType } = req.query;
+    const { _page=1, _limit= 10, _sort="createdAt", _order, code, status, voucherType } = req.query;
     let query = {};
     // Tìm kiếm theo code nếu có
     if (code) {
@@ -73,11 +73,15 @@ export const getAllVoucher = async (req, res) => {
     if(voucherType){
       query.voucherType = { $regex: voucherType, $options: "i" };
     }
-    const listVouchers = await Voucher.find(query);
-    res.status(200).json({
-      message: "Lấy danh sách voucher thành công",
-      data: listVouchers,
-    })
+
+    const options = {
+      page: parseInt(_page, 10),
+      limit: parseInt(_limit, 10),
+      sort: { [_sort]: _order === "desc" ? -1 : 1 },
+    };
+
+    const listVouchers = await Voucher.paginate(query, options);
+    res.status(200).json(listVouchers)
   } catch (error) {
     res.status(500).json({
       message: "Lỗi khi lấy danh sách voucher",
