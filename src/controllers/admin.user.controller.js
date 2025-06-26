@@ -33,9 +33,7 @@ export const getAllUsers = async (req, res) => {
       sort: { [_sort]: _order === "desc" ? -1 : 1 },
     };
 
-    const users = await authModel
-      .paginate(query, options)
-      .select("-password", "-refreshToken");
+    const users = await authModel.paginate(query, options);
 
     const countOrderNotSuccess = await Promise.all(
       users.docs.map(async (user) => {

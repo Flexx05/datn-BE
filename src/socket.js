@@ -16,6 +16,13 @@ export function setupSocket(httpServer) {
   io.on("connection", (socket) => {
     console.log("A client connected: " + socket.id);
 
+    // Nontification
+    socket.on("join-admin-room", () => {
+      socket.join("admin");
+      console.log("Admin joined room");
+    });
+
+    // Check account status
     socket.on("check-account-status", async (userId) => {
       socket.join(userId);
       try {

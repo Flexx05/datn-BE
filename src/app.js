@@ -17,6 +17,7 @@ import staffRrouter from "./routers/staff.router";
 import voucherRouter from "./routers/voucher.router";
 import { createServer } from "http";
 import { setupSocket } from "./socket";
+import nontificationRouter from "./routers/nontification.router";
 
 const app = express();
 const httpServer = createServer(app);
@@ -53,6 +54,7 @@ app.use("/api", voucherRouter);
 app.use("/api", staffRrouter);
 app.use("/api", paymentRouter);
 app.use("/api", orderRouter);
+app.use("/api", nontificationRouter);
 
 httpServer.listen(process.env.PORT || 8080, () => {
   console.log(
