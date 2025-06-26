@@ -84,21 +84,23 @@ const orderSchema = new mongoose.Schema(
       min: 0,
     },
     status: {
-      type: String,
-      enum: [
-        "Cho xac nhan",
-        "Da xac nhan",
-        "Dang giao hang",
-        "Da giao hang",
-        "Hoan thanh",
-        "Da huy",
-      ],
-      default: "Cho xac nhan",
+      type: Number,
+      enum: [0, 1, 2, 3, 4, 5],
+        // 0: Cho xac nhan
+        // 1: Da xac nhan
+        // 2: Dang giao hang
+        // 3: Da giao hang
+        // 4: Da huy
+        // 5: Hoan hang
+      default: 0,
     },
     paymentStatus: {
-      type: String,
-      enum: ["Chua thanh toan", "Da thanh toan", "Da hoan tien"],
-      default: "Chua thanh toan",
+      type: Number,
+      enum: [0, 1, 2],
+      // 0: Chua thanh toan
+      // 1: Da thanh toan
+      // 2: Hoan tien
+      default: 0,
     },
     paymentMethod: {
       type: String,
@@ -137,6 +139,10 @@ const orderSchema = new mongoose.Schema(
       enum: ["user", "system", null],
       default: null,
     },
+    note: {
+      type: String,
+      default: null,
+    }
   },
   {
     timestamps: true,
