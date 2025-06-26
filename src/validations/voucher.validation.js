@@ -14,8 +14,11 @@ const createVoucherSchema = Joi.object({
     "any.required": "Mã giảm giá là bắt buộc",
   }),
 
-  link: Joi.string().uri().required().messages({
-    "any.required": "Link giảm giá là bắt buộc",
+  link: Joi.string()
+  .uri()
+  .optional()
+  .allow("")
+  .messages({
     "string.uri": "Link phải đúng định dạng URL",
   }),
 
@@ -41,11 +44,15 @@ const createVoucherSchema = Joi.object({
     "number.base": "Giá trị đơn hàng tối thiểu phải là số",
   }),
 
-  maxDiscount: Joi.number().min(0).required().messages({
-    "any.required": "Số tiền giảm tối đa là bắt buộc",
-    "number.base": "Số tiền giảm tối đa phải là số",
+  maxDiscount: Joi.when("discountType", {
+    is: "percent",
+    then: Joi.number().min(1).required().messages({
+      "any.required": "Số tiền giảm tối đa là bắt buộc khi giảm theo phần trăm",
+      "number.min": "Số tiền giảm tối đa phải lớn hơn hoặc bằng 1",
+    }),
+    otherwise: Joi.forbidden(), // Không được gửi nếu không cần
   }),
-
+  
   quantity: Joi.number().min(1).required().messages({
     "any.required": "Số lượng voucher là bắt buộc",
     "number.min": "Số lượng phải ít nhất là 1",

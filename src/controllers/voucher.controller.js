@@ -8,6 +8,7 @@ import {
 //Thêm mới voucher
 export const createVoucher = async (req, res) => {
   try {
+    // Validate với Joi
     const { error } = createVoucherSchema.validate(req.body, { abortEarly: false });
     if (error) {
       return res.status(400).json({
@@ -15,40 +16,48 @@ export const createVoucher = async (req, res) => {
         errors: error.details.map((e) => e.message),
       });
     }
+
+    // Check trùng mã
     const exists = await Voucher.findOne({ code: req.body.code });
     if (exists) {
       return res.status(400).json({ message: "Mã giảm giá đã tồn tại" });
     }
 
-    // Chuẩn bị dữ liệu cập nhật
-    const createData = { ...req.body };
     const now = new Date();
+    const createData = { ...req.body };
 
-    // Tự động cập nhật trạng thái dựa trên ngày
+    // Xử lý trạng thái
     const startDate = new Date(createData.startDate);
     const endDate = new Date(createData.endDate);
 
-    // Cập nhật trạng thái dựa trên thời gian hiện tại
     if (now > endDate) {
       createData.voucherStatus = "expired";
-    } else if (now >= startDate && now <= endDate) {
+    } else if (now >= startDate) {
       createData.voucherStatus = "active";
-    } else if (now < endDate) {
+    } else {
       createData.voucherStatus = "inactive";
     }
-    //Thêm mới
+
+    // Nếu giảm giá cố định → xóa maxDiscount nếu có
+    if (createData.discountType === "fixed") {
+      delete createData.maxDiscount;
+    }
+
+    // Tạo voucher mới
     const newVoucher = await Voucher.create(createData);
-    res.status(200).json({
+    return res.status(200).json({
       message: "Tạo voucher thành công",
-      data: newVoucher
-    })
+      data: newVoucher,
+    });
+
   } catch (error) {
-    res.status(400).json({
+    return res.status(400).json({
       message: "Tạo voucher thất bại",
       error: error.message,
     });
   }
-}
+};
+
 
 //Lấy tất cả voucher
 export const getAllVoucher = async (req, res) => {

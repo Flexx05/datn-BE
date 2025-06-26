@@ -15,7 +15,6 @@ const voucherSchema = new Schema(
     },
     link: {
       type: String,
-      required:[true, "Link giảm giá là bắt buộc"]
     },
     description: {
       type: String,
@@ -37,7 +36,9 @@ const voucherSchema = new Schema(
     },
     maxDiscount: {
       type: Number,
-      required : true
+      required: function () {
+        return this.discountType === "percent";
+      },
     },
     quantity: {
       type: Number,
