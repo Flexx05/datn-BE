@@ -54,5 +54,8 @@ app.use("/api", staffRrouter);
 app.use("/api", paymentRouter);
 app.use("/api", orderRouter);
 
-// export const viteNodeApp = app;
-httpServer.listen(process.env.PORT || 8080);
+httpServer.listen(process.env.PORT || 8080, () => {
+  console.log(
+    `Server listening on: http://localhost:${process.env.PORT || 8080}`
+  );
+});

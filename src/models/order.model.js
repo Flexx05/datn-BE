@@ -145,6 +145,6 @@ const orderSchema = new mongoose.Schema(
     versionKey: false,
   }
 );
-export const orderModel = mongoose.models.Order || model("Order", orderSchema);
+export const Order = mongoose.models.Order || model("Order", orderSchema);
 
-export default orderModel;
+export default Order;

@@ -1,7 +1,8 @@
-import authModel from "../models/auth.model";
 import bcrypt from "bcryptjs";
-import { updateUserInfoSchema } from "../validations/auth.validation";
+import authModel from "../models/auth.model";
 import { getSocketInstance } from "../socket";
+import { updateUserInfoSchema } from "../validations/auth.validation";
+import Order from "../models/order.model";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -32,9 +33,21 @@ export const getAllUsers = async (req, res) => {
       sort: { [_sort]: _order === "desc" ? -1 : 1 },
     };
 
-    const users = await authModel.paginate(query, options);
+    const users = await authModel
+      .paginate(query, options)
+      .select("-password", "-refreshToken");
 
-    return res.status(200).json(users);
+    const countOrderNotSuccess = await Promise.all(
+      users.docs.map(async (user) => {
+        const count = await Order.countDocuments({
+          userId: user._id,
+          status: { $ne: 5 || "5" || "Hoan thanh" },
+        });
+        return { ...user.toObject(), countOrderNotSuccess: count };
+      })
+    );
+
+    return res.status(200).json({ ...users, docs: countOrderNotSuccess });
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -77,6 +90,19 @@ export const updateUserStatus = async (req, res) => {
         success: false,
         message:
           "Trạng thái không hợp lệ, vui lòng cung cấp isActive là true hoặc false",
+      });
+    }
+
+    const countOrderNotSuccess = await Order.countDocuments({
+      userId: id,
+      status: { $ne: 5 || "5" || "Hoan thanh" },
+    });
+
+    if (countOrderNotSuccess > 0 && isActive === true) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Không thể cập nhật trạng thái người dùng, người dùng có đơn hàng chưa thanh toán",
       });
     }
 

@@ -63,25 +63,33 @@ export const getAllCategories = async (req, res) => {
     if (typeof search === "string" && search.trim() !== "") {
       query.name = { $regex: search, $options: "i" };
     }
-    const options = {
-      page: parseInt(_page, 10),
-      limit: parseInt(_limit, 10),
-      sort: { [_sort]: _order === "desc" ? -1 : 1 },
-      populate: {
+    const options = {};
+    if (_limit === "off") {
+      // Không phân trang, lấy tất cả
+      options.pagination = false;
+    } else {
+      options.page = parseInt(_page, 10) || 1;
+      options.limit = parseInt(_limit, 10) || 10;
+      options.sort = { [_sort]: _order === "desc" ? -1 : 1 };
+      options.populate = {
         path: "subCategories",
         match: { isActive: true },
-      },
-    };
+      };
+    }
 
     const categories = await categoryModel.paginate(query, options);
 
-    // Lấy tất cả danh mục con theo parentId
-    const allCategories = await categoryModel.find(query).lean();
+    let docs = [];
+    if (options.pagination === false) {
+      docs = categories;
+    } else {
+      docs = categories.docs;
+    }
 
     // Đếm sản phẩm cho từng danh mục
     const productCounts = {};
     await Promise.all(
-      allCategories.map(async (cate) => {
+      docs.map(async (cate) => {
         const count = await productModel.countDocuments({
           categoryId: cate._id,
         });
@@ -138,7 +146,11 @@ export const getAllCategories = async (req, res) => {
       })
     );
 
-    return res.status(200).json({ ...categories, docs: resultDocs });
+    if (options.pagination === false) {
+      return res.status(200).json(resultDocs);
+    } else {
+      return res.status(200).json({ ...categories, docs: resultDocs });
+    }
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
