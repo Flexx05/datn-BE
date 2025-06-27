@@ -1,4 +1,5 @@
 import attributeModel from "../models/attribute.model";
+import productModel from "../models/product.model";
 import { generateSlug } from "../utils/createSlug";
 import { attributeSchema } from "../validations/attribute.validation";
 
@@ -25,7 +26,16 @@ export const getAllAttribute = async (req, res) => {
       sort: { [_sort]: _order === "desc" ? -1 : 1 },
     };
     const attributes = await attributeModel.paginate(query, options);
-    return res.status(200).json(attributes);
+    // Thêm countProduct vào từng attribute
+    const countProduct = await Promise.all(
+      attributes.docs.map(async (attr) => {
+        const count = await productModel.countDocuments({
+          attributes: { $elemMatch: { attributeId: attr._id } },
+        });
+        return { ...attr.toObject(), countProduct: count };
+      })
+    );
+    return res.status(200).json({ ...attributes, docs: countProduct });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
@@ -58,25 +68,31 @@ export const getAttributeById = async (req, res) => {
 export const deleteAttribute = async (req, res) => {
   try {
     const { id } = req.params;
-     const force = req.query.force === "true";
-          const attributeDelete = await attributeModel.findById(id);
-          if(!attributeDelete){
-            return res.status(404).json({ error: "Attribute not found" });
-          }
-          if(force){
-            if(attributeDelete.isActive === false){
-              await attributeModel.findByIdAndDelete(id);
-              return res.status(200).json({ message: "Attribute deleted successfully" });
-            }
-          }
-    const attribute = await attributeModel.findByIdAndUpdate(
-      id,
-      { isActive: false },
-      { new: true }
-    );
+    const getOneAttribute = await attributeModel.findById(id);
+    if (getOneAttribute.isActive === true) {
+      const productExist = await productModel.findOne({
+        attributes: { $elemMatch: { attributeId: id } },
+      });
+      if (productExist) {
+        return res
+          .status(400)
+          .json({ message: "Thuộc tính đang tồn tại sản phẩm" });
+      }
+      const attribute = await attributeModel.findByIdAndUpdate(
+        id,
+        { isActive: false },
+        { new: true }
+      );
+      if (!attribute)
+        return res.status(404).json({ message: "Thuộc tinh không tồn tại" });
+      return res.status(200).json(attribute);
+    }
+    const attribute = await attributeModel.findByIdAndDelete(id);
     if (!attribute)
       return res.status(404).json({ message: "Thuộc tinh không tồn tại" });
-    return res.status(200).json(attribute);
+    return res
+      .status(200)
+      .json({ message: "Thuộc tính đã được xóa thành công", attribute });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }

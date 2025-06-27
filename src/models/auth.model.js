@@ -23,7 +23,7 @@ const authSchema = new Schema(
     },
     avatar: {
       type: String,
-      default: null
+      default: null,
     },
     role: {
       type: String,
@@ -36,14 +36,6 @@ const authSchema = new Schema(
     isActive: {
       type: Boolean,
       default: true,
-    },
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // hoặc 'Admin' nếu bạn phân biệt
-      default: null,
-    },
-    userUpdated: {
-      type: String,
     },
     resetPasswordVerified: {
       type: Boolean,
