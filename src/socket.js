@@ -22,6 +22,16 @@ export function setupSocket(httpServer) {
       console.log("Admin joined room");
     });
 
+    // change order status
+    socket.on("join-room", (userId) => {
+      socket.join(userId);
+      console.log("User joined room");
+    });
+
+    // const io = getSocketInstance();
+    // const message = `Đơn hàng ${mã đơn hàng}` đã được khách hàng ${trạng thái đơn hàng}`
+    // io.to(updatedOrder.userId.toString()).emit("order-status-changed", message);
+
     // Check account status
     socket.on("check-account-status", async (userId) => {
       socket.join(userId);
