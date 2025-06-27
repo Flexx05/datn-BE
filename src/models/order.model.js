@@ -90,8 +90,9 @@ const orderSchema = new mongoose.Schema(
         // 1: Da xac nhan
         // 2: Dang giao hang
         // 3: Da giao hang
-        // 4: Da huy
-        // 5: Hoan hang
+        // 4: Hoan thanh
+        // 5: Da huy
+        // 6: Hoan hang
       default: 0,
     },
     paymentStatus: {

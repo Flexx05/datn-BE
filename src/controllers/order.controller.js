@@ -49,7 +49,7 @@ export const createOrder = async (req, res) => {
     // Bắt đầu transaction
     session.startTransaction();
 
-    if (paymentMethod === "COD") {
+    if (paymentMethod === "COD" || paymentMethod === "VNPAY") {
       const variationIds = items.map((i) => i.variationId);
       const products = await Product.find({
         "variation._id": { $in: variationIds },
@@ -228,8 +228,8 @@ export const createOrder = async (req, res) => {
         shippingFee: shippingFeeValue,
         discountAmount,
         totalAmount,
-        status: "Cho xac nhan",
-        paymentStatus: "Chua thanh toan",
+        status: 0,
+        paymentStatus: 0,
         paymentMethod,
         expectedDeliveryDate,
       });
@@ -276,7 +276,7 @@ export const createOrder = async (req, res) => {
 
         // Gửi email xác nhận (sau khi commit thành công)
         try {
-          const transporter = nodemailer.createTransporter({
+          const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
               user: "binovaweb73@gmail.com",
@@ -389,6 +389,8 @@ export const createOrder = async (req, res) => {
         });
       }
     } else {
+      console.log(1);
+      
       throw new Error("Phương thức thanh toán không được hỗ trợ");
     }
   } catch (error) {
@@ -517,12 +519,13 @@ export const updateOrderStatus = async (req, res) => {
 
     // Định nghĩa các trạng thái hợp lệ
     const validStatusTransitions = {
-      "Cho xac nhan": ["Da xac nhan", "Dang giao hang", "Da huy"],
-      "Da xac nhan": ["Dang giao hang", "Da huy"],
-      "Dang giao hang": ["Da giao hang", "Da huy"],
-      "Da giao hang": ["Hoan thanh"],
-      "Hoan thanh": [],
-      "Da huy": [],
+      0: [1, 5],
+      1: [2, 5],
+      2: [3], 
+      3: [4],
+      4: [],
+      5: [],
+      6: [],
     };
 
     // Kiểm tra và cập nhật trạng thái đơn hàng
@@ -546,10 +549,9 @@ export const updateOrderStatus = async (req, res) => {
     // Kiểm tra và cập nhật trạng thái thanh toán
     if (paymentStatus && paymentStatus !== order.paymentStatus) {
       const validPaymentTransitions = {
-        "Chua thanh toan": ["Da thanh toan", "That bai"],
-        "That bai": ["Chua thanh toan"], // Có thể thử lại thanh toán
-        "Da thanh toan": ["Da hoan tien"],
-        "Da hoan tien": [],
+        0: [1],
+        1: [2],
+        2: [],
       };
 
       const allowedNext = validPaymentTransitions[order.paymentStatus];
@@ -580,21 +582,21 @@ export const updateOrderStatus = async (req, res) => {
 
     // Mapping cho email
     const subjectMap = {
-      "Cho xac nhan": `Đơn hàng ${order.orderCode} đang chờ xác nhận`,
-      "Da xac nhan": `Đơn hàng ${order.orderCode} đã được xác nhận`,
-      "Dang giao hang": `Đơn hàng ${order.orderCode} đang được giao`,
-      "Da giao hang": `Đơn hàng ${order.orderCode} đã được giao`,
-      "Hoan thanh": `Đơn hàng ${order.orderCode} hoàn tất`,
-      "Da huy": `Đơn hàng ${order.orderCode} đã bị hủy`,
+      0: `Đơn hàng ${order.orderCode} đang chờ xác nhận`,
+      1: `Đơn hàng ${order.orderCode} đã được xác nhận`,
+      2: `Đơn hàng ${order.orderCode} đang được giao`,
+      3: `Đơn hàng ${order.orderCode} đã được giao`,
+      4: `Đơn hàng ${order.orderCode} hoàn tất`,
+      5: `Đơn hàng ${order.orderCode} đã bị hủy`,
     };
 
     const messageMap = {
-      "Cho xac nhan": `Chúng tôi đã nhận được đơn hàng của bạn và đang chờ xác nhận.`,
-      "Da xac nhan": `Đơn hàng của bạn đã được xác nhận và đang được chuẩn bị để giao.`,
-      "Dang giao hang": `Đơn hàng của bạn đang được vận chuyển. Vui lòng giữ liên lạc để nhận hàng sớm nhất.`,
-      "Da giao hang": `Đơn hàng của bạn đã được giao. Vui lòng kiểm tra và xác nhận nếu có bất kỳ vấn đề gì.`,
-      "Hoan thanh": `Cảm ơn bạn! Đơn hàng đã hoàn tất. Rất mong được phục vụ bạn lần sau.`,
-      "Da huy": `Đơn hàng của bạn đã bị hủy. Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ đội ngũ hỗ trợ của chúng tôi.`,
+      0: `Chúng tôi đã nhận được đơn hàng của bạn và đang chờ xác nhận.`,
+      1: `Đơn hàng của bạn đã được xác nhận và đang được chuẩn bị để giao.`,
+      2: `Đơn hàng của bạn đang được vận chuyển. Vui lòng giữ liên lạc để nhận hàng sớm nhất.`,
+      3: `Đơn hàng của bạn đã được giao. Vui lòng kiểm tra và xác nhận nếu có bất kỳ vấn đề gì.`,
+      4: `Cảm ơn bạn! Đơn hàng đã hoàn tất. Rất mong được phục vụ bạn lần sau.`,
+      5: `Đơn hàng của bạn đã bị hủy. Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ đội ngũ hỗ trợ của chúng tôi.`,
     };
 
     // Kiểm tra trạng thái có hợp lệ để gửi email
@@ -725,9 +727,9 @@ export const updatePaymentStatus = async (req, res) => {
 
     if (paymentStatus && paymentStatus !== order.paymentStatus) {
       const validPaymentTransitions = {
-        "Chua thanh toan": ["Da thanh toan"],
-        "Da thanh toan": ["Da hoan tien"],
-        "Da hoan tien": [],
+        0 : [1],
+        1 : [2],
+        2 : [],
       };
 
       const allowedNext = validPaymentTransitions[order.paymentStatus];
@@ -749,8 +751,8 @@ export const updatePaymentStatus = async (req, res) => {
     };
 
     const paymentMessageMap = {
-      "Đã thanh toán": `Cảm ơn bạn! Chúng tôi đã nhận được thanh toán cho đơn hàng ${order.orderCode}.`,
-      "Đã hoàn tiền": `Chúng tôi đã hoàn tiền cho đơn hàng ${order.orderCode}. Vui lòng kiểm tra tài khoản của bạn.`,
+      1: `Cảm ơn bạn! Chúng tôi đã nhận được thanh toán cho đơn hàng ${order.orderCode}.`,
+      2: `Chúng tôi đã hoàn tiền cho đơn hàng ${order.orderCode}. Vui lòng kiểm tra tài khoản của bạn.`,
     };
 
     if (!paymentSubjectMap[order.paymentStatus])
