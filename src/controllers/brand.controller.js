@@ -70,7 +70,7 @@ export const getAllBrands = async (req, res) => {
     let docs = [];
     if (options.pagination === false) {
       // Khi không phân trang, brands là mảng
-      docs = brands;
+      docs = brands.docs;
     } else {
       // Khi phân trang, brands.docs là mảng
       docs = brands.docs;

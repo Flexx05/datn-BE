@@ -31,6 +31,13 @@ export const getAllAttribute = async (req, res) => {
     }
 
     const attributes = await attributeModel.paginate(query, options);
+
+    let docs = [];
+    if (options.paginate === false) {
+      docs = attributes.docs;
+    } else {
+      docs = attributes.docs;
+    }
     // Thêm countProduct vào từng attribute
     const countProduct = await Promise.all(
       attributes.docs.map(async (attr) => {

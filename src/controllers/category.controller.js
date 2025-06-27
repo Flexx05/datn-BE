@@ -64,6 +64,10 @@ export const getAllCategories = async (req, res) => {
       query.name = { $regex: search, $options: "i" };
     }
     const options = {};
+    options.populate = {
+      path: "subCategories",
+      match: { isActive: true },
+    };
     if (_limit === "off") {
       // Không phân trang, lấy tất cả
       options.pagination = false;
@@ -71,17 +75,13 @@ export const getAllCategories = async (req, res) => {
       options.page = parseInt(_page, 10) || 1;
       options.limit = parseInt(_limit, 10) || 10;
       options.sort = { [_sort]: _order === "desc" ? -1 : 1 };
-      options.populate = {
-        path: "subCategories",
-        match: { isActive: true },
-      };
     }
 
     const categories = await categoryModel.paginate(query, options);
 
     let docs = [];
     if (options.pagination === false) {
-      docs = categories;
+      docs = categories.docs;
     } else {
       docs = categories.docs;
     }
