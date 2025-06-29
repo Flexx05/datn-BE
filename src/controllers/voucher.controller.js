@@ -184,27 +184,13 @@ export const deleteVoucher = async (req, res) => {
       });
     }
 
-    const now = new Date();
-
-    // Trả về thông báo chi tiết cho từng trường hợp
-    if (voucher.voucherStatus === "expired" || now > new Date(voucher.endDate)) {
+  
+    if (!["inactive", "expired"].includes(voucher.voucherStatus)) {
       return res.status(400).json({
-        message: "Voucher đã hết hạn. Không thể xóa.",
+        message: "Chỉ có thể xóa voucher ở trạng thái 'Không có hiệu lực' hoặc 'Hết hạn'. Vui lòng chuyển trạng thái trước.",
       });
     }
-
-    if (voucher.used >= voucher.quantity) {
-      return res.status(400).json({
-        message: "Voucher đã được sử dụng hết số lượng. Không thể xóa.",
-      });
-    }
-
-    if (voucher.voucherStatus !== "inactive") {
-      return res.status(400).json({
-        message: "Chỉ có thể xóa voucher ở trạng thái không hiệu lực (inactive). Vui lòng chuyển trạng thái trước.",
-      });
-    }
-
+    
     await Voucher.findByIdAndDelete(req.params.id);
     return res.status(200).json({
       message: "Xóa voucher thành công.",
