@@ -410,7 +410,20 @@ export const createOrder = async (req, res) => {
 
 export const getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.find();
+    const {
+      _sort = "createdAt",
+      _order = "desc",
+    } = req.query; 
+
+    const sortOption = {};
+    sortOption[_sort] = _order.toLowerCase() === "asc" ? 1 : -1;
+
+    const orders = await Order.find().sort(sortOption);
+
+    if (!orders || orders.length === 0) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+    
     return res.status(200).json(orders);
   } catch (error) {
     return res.status(400).json({ error: error.message });
@@ -456,7 +469,7 @@ export const getOrderById = async (req, res) => {
 
 export const getOrderByUserId = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.params.id;
 
     if (!userId) {
       return res.status(400).json({ error: "Đăng nhập để tiếp tục" });
@@ -618,7 +631,7 @@ export const updateOrderStatus = async (req, res) => {
 
       await transporter.sendMail({
         from: '"Binova" <binovaweb73@gmail.com>',
-        to: "phongne2005@gmail.com",
+        to: order.recipientInfo.email,
         subject: subjectMap[order.status],
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
@@ -770,7 +783,7 @@ export const updatePaymentStatus = async (req, res) => {
 
     await transporter.sendMail({
       from: '"Binova" <binovaweb73@gmail.com>',
-      to: "phongne2005@gmail.com",
+      to: order.recipientInfo.email,
       subject: paymentSubjectMap[order.paymentStatus],
       html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
