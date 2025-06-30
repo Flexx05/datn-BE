@@ -61,6 +61,10 @@ const voucherSchema = new Schema(
       enum: ["active", "inactive", "expired"],
       default: "inactive"
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    }
   },
   {
     timestamps: true,

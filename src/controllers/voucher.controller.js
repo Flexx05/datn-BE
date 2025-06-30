@@ -62,8 +62,16 @@ export const createVoucher = async (req, res) => {
 //Lấy tất cả voucher
 export const getAllVoucher = async (req, res) => {
   try {
-    const { _page=1, _limit= 10, _sort="createdAt", _order, code, status, voucherType } = req.query;
+    const { _page=1, _limit= 10, _sort="createdAt", _order, code, status, voucherType, isDeleted } = req.query;
     let query = {};
+    
+    // Filter theo isDeleted (mặc định là false - chưa xóa)
+    if (isDeleted !== undefined) {
+      query.isDeleted = isDeleted === 'true';
+    } else {
+      query.isDeleted = false; // Mặc định chỉ lấy voucher chưa xóa
+    }
+    
     // Tìm kiếm theo code nếu có
     if (code) {
       query.code = { $regex: code, $options: "i" };
@@ -180,20 +188,56 @@ export const deleteVoucher = async (req, res) => {
 
     if (!voucher) {
       return res.status(404).json({
-        message: "Voucher không tồn tại, vui lòng kiểm tra lại",
+        message: "Voucher không tồn tại, vui lòng kiểm tra lại.",
       });
     }
 
-  
-    if (!["inactive", "expired"].includes(voucher.voucherStatus)) {
-      return res.status(400).json({
-        message: "Chỉ có thể xóa voucher ở trạng thái 'Không có hiệu lực' hoặc 'Hết hạn'. Vui lòng chuyển trạng thái trước.",
+    if (!voucher.isDeleted) {
+      // Xóa mềm
+      voucher.isDeleted = true;
+      await voucher.save();
+      return res.status(200).json({
+        message: "Đã chuyển voucher vào thùng rác (xóa mềm).",
+      });
+    } else {
+      // Xóa vĩnh viễn
+      await Voucher.findByIdAndDelete(req.params.id);
+      return res.status(200).json({
+        message: "Đã xóa vĩnh viễn voucher.",
       });
     }
-    
-    await Voucher.findByIdAndDelete(req.params.id);
+  } catch (error) {
+    return res.status(500).json({
+      message: "Đã xảy ra lỗi. Vui lòng thử lại sau.",
+      error: error.message,
+    });
+  }
+};
+
+
+// Khôi phục voucher từ thùng rác
+export const restoreVoucher = async (req, res) => {
+  try {
+    const voucher = await Voucher.findById(req.params.id);
+
+    if (!voucher) {
+      return res.status(404).json({
+        message: "Voucher không tồn tại, vui lòng kiểm tra lại.",
+      });
+    }
+
+    if (!voucher.isDeleted) {
+      return res.status(400).json({
+        message: "Voucher chưa bị xóa.",
+      });
+    }
+
+    // Khôi phục voucher (đánh dấu isDeleted = false)
+    voucher.isDeleted = false;
+    await voucher.save();
+
     return res.status(200).json({
-      message: "Xóa voucher thành công.",
+      message: "Khôi phục voucher thành công.",
     });
 
   } catch (error) {
@@ -203,6 +247,7 @@ export const deleteVoucher = async (req, res) => {
     });
   }
 };
+
 
 
 
