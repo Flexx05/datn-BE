@@ -5,6 +5,8 @@ import User from "../models/auth.model.js";
 import { generateOrderCode } from "../services/order.service.js";
 import mongoose from "mongoose";
 import nodemailer from "nodemailer";
+import { calculateShippingDistance, calculateShippingFee } from "../services/shipping.service.js";
+import { geocodeAddress } from "../utils/geocoding.js";
 
 export const createOrder = async (req, res) => {
   const session = await mongoose.startSession();
@@ -119,7 +121,25 @@ export const createOrder = async (req, res) => {
       // Xử lý voucher
       let hasShippingVoucher = false;
       let hasProVoucher = false;
-      let shippingFeeValue = shippingFee || 40000; // Cập nhật theo bản ghi mẫu
+      
+      // Tính phí ship
+      // 1. Địa chỉ kho hàng
+      const warehouseCoords = {
+        lat: 21.028511,
+        lng: 105.804817,
+      };
+
+      // 2. Geocode địa chỉ khách
+      const customerCoords = await geocodeAddress(shippingAddress);
+
+      if (!customerCoords) {
+        throw new Error("Không thể xác định vị trí địa chỉ giao hàng");
+      }
+
+      // 3. Tính khoảng cách và phí ship
+      const distance = await calculateShippingDistance(warehouseCoords, customerCoords);
+      let shippingFeeValue = calculateShippingFee(distance);
+
       let discountAmount = 0;
 
       // Kiểm tra voucher trùng lặp
