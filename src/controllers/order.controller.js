@@ -296,7 +296,7 @@ export const createOrder = async (req, res) => {
 
         // Gửi email xác nhận (sau khi commit thành công)
         try {
-          const transporter = nodemailer.createTransporter({
+          const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
               user: "binovaweb73@gmail.com",
