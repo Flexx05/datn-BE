@@ -1,6 +1,5 @@
 import {Router} from "express";
 import { addComment, getAllComment, updateCommentStatus, replyToComment, getCommentsForClient, getCommentById } from "../controllers/comment.controller";
-// import { verifyToken, checkAdminAndStaff } from "../middlewares/checkComment";
 import { verifyToken, isAdminOrStaff } from "../middlewares/checkAuth";
 
 

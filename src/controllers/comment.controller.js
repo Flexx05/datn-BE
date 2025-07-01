@@ -13,7 +13,7 @@ export const getAllComment = async (req, res) => {
       _page = 1,
       _limit = 10,
       _sort = "createdAt",
-      _order = "desc",
+      _order,
       search,
       status,
       rating,
@@ -108,8 +108,7 @@ export const getAllComment = async (req, res) => {
       });
     }
 
-
-    return res.status(200).json(allComments.docs);
+    return res.status(200).json(allComments);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
