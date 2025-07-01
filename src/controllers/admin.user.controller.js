@@ -39,7 +39,7 @@ export const getAllUsers = async (req, res) => {
       users.docs.map(async (user) => {
         const count = await Order.countDocuments({
           userId: user._id,
-          status: { $ne: 5 || "5" || "Hoan thanh" },
+          status: { $nin: [4, 5] },
         });
         return { ...user.toObject(), countOrderNotSuccess: count };
       })
@@ -93,7 +93,7 @@ export const updateUserStatus = async (req, res) => {
 
     const countOrderNotSuccess = await Order.countDocuments({
       userId: id,
-      status: { $ne: 5 || "5" || "Hoan thanh" },
+      status: { $nin: [4, 5] },
     });
 
     if (countOrderNotSuccess > 0 && isActive === true) {

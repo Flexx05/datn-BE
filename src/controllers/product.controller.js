@@ -32,13 +32,24 @@ export const getAllProduct = async (req, res) => {
       ];
     }
 
-    const options = {
-      page: parseInt(_page, 10),
-      limit: parseInt(_limit, 10),
-      sort: { [_sort]: _order === "desc" ? -1 : 1 },
-    };
+    const options = {};
+
+    if (_limit === "off") {
+      // Không phân trang, lấy tất cả
+      options.pagination = false;
+    } else {
+      options.page = parseInt(_page, 10) || 1;
+      options.limit = parseInt(_limit, 10) || 10;
+      options.sort = { [_sort]: _order === "desc" ? -1 : 1 };
+    }
 
     const product = await productModel.paginate(query, options);
+    let docs = [];
+    if (options.paginate === false) {
+      docs = product.docs;
+    } else {
+      docs = product.docs;
+    }
 
     return res.status(200).json(product);
   } catch (error) {

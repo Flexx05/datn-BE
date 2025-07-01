@@ -7,9 +7,16 @@ const nontificationSchema = new Schema(
       required: [true, "Type is required"],
       enum: ["order", "status"],
     },
-    content: {
+    userName: {
       type: String,
-      required: true,
+      required: [true, "User name is required"],
+    },
+    orderCode: {
+      type: String,
+      required: [true, "Order code is required"],
+    },
+    orderStatus: {
+      type: String,
     },
     orderId: {
       type: Schema.Types.ObjectId,

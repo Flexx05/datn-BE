@@ -1,10 +1,11 @@
-import Order from "../models/order.model.js";
-import Voucher from "../models/voucher.model.js";
-import Product from "../models/product.model.js";
-import User from "../models/auth.model.js";
-import { generateOrderCode } from "../services/order.service.js";
 import mongoose from "mongoose";
 import nodemailer from "nodemailer";
+import { authModel } from "../models/auth.model.js";
+import Order from "../models/order.model.js";
+import Product from "../models/product.model.js";
+import Voucher from "../models/voucher.model.js";
+import { nontifyAdmin } from "./nontification.controller.js";
+import { getSocketInstance } from "../socket.js";
 
 export const createOrder = async (req, res) => {
   const session = await mongoose.startSession();
@@ -236,7 +237,7 @@ export const createOrder = async (req, res) => {
 
       // Lưu order với session
       const orderSave = await order.save({ session });
-      console.log("Order saved:", orderSave);
+      // console.log("Order saved:", orderSave);
 
       if (orderSave) {
         // Cập nhật voucher usage
@@ -266,9 +267,9 @@ export const createOrder = async (req, res) => {
             },
             { session }
           );
-          console.log(
-            `Đã xóa ${deleteResult.deletedCount} items khỏi giỏ hàng`
-          );
+          // console.log(
+          //   `Đã xóa ${deleteResult.deletedCount} items khỏi giỏ hàng`
+          // );
         }
 
         // Commit transaction
@@ -381,6 +382,19 @@ export const createOrder = async (req, res) => {
           // Không throw error để không ảnh hưởng đến response
         }
 
+        try {
+          await nontifyAdmin(
+            "order",
+            orderSave.recipientInfo.name,
+            orderSave.status,
+            orderSave.orderCode,
+            orderSave._id
+          );
+        } catch (error) {
+          console.error("Lỗi gửi thống báo cho admin:", error);
+          return res.status(400).json({ error: error.message });
+        }
+
         return res.status(201).json({
           message:
             "Đơn hàng đã được tạo thành công và đã xóa sản phẩm khỏi giỏ hàng",
@@ -390,7 +404,7 @@ export const createOrder = async (req, res) => {
       }
     } else {
       console.log(1);
-      
+
       throw new Error("Phương thức thanh toán không được hỗ trợ");
     }
   } catch (error) {
@@ -410,10 +424,7 @@ export const createOrder = async (req, res) => {
 
 export const getAllOrders = async (req, res) => {
   try {
-    const {
-      _sort = "createdAt",
-      _order = "desc",
-    } = req.query; 
+    const { _sort = "createdAt", _order = "desc" } = req.query;
 
     const sortOption = {};
     sortOption[_sort] = _order.toLowerCase() === "asc" ? 1 : -1;
@@ -423,7 +434,7 @@ export const getAllOrders = async (req, res) => {
     if (!orders || orders.length === 0) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
-    
+
     return res.status(200).json(orders);
   } catch (error) {
     return res.status(400).json({ error: error.message });
@@ -495,10 +506,10 @@ export const getOrderByUserId = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, paymentStatus, deliveryDate } = req.body;
+    const { status, paymentStatus, deliveryDate, userId } = req.body;
 
     // Kiểm tra các trường được phép cập nhật
-    const allowedFields = ["status", "paymentStatus", "deliveryDate"];
+    const allowedFields = ["status", "paymentStatus", "deliveryDate", "userId"];
     const unknownFields = Object.keys(req.body).filter(
       (key) => !allowedFields.includes(key)
     );
@@ -534,7 +545,7 @@ export const updateOrderStatus = async (req, res) => {
     const validStatusTransitions = {
       0: [1, 5],
       1: [2, 5],
-      2: [3], 
+      2: [3],
       3: [4],
       4: [],
       5: [],
@@ -672,6 +683,44 @@ export const updateOrderStatus = async (req, res) => {
       // Không return lỗi ở đây vì đơn hàng đã được cập nhật thành công
     }
 
+    const statusMap = {
+      0: "Chờ xác nhận",
+      1: "Đã xác nhận",
+      2: "Đang giao hàng",
+      3: "Đã giao hàng",
+      4: "Hoàn thành",
+      5: "Đã hủy",
+      6: "Hoàn hàng",
+    };
+
+    try {
+      const user = await authModel.findById(userId);
+      if (!user)
+        return res.status(404).json({ error: "Không tìm thấy người dùng" });
+      if (user.role === "user") {
+        await nontifyAdmin(
+          "status",
+          user.fullName,
+          order.status,
+          order.orderCode,
+          order._id
+        );
+      } else {
+        const io = getSocketInstance();
+        const message = `Đơn hàng ${
+          order.orderCode
+        } đã được cập nhật trạng thái: ${statusMap[order.status]}`;
+        io.to(order.userId.toString()).emit("order-status-changed", {
+          message,
+        });
+      }
+    } catch (error) {
+      console.log("Lỗi gửi thống báo cho người dùng: ", error);
+      return res
+        .status(500)
+        .json({ error: "Lỗi gửi thông báo cho người dùng" });
+    }
+
     return res.status(200).json({
       message: "Cập nhật trạng thái thành công",
       order: {
@@ -740,9 +789,9 @@ export const updatePaymentStatus = async (req, res) => {
 
     if (paymentStatus && paymentStatus !== order.paymentStatus) {
       const validPaymentTransitions = {
-        0 : [1],
-        1 : [2],
-        2 : [],
+        0: [1],
+        1: [2],
+        2: [],
       };
 
       const allowedNext = validPaymentTransitions[order.paymentStatus];
