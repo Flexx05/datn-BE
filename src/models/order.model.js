@@ -82,21 +82,25 @@ const orderSchema = new mongoose.Schema({
       min: 0
     },
     status: {
-      type: String,
-      enum: [
-              "Cho xac nhan",
-              "Da xac nhan",
-              "Dang giao hang",
-              "Da giao hang",
-              "Hoan thanh",
-              "Da huy",
-            ],
-      default: 'Cho xac nhan'
+      type: Number,
+      enum: [0, 1, 2, 3, 4, 5, 6], 
+      default: 0,                  
+      // 0: Chờ xác nhận
+      // 1: Đã xác nhận
+      // 2: Đang giao hàng
+      // 3: Đã giao hàng
+      // 4: Hoàn thành
+      // 5: Đã hủy
+      // 6: Hoàn hàng
     },
+  
     paymentStatus: {
-      type: String,
-      enum: ['Chua thanh toan', 'Da thanh toan', 'Da hoan tien'],
-      default: 'Chua thanh toan'
+      type: Number,
+      enum: [0, 1, 2],
+      default: 0,
+      // 0: Chưa thanh toán
+      // 1: Đã thanh toán
+      // 2: Đã hoàn tiền
     },
     paymentMethod: {
       type: String,
