@@ -83,6 +83,7 @@ export const createVnpayPayment = async (req, res) => {
       status: 0,
       amount: order.totalAmount,
       transactionId: vnpTxnRef,
+      paymentUrl
     });
 
     await newPayment.save();
@@ -111,8 +112,6 @@ export const createVnpayPayment = async (req, res) => {
 };
 
 // Xử lý callback từ VNPAY
-// vnpayCallback.js
-
 export const vnpayCallback = async (req, res) => {
   try {
     const vnpParams = req.query;
@@ -129,6 +128,10 @@ export const vnpayCallback = async (req, res) => {
     const payment = await paymentModel.findOne({ transactionId: vnp_TxnRef });
     if (!payment) {
       return res.status(404).send("Không tìm thấy thông tin thanh toán");
+    }
+    const order = await orderModel.findById(payment.orderId);
+    if(order.status === 5) {
+      return res.status(400).send("Đơn hàng đã bị hủy, không thể thanh toán");
     }
 
     // Lưu lại dữ liệu trả về từ VNPAY
@@ -213,6 +216,7 @@ export const getPaymentStatus = async (req, res) => {
         status: payment.status,
         paymentMethod: payment.paymentMethod,
         amount: payment.amount,
+        paymentUrl: payment.paymentUrl,
         createdAt: payment.createdAt,
       },
     });

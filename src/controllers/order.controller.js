@@ -13,7 +13,6 @@ export const createOrder = async (req, res) => {
   try {
     const {
       userId,
-      orderCode,
       voucherCode = [],
       recipientInfo,
       shippingAddress,
@@ -83,9 +82,13 @@ export const createOrder = async (req, res) => {
             `Biến thể ${variation._id} của sản phẩm ${product.name} không khả dụng`
           );
         }
-
-        // 3. Kiểm tra số lượng
+        if (item.priceAtOrder !== variation.regularPrice) {
+          throw new Error(
+            `Giá sản phẩm ${product.name} đã thay đổi. Vui lòng kiểm tra lại`
+          );
+        }
         if (item.quantity <= 0) {
+          // 3. Kiểm tra số lượng
           throw new Error("Số lượng phải lớn hơn 0");
         }
 
@@ -217,11 +220,22 @@ export const createOrder = async (req, res) => {
       const expectedDeliveryDate = new Date();
       expectedDeliveryDate.setDate(expectedDeliveryDate.getDate() + 7);
 
+      const generateOrderCode = () => {
+        const date = new Date();
+        const year = date.getFullYear().toString().slice(-2);
+        const month = (date.getMonth() + 1).toString().padStart(2, "0");
+        const day = date.getDate().toString().padStart(2, "0");
+        const random = Math.floor(Math.random() * 10000)
+          .toString()
+          .padStart(4, "0");
+        return `DH${year}${month}${day}-${random}`;
+      };
+
       // Tạo order object
       const order = new Order({
         userId: userId || undefined,
         recipientInfo,
-        orderCode: orderCode,
+        orderCode: generateOrderCode(),
         voucherId: voucherIds,
         shippingAddress,
         items: orderItems,
@@ -506,10 +520,24 @@ export const getOrderByUserId = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, paymentStatus, deliveryDate, userId } = req.body;
+    const {
+      status,
+      paymentStatus,
+      deliveryDate,
+      reason,
+      cancelReason,
+      userId,
+    } = req.body;
 
     // Kiểm tra các trường được phép cập nhật
-    const allowedFields = ["status", "paymentStatus", "deliveryDate", "userId"];
+    const allowedFields = [
+      "status",
+      "paymentStatus",
+      "deliveryDate",
+      "cancelReason",
+      "reason",
+      "userId",
+    ];
     const unknownFields = Object.keys(req.body).filter(
       (key) => !allowedFields.includes(key)
     );
@@ -573,9 +601,10 @@ export const updateOrderStatus = async (req, res) => {
     // Kiểm tra và cập nhật trạng thái thanh toán
     if (paymentStatus && paymentStatus !== order.paymentStatus) {
       const validPaymentTransitions = {
-        0: [1],
+        0: [1, 3],
         1: [2],
         2: [],
+        3: [],
       };
 
       const allowedNext = validPaymentTransitions[order.paymentStatus];
@@ -599,6 +628,7 @@ export const updateOrderStatus = async (req, res) => {
     if (deliveryDate) {
       order.deliveryDate = new Date(deliveryDate);
     }
+    order.cancelReason = reason || cancelReason || null;
 
     // Lưu thay đổi
     await order.save();
@@ -729,6 +759,7 @@ export const updateOrderStatus = async (req, res) => {
         status: order.status,
         paymentStatus: order.paymentStatus,
         deliveryDate: order.deliveryDate,
+        cancelReason: order.cancelReason,
       },
     });
   } catch (error) {
