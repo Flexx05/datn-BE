@@ -13,7 +13,7 @@ export const getAllComment = async (req, res) => {
       _page = 1,
       _limit = 10,
       _sort = "createdAt",
-      _order = "desc",
+      _order,
       search,
       status,
       rating,
@@ -79,6 +79,20 @@ export const getAllComment = async (req, res) => {
 
     const allComments = await Comment.paginate(query, options);
 
+    const updatePromises = [];
+      allComments.docs.forEach(comment => {
+        // Nếu không còn productId (sản phẩm đã bị xóa) và status chưa là hidden thì cập nhật
+        if (!comment.productId && comment.status !== "hidden") {
+          updatePromises.push(
+            Comment.findByIdAndUpdate(comment._id, { status: "hidden" })
+          );
+          comment.status = "hidden"; // cập nhật luôn trong kết quả trả về
+        }
+      });
+      if (updatePromises.length > 0) {
+        await Promise.all(updatePromises);
+      }
+
     // Lọc thêm theo tên sản phẩm hoặc người dùng sau khi populate (do MongoDB không join sâu)
     if (searchNormalized) {
       allComments.docs = allComments.docs.filter((c) => {
@@ -94,8 +108,7 @@ export const getAllComment = async (req, res) => {
       });
     }
 
-
-    return res.status(200).json(allComments.docs);
+    return res.status(200).json(allComments);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -112,6 +125,11 @@ export const getCommentById = async (req, res) => {
 
     if (!comment) {
       return res.status(404).json({ message: "Không tìm thấy bình luận." });
+    }
+
+    if (!comment.productId && comment.status !== "hidden") {
+      comment.status = "hidden";
+      await comment.save();
     }
     
     //  👉 Lấy thông tin biến thể sản phẩm nếu có (ví dụ: màu sắc: #ffffff, kích thước: M)
@@ -168,8 +186,8 @@ export const addComment = async (req, res) => {
     const order = await Order.findOne({
       _id: orderId,
       userId,
-      status: "Hoan thanh",
-      paymentStatus: "Da thanh toan"
+      status: 4, // 4: Hoàn thành đơn hàng
+      paymentStatus: 1 // 1: Đã thanh toán
     });
 
     if (!order) {
