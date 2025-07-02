@@ -31,6 +31,9 @@ const paymentSchema = new Schema(
     responseData: {
       type: Object,
     },
+    paymentUrl: {
+      type: String,
+    },
   },
   {
     timestamps: true,
