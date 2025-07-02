@@ -97,6 +97,7 @@ const orderSchema = new mongoose.Schema(
       // 6: Hoan hang
       default: 0,
     },
+  
     paymentStatus: {
       type: Number,
       enum: [0, 1, 2, 3],

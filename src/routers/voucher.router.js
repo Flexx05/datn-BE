@@ -5,15 +5,16 @@ import {
   getByIdVoucher,
   updateVoucher,
   deleteVoucher,
+  restoreVoucher,
 } from "../controllers/voucher.controller";
 
 const router = Router();
 
-router.get("/voucher", getAllVoucher);
-router.get("/voucher/:id", getByIdVoucher);
-router.post("/voucher/add", createVoucher);
-router.patch("/voucher/edit/:id", updateVoucher);
-router.delete("/voucher/delete/:id", deleteVoucher);
-
+router.get("/vouchers", getAllVoucher);
+router.get("/vouchers/id/:id", getByIdVoucher);
+router.post("/vouchers/add", createVoucher);
+router.patch("/vouchers/edit/:id", updateVoucher);
+router.delete("/vouchers/delete/:id", deleteVoucher);
+router.patch("/vouchers/restore/:id", restoreVoucher);
 
 export default router;

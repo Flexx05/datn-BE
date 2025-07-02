@@ -18,6 +18,7 @@ import voucherRouter from "./routers/voucher.router";
 import { createServer } from "http";
 import { setupSocket } from "./socket";
 import nontificationRouter from "./routers/nontification.router";
+import { startVoucherStatusJob } from "./cron/voucherStatusCron.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -36,10 +37,19 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
-mongoose.connect(
-  `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@datn-db.nx9ha3d.mongodb.net/${process.env.DB_URL}?retryWrites=true&w=majority&appName=DATN-DB`
-);
-console.log("Connected to MongoDB");
+mongoose
+  .connect(
+    `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@datn-db.nx9ha3d.mongodb.net/${process.env.DB_URL}?retryWrites=true&w=majority&appName=DATN-DB`
+  )
+  .then(() => {
+    console.log("Connected to MongoDB");
+
+    // 👉 Khởi động cron job cập nhật trạng thái voucher
+    startVoucherStatusJob();
+  })
+  .catch((err) => {
+    console.error("MongoDB connection failed:", err.message);
+  });
 
 //route
 app.use("/api", attributeRouter);

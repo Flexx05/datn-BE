@@ -1,4 +1,5 @@
 import { model, mongoose, Schema } from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 
 const voucherSchema = new Schema(
   {
@@ -14,7 +15,6 @@ const voucherSchema = new Schema(
     },
     link: {
       type: String,
-      required: [true, "Link giảm giá là bắt buộc"],
     },
     description: {
       type: String,
@@ -36,7 +36,9 @@ const voucherSchema = new Schema(
     },
     maxDiscount: {
       type: Number,
-      required: true,
+      required: function () {
+        return this.discountType === "percent";
+      },
     },
     quantity: {
       type: Number,
@@ -57,6 +59,11 @@ const voucherSchema = new Schema(
     voucherStatus: {
       type: String,
       enum: ["active", "inactive", "expired"],
+      default: "inactive",
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
     },
   },
   {
@@ -65,6 +72,7 @@ const voucherSchema = new Schema(
   }
 );
 
+voucherSchema.plugin(mongoosePaginate);
 export const Voucher =
   mongoose.models.Voucher || model("Voucher", voucherSchema);
 
