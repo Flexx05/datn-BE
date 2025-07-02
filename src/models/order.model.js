@@ -86,21 +86,22 @@ const orderSchema = new mongoose.Schema(
     status: {
       type: Number,
       enum: [0, 1, 2, 3, 4, 5],
-        // 0: Cho xac nhan
-        // 1: Da xac nhan
-        // 2: Dang giao hang
-        // 3: Da giao hang
-        // 4: Hoan thanh
-        // 5: Da huy
-        // 6: Hoan hang
+      // 0: Cho xac nhan
+      // 1: Da xac nhan
+      // 2: Dang giao hang
+      // 3: Da giao hang
+      // 4: Hoan thanh
+      // 5: Da huy
+      // 6: Hoan hang
       default: 0,
     },
     paymentStatus: {
       type: Number,
-      enum: [0, 1, 2],
+      enum: [0, 1, 2, 3],
       // 0: Chua thanh toan
       // 1: Da thanh toan
       // 2: Hoan tien
+      // 3: Da huy
       default: 0,
     },
     paymentMethod: {
@@ -143,7 +144,11 @@ const orderSchema = new mongoose.Schema(
     note: {
       type: String,
       default: null,
-    }
+    },
+    cancelReason: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,
