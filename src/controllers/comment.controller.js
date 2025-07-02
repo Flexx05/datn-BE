@@ -186,8 +186,8 @@ export const addComment = async (req, res) => {
     const order = await Order.findOne({
       _id: orderId,
       userId,
-      status: "Hoan thanh",
-      paymentStatus: "Da thanh toan"
+      status: 4, // 4: Hoàn thành đơn hàng
+      paymentStatus: 1 // 1: Đã thanh toán
     });
 
     if (!order) {
