@@ -958,6 +958,9 @@ export const getShippingFee = async (req, res) => {
 
   // 3. Tính khoảng cách và phí ship
   const distance = await calculateShippingDistance(warehouseCoords, customerCoords);
+  if(!distance) {
+    return res.status(400).json({error: "Không tính được khoảng cách"}); 
+  }
   const shippingFeeValue = calculateShippingFee(distance);
   console.log(shippingFeeValue);
   return res.status(200).json(shippingFeeValue); 
