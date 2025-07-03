@@ -146,6 +146,13 @@ export const updateVoucher = async (req, res) => {
         message: "Không tìm thấy voucher để cập nhật",
       });
     }
+
+    if (currentVoucher.isDeleted) {
+      return res.status(400).json({
+        message: "Voucher đã bị xóa. Không thể cập nhật.",
+      });
+    }
+    
     // Chuẩn bị dữ liệu cập nhật
     const updateData = { ...req.body };
     const now = new Date();
