@@ -1,13 +1,11 @@
 // services/geocoding.service.js
 import axios from 'axios';
 
-const GEOCODING_API_KEY = 'ae032e6f4d9d4a89abdc53251c45a563';
-
 export const geocodeAddress = async (address) => {
   try {
     const url = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(
       address
-    )}&key=${GEOCODING_API_KEY}&language=vi&limit=1`;
+    )}&key=${process.env.GEOCODING_API_KEY}&language=vi&limit=1`;
 
     const response = await axios.get(url);
     const data = response.data;
