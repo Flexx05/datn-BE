@@ -938,3 +938,27 @@ export const cancelOrder = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+export const getShippingFee = async (req, res) => {
+  const { shippingAddress } = req.body
+  console.log(shippingAddress)
+  // Tính phí ship
+  // 1. Địa chỉ kho hàng
+  const warehouseCoords = {
+    lat: 21.028511,
+    lng: 105.804817,
+  };
+
+  // 2. Geocode địa chỉ khách
+  const customerCoords = await geocodeAddress(shippingAddress);
+
+  if (!customerCoords) {
+    return res.status(400).json("Không thể xác định vị trí địa chỉ giao hàng");
+  }
+
+  // 3. Tính khoảng cách và phí ship
+  const distance = await calculateShippingDistance(warehouseCoords, customerCoords);
+  const shippingFeeValue = calculateShippingFee(distance);
+  console.log(shippingFeeValue);
+  return res.status(200).json(shippingFeeValue); 
+}

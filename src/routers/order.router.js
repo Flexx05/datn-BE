@@ -7,7 +7,8 @@ import {
     getOrderByUserId,
     updateOrderStatus,
     updatePaymentStatus,
-    cancelOrder
+    cancelOrder,
+    getShippingFee
 } from "../controllers/order.controller.js";
 
 const router = Router();
@@ -19,6 +20,7 @@ router.get("/order/id/:id", getOrderById); // người dùng có thể xem đơn
 router.patch("/order/status/:id",updateOrderStatus);
 router.patch("/order/payment-status/:id", updatePaymentStatus); // chỉ admin mới có thể cập nhật trạng thái thanh toán của đơn hàng (dành cho COD và các đơn có khiếu nại), chưa làm: hệ thống sẽ tự động cập nhật trạng thái đơn hàng khi thanh toán online thành công hoặc khi hoàn tiền thành công
 router.patch("/order/cancel/:id", cancelOrder);  // người dùng có thể hủy đơn hàng của mình, admin hoặc nhân viên có thể hủy đơn hàng của người khác
+router.get("/order/shippingFee", getShippingFee); // lấy phí ship (bên client truyền vào địa chỉ giao hàng, ex: {"shippingAddress": "Hà Nội"})
 
 export default router;
  
