@@ -63,10 +63,14 @@ export const getAllCategories = async (req, res) => {
     if (typeof search === "string" && search.trim() !== "") {
       query.name = { $regex: search, $options: "i" };
     }
+    const match = {};
+    if (isActive !== undefined) {
+      match.isActive = isActive === "true";
+    }
     const options = {};
     options.populate = {
       path: "subCategories",
-      match: { isActive: true },
+      match,
     };
     if (_limit === "off") {
       // Không phân trang, lấy tất cả
@@ -287,6 +291,10 @@ export const deleteCategory = async (req, res) => {
           parentId: null,
         });
       }
+      if (category.slug === unCategorized.slug)
+        return res
+          .status(400)
+          .json({ message: "Không thể xóa danh mục không xác định" });
       const subCategories = await categoryModel.find({ parentId: id });
       const subCategoryIds = subCategories.map((sub) => sub._id);
       const affectedCategoryIds = [category._id, ...subCategoryIds];

@@ -143,20 +143,20 @@ export const login = async (req, res) => {
     if (!isValid) {
       return res.status(400).json({ error: "Sai mật khẩu" });
     }
-    if(!user.isVerify || user.isVerify === false) {
+    if (!user.isVerify || user.isVerify === false) {
       sendEmail(email);
-      return res.status(400).json({ error: "OTP đã được gửi! Vui lòng kiểm tra email" });
-    } 
-    if (!user.isActive || user.isActive === false) {
       return res
         .status(400)
-        .json({ error: "Tài khoản này bị khoá " });
-    }    
+        .json({ error: "OTP đã được gửi! Vui lòng kiểm tra email" });
+    }
+    if (!user.isActive || user.isActive === false) {
+      return res.status(400).json({ error: "Tài khoản này bị khoá " });
+    }
     const accessToken = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET_KEY || "binova",
       {
-        expiresIn: "1d",
+        expiresIn: "5m",
       }
     );
     const refreshToken = jwt.sign(
@@ -185,6 +185,8 @@ export const login = async (req, res) => {
 
 export const refreshToken = async (req, res) => {
   const { refreshToken } = req.cookies;
+  console.log("Refresh Token:", refreshToken);
+
   if (!refreshToken) {
     return res.status(401).json({ error: "Refresh token không hợp lệ" });
   }
@@ -195,6 +197,8 @@ export const refreshToken = async (req, res) => {
     );
     const user = await authModel.findById(decoded.id);
     if (!user || user.refreshToken !== refreshToken) {
+      console.log(user, refreshToken);
+
       return res.status(403).json({ error: "Refresh token không hợp lệ" });
     }
     const newAccessToken = jwt.sign(
