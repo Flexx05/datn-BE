@@ -41,7 +41,7 @@ export const getAllBrands = async (req, res) => {
   try {
     const {
       _page = 1,
-      _limit = 0,
+      _limit = 10,
       _sort = "createdAt",
       _order,
       isActive,
@@ -54,22 +54,42 @@ export const getAllBrands = async (req, res) => {
     if (isActive !== undefined) {
       query.isActive = isActive === "true";
     }
-    const options = {
-      page: parseInt(_page, 10),
-      limit: parseInt(_limit, 10),
-      sort: { [_sort]: _order === "desc" ? -1 : 1 },
-    };
+    const options = {};
+
+    if (_limit === "off") {
+      // Không phân trang, lấy tất cả
+      options.pagination = false;
+    } else {
+      options.page = parseInt(_page, 10) || 1;
+      options.limit = parseInt(_limit, 10) || 10;
+      options.sort = { [_sort]: _order === "desc" ? -1 : 1 };
+    }
 
     const brands = await brandModel.paginate(query, options);
 
+    let docs = [];
+    if (options.pagination === false) {
+      // Khi không phân trang, brands là mảng
+      docs = brands.docs;
+    } else {
+      // Khi phân trang, brands.docs là mảng
+      docs = brands.docs;
+    }
+
     const countProduct = await Promise.all(
-      brands.docs.map(async (brand) => {
+      docs.map(async (brand) => {
         const count = await productModel.countDocuments({ brandId: brand._id });
         return { ...brand.toObject(), countProduct: count };
       })
     );
 
-    return res.status(200).json({ ...brands, docs: countProduct });
+    if (options.pagination === false) {
+      // Trả về mảng khi không phân trang
+      return res.status(200).json(countProduct);
+    } else {
+      // Trả về object phân trang như cũ
+      return res.status(200).json({ ...brands, docs: countProduct });
+    }
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

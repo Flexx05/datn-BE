@@ -1,6 +1,8 @@
-import authModel from "../models/auth.model";
 import bcrypt from "bcryptjs";
+import authModel from "../models/auth.model";
+import { getSocketInstance } from "../socket";
 import { updateUserInfoSchema } from "../validations/auth.validation";
+import Order from "../models/order.model";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -33,7 +35,17 @@ export const getAllUsers = async (req, res) => {
 
     const users = await authModel.paginate(query, options);
 
-    return res.status(200).json(users);
+    const countOrderNotSuccess = await Promise.all(
+      users.docs.map(async (user) => {
+        const count = await Order.countDocuments({
+          userId: user._id,
+          status: { $nin: [4, 5] },
+        });
+        return { ...user.toObject(), countOrderNotSuccess: count };
+      })
+    );
+
+    return res.status(200).json({ ...users, docs: countOrderNotSuccess });
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -79,6 +91,19 @@ export const updateUserStatus = async (req, res) => {
       });
     }
 
+    const countOrderNotSuccess = await Order.countDocuments({
+      userId: id,
+      status: { $nin: [4, 5] },
+    });
+
+    if (countOrderNotSuccess > 0 && isActive === true) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Không thể cập nhật trạng thái người dùng, người dùng có đơn hàng chưa thanh toán",
+      });
+    }
+
     const updatedUser = await authModel
       .findByIdAndUpdate(id, { isActive }, { new: true })
       .select("-password");
@@ -87,6 +112,16 @@ export const updateUserStatus = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Không tìm thấy người dùng",
+      });
+    }
+
+    if (!isActive) {
+      const io = getSocketInstance();
+      const userId = updatedUser._id.toString();
+      io.to(userId).emit("account-status", {
+        userId,
+        isActive: false,
+        error: "Tài khoản đã bị khóa",
       });
     }
 

@@ -20,12 +20,24 @@ export const getAllAttribute = async (req, res) => {
     if (typeof search === "string" && search.trim() !== "") {
       query.name = { $regex: search, $options: "i" };
     }
-    const options = {
-      page: parseInt(_page, 10),
-      limit: parseInt(_limit, 10),
-      sort: { [_sort]: _order === "desc" ? -1 : 1 },
-    };
+    const options = {};
+    if (_limit === "off") {
+      // Không phân trang, lấy tất cả
+      options.pagination = false;
+    } else {
+      options.page = parseInt(_page, 10) || 1;
+      options.limit = parseInt(_limit, 10) || 10;
+      options.sort = { [_sort]: _order === "desc" ? -1 : 1 };
+    }
+
     const attributes = await attributeModel.paginate(query, options);
+
+    let docs = [];
+    if (options.paginate === false) {
+      docs = attributes.docs;
+    } else {
+      docs = attributes.docs;
+    }
     // Thêm countProduct vào từng attribute
     const countProduct = await Promise.all(
       attributes.docs.map(async (attr) => {
@@ -35,7 +47,11 @@ export const getAllAttribute = async (req, res) => {
         return { ...attr.toObject(), countProduct: count };
       })
     );
-    return res.status(200).json({ ...attributes, docs: countProduct });
+    if (_limit === "off") {
+      return res.status(200).json(countProduct);
+    } else {
+      return res.status(200).json({ ...attributes, docs: countProduct });
+    }
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }

@@ -58,4 +58,6 @@ const authSchema = new Schema(
 
 authSchema.plugin(mongoosePaginate);
 
-export default model("Auth", authSchema);
+export const authModel = mongoose.models.Auth || model("Auth", authSchema);
+
+export default authModel;

@@ -40,4 +40,7 @@ categorySchema.virtual("subCategories", {
 });
 categorySchema.plugin(mongoosePaginate);
 
-export default model("Category", categorySchema);
+export const categoryModel =
+  mongoose.models.Category || model("Category", categorySchema);
+
+export default categoryModel;

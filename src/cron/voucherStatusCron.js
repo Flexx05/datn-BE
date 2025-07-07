@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import Voucher from "../models/voucher.model.js";
-import { getIO } from "../socket.js";
+import { getSocketInstance } from "../socket.js";
 
 export const startVoucherStatusJob = () => {
   cron.schedule("* * * * *", async () => {
@@ -35,7 +35,7 @@ export const startVoucherStatusJob = () => {
         { $set: { voucherStatus: "expired" } }
       );
       
-      const io = getIO();
+      const io = getSocketInstance();
       if (io) {
         io.emit("voucherStatusUpdated", { time: now }); // Có thể gửi thêm dữ liệu chi tiết nếu muốn
       }

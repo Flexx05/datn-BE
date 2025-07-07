@@ -166,6 +166,21 @@ export const updateVoucher = async (req, res) => {
         message: "Voucher đã hết hạn. Không thể cập nhật.",
       });
     }
+
+    if (currentVoucher.voucherStatus === "active" && req.body.startDate) {
+      return res.status(400).json({
+        message: "Không thể thay đổi ngày bắt đầu khi voucher đang hoạt động.",
+      });
+    }
+
+    if (currentVoucher.voucherStatus === "active") {
+      if (req.body.quantity && req.body.quantity < currentVoucher.quantity) {
+        return res.status(400).json({
+          message: "Không thể giảm số lượng voucher khi đang hoạt động.",
+        });
+      }
+    }
+    
     
     // Chuẩn bị dữ liệu cập nhật
     const updateData = { ...req.body };
