@@ -68,3 +68,7 @@ app.use("/api", orderRouter);
 
 export { httpServer, io };
 export const viteNodeApp = app;
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, () => {
+  console.log(`Backend server listening on port ${PORT}`);
+});

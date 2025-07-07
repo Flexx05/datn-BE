@@ -65,13 +65,21 @@ export const getAllVoucher = async (req, res) => {
     const { _page=1, _limit= 10, _sort="createdAt", _order, code, status, voucherType, isDeleted } = req.query;
     let query = {};
     
-    // Filter theo isDeleted (mặc định là false - chưa xóa)
-    if (isDeleted !== undefined) {
-      query.isDeleted = isDeleted === 'true';
-    } else {
-      query.isDeleted = false; // Mặc định chỉ lấy voucher chưa xóa
+
+    // Nếu truyền ?isDeleted=true
+    if (isDeleted === 'true') {
+      query.isDeleted = true;
     }
-    
+    // Nếu truyền ?isDeleted=false
+    else if (isDeleted === 'false') {
+      query.isDeleted = false;
+    }
+    // Nếu là all → không thêm gì → sẽ lấy hết tất cả
+    // Nếu không truyền gì → mặc định là false
+    else if (!isDeleted || isDeleted === '') {
+      query.isDeleted = false;
+    }
+ 
     // Tìm kiếm theo code nếu có
     if (code) {
       query.code = { $regex: code, $options: "i" };
@@ -150,6 +158,12 @@ export const updateVoucher = async (req, res) => {
     if (currentVoucher.isDeleted) {
       return res.status(400).json({
         message: "Voucher đã bị xóa. Không thể cập nhật.",
+      });
+    }
+
+    if (currentVoucher.voucherStatus === "expired") {
+      return res.status(400).json({
+        message: "Voucher đã hết hạn. Không thể cập nhật.",
       });
     }
     
