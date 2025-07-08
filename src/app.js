@@ -19,6 +19,7 @@ import { createServer } from "http";
 import { setupSocket } from "./socket";
 import nontificationRouter from "./routers/nontification.router";
 import { startVoucherStatusJob } from "./cron/voucherStatusCron.js";
+import chatMessageRouter from "./routers/chatMessage.router.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -65,6 +66,7 @@ app.use("/api", staffRrouter);
 app.use("/api", paymentRouter);
 app.use("/api", orderRouter);
 app.use("/api", nontificationRouter);
+app.use("/api", chatMessageRouter);
 
 httpServer.listen(process.env.PORT || 8080, () => {
   console.log(
