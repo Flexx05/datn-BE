@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import authModel from "./models/auth.model";
+import ChatMessage from "./models/chatMessage.model";
 
 let ioInstance;
 
@@ -16,16 +17,34 @@ export function setupSocket(httpServer) {
   io.on("connection", (socket) => {
     console.log("A client connected: " + socket.id);
 
-    // Nontification
+    // Nontification for admin
     socket.on("join-admin-room", () => {
       socket.join("admin");
       console.log("Admin joined room");
     });
 
-    // change order status
     socket.on("join-room", (userId) => {
       socket.join(userId);
       console.log("User joined room");
+    });
+
+    // Handle chat messages
+    socket.on("chat-message", async ({ senderId, reciverId, message }) => {
+      if (!senderId || !reciverId || !message) return;
+      try {
+        const newChatMessage = await ChatMessage.create({
+          senderId,
+          reciverId,
+          message,
+        });
+        io.to(reciverId).emit("newChatMessage", newChatMessage);
+        io.to(senderId).emit("newChatMessage", newChatMessage);
+      } catch (error) {
+        console.error("Error handling chat message:", error.message);
+        socket.emit("chat-message-error", {
+          error: "Lỗi khi gửi tin nhắn",
+        });
+      }
     });
 
     // Check account status
