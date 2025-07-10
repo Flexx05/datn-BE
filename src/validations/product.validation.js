@@ -5,22 +5,24 @@ const productAttributeSchema = Joi.object({
   attributeName: Joi.string(),
   isColor: Joi.boolean(),
   values: Joi.array().items(Joi.string()).required(),
+  createdAt: Joi.string(),
+  updatedAt: Joi.string(),
 });
 
 const variationSchema = Joi.object({
   _id: Joi.string(),
   attributes: Joi.array().items(productAttributeSchema).min(1),
-  regularPrice: Joi.number().required(),
-  salePrice: Joi.number(),
-  saleForm: Joi.string().allow(null),
-  saleTo: Joi.string().allow(null),
-  stock: Joi.number().required(),
+  regularPrice: Joi.number().integer().min(1000).max(1000000000).required(),
+  salePrice: Joi.number().integer().min(1000).max(1000000000).allow(null),
+  stock: Joi.number().integer().min(0).max(10000).required(),
   image: Joi.string(),
   isActive: Joi.boolean().default(true),
+  createdAt: Joi.string(),
+  updatedAt: Joi.string(),
 });
 
 export const productSchema = Joi.object({
-  name: Joi.string().required().min(3).trim(),
+  name: Joi.string().required().min(3).trim().max(100),
   description: Joi.string().trim().allow(null),
   image: Joi.array().items(Joi.string()),
   brandId: Joi.string().required(),

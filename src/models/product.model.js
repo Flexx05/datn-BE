@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose";
+import mongoose, { model, Schema } from "mongoose";
 import mongoosePaginate from "mongoose-paginate-v2";
 
 const productAttributeSchema = new Schema(
@@ -36,14 +36,6 @@ const variationSchema = new Schema(
     salePrice: {
       type: Number,
       default: 0,
-    },
-    saleFrom: {
-      type: Date,
-      default: null,
-    },
-    saleTo: {
-      type: Date,
-      default: null,
     },
     stock: {
       type: Number,
@@ -126,4 +118,7 @@ const productSchema = new Schema(
 
 productSchema.plugin(mongoosePaginate);
 
-export default model("Product", productSchema);
+export const productModel =
+  mongoose.models.Product || model("Product", productSchema);
+
+export default productModel;

@@ -1,4 +1,4 @@
-import mongoose, { model, Schema } from "mongoose"
+import mongoose, { model, Schema } from "mongoose";
 
 const cartItemSchema = new Schema(
   {
@@ -7,12 +7,10 @@ const cartItemSchema = new Schema(
       ref: "Product",
       required: true,
     },
-    variantAttributes: [
-      {
-        attributeName: { type: String, required: true },
-        value: { type: String, required: true },
-      },
-    ],
+    variantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+    },
     quantity: {
       type: Number,
       required: true,
@@ -38,4 +36,6 @@ const cartSchema = new Schema(
   }
 );
 
-export default model("Cart", cartSchema);
+export const cartModel = mongoose.models.Cart || model("Cart", cartSchema);
+
+export default cartModel;

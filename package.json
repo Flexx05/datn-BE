@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "vite"
+    "dev": "vite-node src/app.js"
   },
   "keywords": [],
   "author": "",
@@ -17,16 +17,22 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "google-auth-library": "^9.15.1",
+    "http": "^0.0.1-security",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.48",
     "momment": "^0.0.1",
     "mongoose": "^8.13.2",
-    "mongoose-paginate-v2": "^1.9.0",
+    "mongoose-paginate-v2": "^1.9.1",
+    "multer": "^2.0.1",
+    "multer-storage-cloudinary": "^4.0.0",
+    "node-cron": "^4.1.1",
     "nodemailer": "^7.0.3",
     "otp-generator": "^4.0.1",
     "qs": "^6.14.0",
+    "socket.io": "^4.8.1",
+    "vite-node": "^3.2.4",
     "vnpay": "^2.2.0"
   },
   "devDependencies": {

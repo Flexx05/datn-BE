@@ -1,24 +1,24 @@
-import {model,mongoose, Schema} from "mongoose";
+import { model, mongoose, Schema } from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 
 const voucherSchema = new Schema(
   {
-    voucherType:{
+    voucherType: {
       type: String,
-      enum:['product','shipping'],
-      required: [true, "Loại voucher là bắt buộc"]
+      enum: ["product", "shipping"],
+      required: [true, "Loại voucher là bắt buộc"],
     },
-    code:{
+    code: {
       type: String,
       required: [true, "Mã giảm giá là bắt buộc"],
       unique: true,
     },
     link: {
       type: String,
-      required:[true, "Link giảm giá là bắt buộc"]
     },
     description: {
       type: String,
-      required: [true, "Mô tả giảm giá là bắt buộc"]
+      required: [true, "Mô tả giảm giá là bắt buộc"],
     },
     discountType: {
       type: String,
@@ -32,11 +32,13 @@ const voucherSchema = new Schema(
     minOrderValues: {
       type: Number,
       default: 0,
-      required: true
+      required: true,
     },
     maxDiscount: {
       type: Number,
-      required : true
+      required: function () {
+        return this.discountType === "percent";
+      },
     },
     quantity: {
       type: Number,
@@ -56,13 +58,22 @@ const voucherSchema = new Schema(
     },
     voucherStatus: {
       type: String,
-      enum: ["active", "inactive", "expired"]
+      enum: ["active", "inactive", "expired"],
+      default: "inactive",
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
     },
   },
   {
     timestamps: true,
     versionKey: false,
   }
-)
+);
 
-export default model('Voucher',voucherSchema)
+voucherSchema.plugin(mongoosePaginate);
+export const Voucher =
+  mongoose.models.Voucher || model("Voucher", voucherSchema);
+
+export default Voucher;

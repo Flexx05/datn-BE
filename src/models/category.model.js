@@ -1,4 +1,5 @@
 import mongoose, { model, Schema } from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 
 const categorySchema = new Schema(
   {
@@ -8,20 +9,15 @@ const categorySchema = new Schema(
     },
     slug: {
       type: String,
-
     },
     description: {
       type: String,
-    //   required: [true, "Mô tả không được để trống"],
+      //   required: [true, "Mô tả không được để trống"],
     },
     parentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
       default: null,
-    },
-    categorySort: {
-      type: Number,
-      default: 0,
     },
     isActive: {
       type: Boolean,
@@ -31,7 +27,7 @@ const categorySchema = new Schema(
   {
     timestamps: true,
     versionKey: false,
-    toJSON: { virtuals: true }, // Chuyển đổi đối tượng thành JSON 
+    toJSON: { virtuals: true }, // Chuyển đổi đối tượng thành JSON
     toObject: { virtuals: true }, // Chuyển đổi đối tượng thành Object
   }
 );
@@ -42,6 +38,9 @@ categorySchema.virtual("subCategories", {
   localField: "_id",
   foreignField: "parentId",
 });
+categorySchema.plugin(mongoosePaginate);
 
-export default model("Category", categorySchema);
+export const categoryModel =
+  mongoose.models.Category || model("Category", categorySchema);
 
+export default categoryModel;

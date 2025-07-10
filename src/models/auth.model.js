@@ -1,9 +1,10 @@
-import { model, Schema } from "mongoose";
+import mongoose, { model, Schema } from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 
 const authSchema = new Schema(
   {
     fullName: {
-      type: String
+      type: String,
     },
     email: {
       type: String,
@@ -36,6 +37,18 @@ const authSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    resetPasswordVerified: {
+      type: Boolean,
+      default: false,
+    },
+    isVerify: {
+      type: Boolean,
+      default: false,
+    },
+    refreshToken: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -43,5 +56,8 @@ const authSchema = new Schema(
   }
 );
 
+authSchema.plugin(mongoosePaginate);
 
-export default model("Auth", authSchema);
+export const authModel = mongoose.models.Auth || model("Auth", authSchema);
+
+export default authModel;
