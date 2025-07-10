@@ -18,6 +18,7 @@ import voucherRouter from "./routers/voucher.router";
 import { createServer } from "http";
 import { setupSocket } from "./socket";
 import nontificationRouter from "./routers/nontification.router";
+import statisticsRouter from "./routers/statistics.router";
 import { startVoucherStatusJob } from "./cron/voucherStatusCron.js";
 
 const app = express();
@@ -65,6 +66,7 @@ app.use("/api", staffRrouter);
 app.use("/api", paymentRouter);
 app.use("/api", orderRouter);
 app.use("/api", nontificationRouter);
+app.use("/api", statisticsRouter);
 
 httpServer.listen(process.env.PORT || 8080, () => {
   console.log(
