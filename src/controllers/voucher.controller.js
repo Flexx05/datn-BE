@@ -167,11 +167,18 @@ export const updateVoucher = async (req, res) => {
       });
     }
 
-    if (currentVoucher.voucherStatus === "active" && req.body.startDate) {
+
+    if (
+      currentVoucher.voucherStatus === "active" &&
+      req.body.startDate &&
+      new Date(req.body.startDate).getTime() !== new Date(currentVoucher.startDate).getTime()
+    ) {
       return res.status(400).json({
         message: "Không thể thay đổi ngày bắt đầu khi voucher đang hoạt động.",
       });
     }
+    
+
 
     if (currentVoucher.voucherStatus === "active") {
       if (req.body.quantity && req.body.quantity < currentVoucher.quantity) {
