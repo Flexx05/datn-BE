@@ -4,12 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "vite-node src/app.js"
+    "dev": "vite-node src/app.js",
+    "start": "node src/app.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
@@ -36,6 +37,7 @@
     "vnpay": "^2.2.0"
   },
   "devDependencies": {
+    "nodemon": "^3.1.10",
     "vite": "^6.3.2",
     "vite-plugin-node": "^5.0.1"
   }

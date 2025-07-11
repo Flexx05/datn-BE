@@ -73,3 +73,5 @@ httpServer.listen(process.env.PORT || 8080, () => {
     `Server listening on: http://localhost:${process.env.PORT || 8080}`
   );
 });
+
+export const viteNodeApp = app;
