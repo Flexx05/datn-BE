@@ -415,7 +415,7 @@ export const updateProduct = async (req, res) => {
         categoryName,
         description,
         attributes: productAttributes,
-        variation,
+        variation: updatedVariations,
         isActive: !allOutOfStock,
       },
       { new: true }

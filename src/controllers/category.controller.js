@@ -192,26 +192,6 @@ export const showCategorySlug = async (req, res) => {
   }
 };
 
-export const showCategoryId = async (req, res) => {
-  try {
-    const { id } = req.params; // param là :id
-    const category = await categoryModel
-      .findOne({ _id: id, isActive: true })
-      .populate({
-        path: "subCategories",
-        match: { isActive: true },
-      });
-    if (!category) {
-      return res.status(404).json({ error: "Category not found" });
-    }
-    return res
-      .status(200)
-      .json({ message: "Get category successfully", category });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
-
 export const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
