@@ -5,6 +5,7 @@ import { getTopProductsSchema } from "../validations/statistics.validation.js";
 export const getTopProducts = async (req, res) => {
   const { error, value } = getTopProductsSchema.validate(req.query, {
     abortEarly: false,
+    convert: true,
   });
 
   if (error) {
@@ -16,22 +17,60 @@ export const getTopProducts = async (req, res) => {
   }
 
   const now = new Date();
-  const startDate = value.startDate
-    ? new Date(value.startDate)
-    : value.endDate
-    ? new Date(new Date(value.endDate).getTime() - 7 * 24 * 60 * 60 * 1000)
-    : new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const rawStart = value.startDate ? new Date(value.startDate) : null;
+  const rawEnd = value.endDate ? new Date(value.endDate) : null;
 
-  const endDate = value.endDate ? new Date(value.endDate) : now;
+  const startDate = rawStart
+    ? new Date(
+        rawStart.getFullYear(),
+        rawStart.getMonth(),
+        rawStart.getDate(),
+        0,
+        0,
+        0,
+        0
+      )
+    : rawEnd
+    ? new Date(
+        rawEnd.getFullYear(),
+        rawEnd.getMonth(),
+        rawEnd.getDate() - 7,
+        0,
+        0,
+        0,
+        0
+      )
+    : new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - 7,
+        0,
+        0,
+        0,
+        0
+      );
 
-  if (startDate > endDate) {
-    return res.status(400).json({
-      success: false,
-      message: "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc",
-    });
-  }
+  const endDate = rawEnd
+    ? new Date(
+        rawEnd.getFullYear(),
+        rawEnd.getMonth(),
+        rawEnd.getDate(),
+        23,
+        59,
+        59,
+        999
+      )
+    : new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        23,
+        59,
+        59,
+        999
+      );
 
-  const { categoryId, brandId, limit = 10 } = value;
+  const { categoryId, brandId, limit = 10 } = value;  
 
   try {
     const orders = await Order.find({
@@ -112,7 +151,6 @@ export const getTopProducts = async (req, res) => {
         };
       })
       .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, limit);
 
     if (!result.length) {
       return res.status(404).json({
@@ -127,6 +165,7 @@ export const getTopProducts = async (req, res) => {
       totalDocs: result.length,
       totalRevenue: result.reduce((sum, p) => sum + p.revenue, 0),
       totalQuantity: result.reduce((sum, p) => sum + p.quantity, 0),
+      totalOrderCount: result.reduce((sum, p) => sum + p.orderCount, 0),
       limit,
     });
   } catch (err) {
