@@ -1,6 +1,5 @@
 import { Server } from "socket.io";
 import authModel from "./models/auth.model";
-import ChatMessage from "./models/chatMessage.model";
 
 let ioInstance;
 
@@ -29,23 +28,23 @@ export function setupSocket(httpServer) {
     });
 
     // Handle chat messages
-    socket.on("chat-message", async ({ senderId, reciverId, message }) => {
-      if (!senderId || !reciverId || !message) return;
-      try {
-        const newChatMessage = await ChatMessage.create({
-          senderId,
-          reciverId,
-          message,
-        });
-        io.to(reciverId).emit("newChatMessage", newChatMessage);
-        io.to(senderId).emit("newChatMessage", newChatMessage);
-      } catch (error) {
-        console.error("Error handling chat message:", error.message);
-        socket.emit("chat-message-error", {
-          error: "Lỗi khi gửi tin nhắn",
-        });
-      }
-    });
+    // socket.on("chat-message", async ({ senderId, reciverId, message }) => {
+    //   if (!senderId || !reciverId || !message) return;
+    //   try {
+    //     const newChatMessage = await ChatMessage.create({
+    //       senderId,
+    //       reciverId,
+    //       message,
+    //     });
+    //     io.to(reciverId).emit("newChatMessage", newChatMessage);
+    //     io.to(senderId).emit("newChatMessage", newChatMessage);
+    //   } catch (error) {
+    //     console.error("Error handling chat message:", error.message);
+    //     socket.emit("chat-message-error", {
+    //       error: "Lỗi khi gửi tin nhắn",
+    //     });
+    //   }
+    // });
 
     // Check account status
     socket.on("check-account-status", async (userId) => {

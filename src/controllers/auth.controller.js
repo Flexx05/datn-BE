@@ -159,15 +159,16 @@ export const login = async (req, res) => {
         expiresIn: "5m",
       }
     );
-    if (!user.refreshToken) {
-      user.refreshToken = jwt.sign(
-        { id: user._id },
-        process.env.JWT_REFRESH_SECRET || "refresh_binova",
-        {
-          expiresIn: "7d",
-        }
-      );
-    }
+
+    const refreshToken = jwt.sign(
+      { id: user._id },
+      process.env.JWT_REFRESH_SECRET || "refresh_binova",
+      {
+        expiresIn: "7d",
+      }
+    );
+
+    user.refreshToken = refreshToken;
     await user.save();
     user.password = undefined; // Không trả về mật khẩu trong response
     res.cookie("refreshToken", refreshToken, {
@@ -197,15 +198,13 @@ export const refreshToken = async (req, res) => {
     );
     const user = await authModel.findById(decoded.id);
     if (!user || user.refreshToken !== refreshToken) {
-      console.log(user.refreshToken, refreshToken);
-
       return res.status(403).json({ error: "Refresh token không hợp lệ" });
     }
     const newAccessToken = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET_KEY || "binova",
       {
-        expiresIn: "1d",
+        expiresIn: "5m",
       }
     );
     return res.status(200).json({
