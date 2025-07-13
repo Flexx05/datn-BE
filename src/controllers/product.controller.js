@@ -204,7 +204,6 @@ export const createProductWithVariations = async (req, res) => {
   try {
     const { error, value } = productSchema.validate(req.body, {
       abortEarly: false,
-      // convert: false,
     });
     if (error) {
       const errors = error.details.map((err) => err.message);
@@ -306,7 +305,7 @@ export const createProductWithVariations = async (req, res) => {
       description,
       attributes: productAttributes,
       variation: updatedVariations,
-      isActive: !allOutOfStock,
+      inStock: !allOutOfStock,
     });
 
     await product.save();
@@ -416,7 +415,7 @@ export const updateProduct = async (req, res) => {
         description,
         attributes: productAttributes,
         variation: updatedVariations,
-        isActive: !allOutOfStock,
+        inStock: !allOutOfStock,
       },
       { new: true }
     );
@@ -446,15 +445,6 @@ export const updateProductStatus = async (req, res) => {
       return res.status(404).json({ message: "Sản phẩm không tồn tại" });
     }
 
-    // Kiểm tra nếu tất cả biến thể đều hết hàng
-    const allOutOfStock =
-      product.variation?.length > 0 &&
-      product.variation.every((v) => v.stock === 0);
-
-    if (allOutOfStock) {
-      return res.status(400).json({ message: "Sản phẩm đã hết hàng" });
-    }
-
     // Cập nhật trạng thái sản phẩm
     product.isActive = isActive;
 
@@ -478,16 +468,15 @@ export const updateProductStatus = async (req, res) => {
 
 export const updateVariaionStatus = async (req, res) => {
   try {
-    const { id, variationId } = req.params;
+    const { id } = req.params;
+    const { productId } = req.body;
 
-    const product = await productModel.findById(id);
+    const product = await productModel.findById(productId);
     if (!product) {
       return res.status(404).json({ message: "Sản phẩm không tồn tại" });
     }
 
-    const variation = product.variation.find(
-      (v) => v._id.toString() === variationId
-    );
+    const variation = product.variation.find((v) => v._id.toString() === id);
 
     if (!variation) {
       return res.status(404).json({ message: "Biến thể không tìm thấy" });
