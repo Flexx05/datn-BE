@@ -63,10 +63,14 @@ export const getAllCategories = async (req, res) => {
     if (typeof search === "string" && search.trim() !== "") {
       query.name = { $regex: search, $options: "i" };
     }
+    const match = {};
+    if (isActive !== undefined) {
+      match.isActive = isActive === "true";
+    }
     const options = {};
     options.populate = {
       path: "subCategories",
-      match: { isActive: true },
+      match,
     };
     if (_limit === "off") {
       // Không phân trang, lấy tất cả
@@ -188,26 +192,6 @@ export const showCategorySlug = async (req, res) => {
   }
 };
 
-export const showCategoryId = async (req, res) => {
-  try {
-    const { id } = req.params; // param là :id
-    const category = await categoryModel
-      .findOne({ _id: id, isActive: true })
-      .populate({
-        path: "subCategories",
-        match: { isActive: true },
-      });
-    if (!category) {
-      return res.status(404).json({ error: "Category not found" });
-    }
-    return res
-      .status(200)
-      .json({ message: "Get category successfully", category });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
-
 export const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
@@ -287,6 +271,10 @@ export const deleteCategory = async (req, res) => {
           parentId: null,
         });
       }
+      if (category.slug === unCategorized.slug)
+        return res
+          .status(400)
+          .json({ message: "Không thể xóa danh mục không xác định" });
       const subCategories = await categoryModel.find({ parentId: id });
       const subCategoryIds = subCategories.map((sub) => sub._id);
       const affectedCategoryIds = [category._id, ...subCategoryIds];

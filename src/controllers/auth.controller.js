@@ -143,22 +143,23 @@ export const login = async (req, res) => {
     if (!isValid) {
       return res.status(400).json({ error: "Sai mật khẩu" });
     }
-    if(!user.isVerify || user.isVerify === false) {
+    if (!user.isVerify || user.isVerify === false) {
       sendEmail(email);
-      return res.status(400).json({ error: "OTP đã được gửi! Vui lòng kiểm tra email" });
-    } 
-    if (!user.isActive || user.isActive === false) {
       return res
         .status(400)
-        .json({ error: "Tài khoản này bị khoá " });
-    }    
+        .json({ error: "OTP đã được gửi! Vui lòng kiểm tra email" });
+    }
+    if (!user.isActive || user.isActive === false) {
+      return res.status(400).json({ error: "Tài khoản này bị khoá " });
+    }
     const accessToken = jwt.sign(
       { id: user._id },
       process.env.JWT_SECRET_KEY || "binova",
       {
-        expiresIn: "1d",
+        expiresIn: "5m",
       }
     );
+
     const refreshToken = jwt.sign(
       { id: user._id },
       process.env.JWT_REFRESH_SECRET || "refresh_binova",
@@ -166,6 +167,7 @@ export const login = async (req, res) => {
         expiresIn: "7d",
       }
     );
+
     user.refreshToken = refreshToken;
     await user.save();
     user.password = undefined; // Không trả về mật khẩu trong response
@@ -185,6 +187,7 @@ export const login = async (req, res) => {
 
 export const refreshToken = async (req, res) => {
   const { refreshToken } = req.cookies;
+
   if (!refreshToken) {
     return res.status(401).json({ error: "Refresh token không hợp lệ" });
   }
@@ -201,7 +204,7 @@ export const refreshToken = async (req, res) => {
       { id: user._id },
       process.env.JWT_SECRET_KEY || "binova",
       {
-        expiresIn: "1d",
+        expiresIn: "5m",
       }
     );
     return res.status(200).json({

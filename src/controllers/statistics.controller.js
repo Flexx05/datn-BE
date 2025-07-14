@@ -70,7 +70,7 @@ export const getTopProducts = async (req, res) => {
         999
       );
 
-  const { categoryId, brandId, limit = 10 } = value;  
+  const { categoryId, brandId, limit = 10 } = value;
 
   try {
     const orders = await Order.find({
@@ -131,6 +131,10 @@ export const getTopProducts = async (req, res) => {
     const result = products
       .map((p) => {
         const stat = productStats[p._id.toString()];
+        const totalStock = (p.variation || []).reduce(
+          (sum, v) => sum + (v.stock || 0),
+          0
+        );
         return {
           id: p._id,
           name: p.name,
@@ -148,9 +152,10 @@ export const getTopProducts = async (req, res) => {
               : 0,
           price:
             p.variation?.[0]?.salePrice || p.variation?.[0]?.regularPrice || 0,
+          totalStock,
         };
       })
-      .sort((a, b) => b.quantity - a.quantity)
+      .sort((a, b) => b.quantity - a.quantity);
 
     if (!result.length) {
       return res.status(404).json({
