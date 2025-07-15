@@ -156,7 +156,7 @@ export const login = async (req, res) => {
       { id: user._id },
       process.env.JWT_SECRET_KEY || "binova",
       {
-        expiresIn: "5m",
+        expiresIn: "1d",
       }
     );
 

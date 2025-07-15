@@ -27,24 +27,10 @@ export function setupSocket(httpServer) {
       console.log("User joined room");
     });
 
-    // Handle chat messages
-    // socket.on("chat-message", async ({ senderId, reciverId, message }) => {
-    //   if (!senderId || !reciverId || !message) return;
-    //   try {
-    //     const newChatMessage = await ChatMessage.create({
-    //       senderId,
-    //       reciverId,
-    //       message,
-    //     });
-    //     io.to(reciverId).emit("newChatMessage", newChatMessage);
-    //     io.to(senderId).emit("newChatMessage", newChatMessage);
-    //   } catch (error) {
-    //     console.error("Error handling chat message:", error.message);
-    //     socket.emit("chat-message-error", {
-    //       error: "Lỗi khi gửi tin nhắn",
-    //     });
-    //   }
-    // });
+    socket.on("join-conversation", (conversationId) => {
+      socket.join(conversationId);
+      console.log("User joined conversation");
+    });
 
     // Check account status
     socket.on("check-account-status", async (userId) => {

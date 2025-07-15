@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import mongoose from "mongoose";
 import Conversation from "../models/conversation.model";
+import { getSocketInstance } from "../socket";
 
 export const getAllConversations = async (req, res) => {
   try {
@@ -92,15 +93,19 @@ export const sendMessage = async (req, res) => {
     conversation.messages.push(newMessage);
     conversation.lastUpdated = new Date();
 
-    // ? Kiểm tra admin/staff nếu tham gia sẽ bị chặn
+    // ? Kiểm tra admin/staff nếu chưa tham gia cuộc trò chuyện thì thêm người dùng với quyền admin/staff
     if (user.role === "staff" || user.role === "admin") {
       const participantExists = conversation.participants.some(
-        (participant) => participant.userId.toString() === senderId
+        (participant) => participant.userId.toString() === senderId.toString()
       );
-      if (!participantExists)
-        return res
-          .status(400)
-          .json({ error: "Bạn chưa tham gia cuộc trò chuyện này" });
+      if (!participantExists) {
+        conversation.participants.push({
+          userId: senderId,
+          fullName: user.fullName,
+          role: user.role,
+          joinedAt: new Date(),
+        });
+      }
     }
 
     // ? Cập nhật trạng thái và lưu log nếu cần
@@ -110,10 +115,22 @@ export const sendMessage = async (req, res) => {
     }
 
     await conversation.save();
+
+    const savedMessage =
+      conversation.messages[conversation.messages.length - 1];
+
+    const io = getSocketInstance();
+    io.to(conversation?._id.toString()).emit("new-message", {
+      conversation: conversation._id,
+      message: newMessage,
+    });
     return res.status(200).json({
       message: "Gửi tin nhắn thành công",
       conversation: conversation._id,
-      data: newMessage,
+      data: {
+        ...savedMessage.toObject(),
+        senderRole: user.role,
+      },
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -126,6 +143,17 @@ export const readMessage = async (req, res) => {
     const user = req.user;
     const { conversationId } = req.body;
     const conversation = await Conversation.findById(conversationId);
+    const participantExists = conversation.participants.some(
+      (participant) => participant.userId.toString() === user._id
+    );
+    if (!participantExists) {
+      conversation.participants.push({
+        userId: user._id,
+        fullName: user.fullName,
+        role: user.role,
+        joinedAt: new Date(),
+      });
+    }
     if (!conversation)
       return res.status(404).json({ error: "Conversation not found" });
     // ? Tìm ra các tin nhắn đã đọc
@@ -142,6 +170,7 @@ export const readMessage = async (req, res) => {
         conversation: conversation._id,
       });
     }
+    return res.status(200).json({ message: "Tin nhắn đã đọc" });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -184,38 +213,7 @@ export const deleteMessage = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-// TODO: Viết API thêm người tham gia với quyền admin/staff và cập nhật người đọc
-export const addParticipantAndRead = async (req, res) => {
-  try {
-    const user = req.user;
-    const { conversationId } = req.params;
-    const conversation = await Conversation.findById(conversationId);
-    if (!conversation)
-      return res.status(404).json({ error: "Conversation not found" });
-    conversation.participants.push({
-      userId: user._id,
-      fullName: user.fullName,
-      role: user.role,
-      joinedAt: new Date(),
-    });
-    conversation.status = "active";
-    conversation.messages.forEach((message) => {
-      message.readBy.push(user._id);
-    });
-    conversation.statusLogs.push({
-      status: "active",
-      updateBy: user._id,
-      updatedAt: new Date(),
-    });
-    await conversation.save();
-    return res.status(200).json({
-      message: "Thêm người tham gia thành công",
-      conversation: conversation._id,
-    });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
+
 // TODO: Viết API hiển thị tin nhắn phía người dùng
 export const getMessagesFromClient = async (req, res) => {
   try {
