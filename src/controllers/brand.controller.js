@@ -85,7 +85,7 @@ export const getAllBrands = async (req, res) => {
 
     if (options.pagination === false) {
       // Trả về mảng khi không phân trang
-      return res.status(200).json(countProduct);
+      return res.status(200).json({docs: countProduct});
     } else {
       // Trả về object phân trang như cũ
       return res.status(200).json({ ...brands, docs: countProduct });
@@ -174,6 +174,10 @@ export const deleteBrand = async (req, res) => {
           isActive: true,
         });
       }
+      if (brand.slug === unBrand.slug)
+        return res
+          .status(400)
+          .json({ message: "Không thể xóa thương hiệu không xác định" });
       await productModel.updateMany(
         { brandId: id },
         { brandId: unBrand._id, brandName: unBrand.name }

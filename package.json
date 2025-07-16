@@ -4,16 +4,18 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "vite-node src/app.js"
+    "dev": "vite-node src/app.js",
+    "start": "node src/app.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "dayjs": "^1.11.13",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "google-auth-library": "^9.15.1",
@@ -36,6 +38,7 @@
     "vnpay": "^2.2.0"
   },
   "devDependencies": {
+    "nodemon": "^3.1.10",
     "vite": "^6.3.2",
     "vite-plugin-node": "^5.0.1"
   }

@@ -2,7 +2,9 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
+import { createServer } from "http";
 import mongoose from "mongoose";
+import { startVoucherStatusJob } from "./cron/voucherStatusCron.js";
 import userRouter from "./routers/admin.user.router";
 import attributeRouter from "./routers/attribute.router";
 import authRouter from "./routers/auth.router";
@@ -10,15 +12,17 @@ import brandRouter from "./routers/brand.router";
 import cartRouter from "./routers/cart.router";
 import categoryRouter from "./routers/category.router";
 import commentRouter from "./routers/comment.router";
+import nontificationRouter from "./routers/nontification.router";
 import orderRouter from "./routers/order.router";
 import paymentRouter from "./routers/payment.router";
 import productRouter from "./routers/product.router";
 import staffRrouter from "./routers/staff.router";
 import voucherRouter from "./routers/voucher.router";
-import { createServer } from "http";
 import { setupSocket } from "./socket";
 import nontificationRouter from "./routers/nontification.router";
+import statisticsRouter from "./routers/statistics.router";
 import { startVoucherStatusJob } from "./cron/voucherStatusCron.js";
+import conversationRouter from "./routers/conversation.router";
 
 const app = express();
 const httpServer = createServer(app);
@@ -65,9 +69,13 @@ app.use("/api", staffRrouter);
 app.use("/api", paymentRouter);
 app.use("/api", orderRouter);
 app.use("/api", nontificationRouter);
+app.use("/api", statisticsRouter);
+app.use("/api", conversationRouter);
 
 httpServer.listen(process.env.PORT || 8080, () => {
   console.log(
     `Server listening on: http://localhost:${process.env.PORT || 8080}`
   );
 });
+
+export const viteNodeApp = app;
