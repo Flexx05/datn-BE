@@ -13,6 +13,17 @@ export const getOrderStatisticsSchema = Joi.object({
     "string.base": "Phương thức thanh toán không hợp lệ",
     "any.only": "Phương thức thanh toán chỉ được là 'COD' hoặc 'VNPAY'",
   }),
-  page: Joi.number().integer().min(1).optional(), // 👈 THÊM DÒNG NÀY
-  limit: Joi.number().integer().min(1).optional(),
+  page: Joi.number().integer().min(1).optional(),
+  limit: Joi.number()
+    .integer()
+    .min(1)
+    .max(100)
+    .optional()
+    .default(10)
+    .messages({
+      "number.base": "Số lượng hiển thị phải là số",
+      "number.integer": "Số lượng hiển thị phải là số nguyên",
+      "number.min": "Số lượng hiển thị tối thiểu là 1",
+      "number.max": "Số lượng hiển thị tối đa là 100",
+    }),
 });

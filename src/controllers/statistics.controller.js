@@ -70,7 +70,7 @@ export const getTopProducts = async (req, res) => {
         999
       );
 
-  const { categoryId, brandId, limit = 10 } = value;
+  const { categoryId, brandId, limit = 10, page = 1 } = value;
 
   try {
     const orders = await Order.find({
@@ -177,7 +177,11 @@ export const getTopProducts = async (req, res) => {
       })
       .sort((a, b) => b.quantity - a.quantity);
 
-    if (!result.length) {
+    const totalDocs = result.length;
+    const totalPages = Math.ceil(totalDocs / limit);
+    const pagedResult = result.slice((page - 1) * limit, page * limit);
+
+    if (!pagedResult.length) {
       return res.status(404).json({
         success: false,
         message: "Không có sản phẩm bán chạy trong khoảng thời gian này",
@@ -186,12 +190,15 @@ export const getTopProducts = async (req, res) => {
 
     return res.json({
       success: true,
-      docs: result, // Danh sách các sản phẩm bán chạy (đã lọc và tính toán đầy đủ thông tin)
-      totalDocs: result.length, // Tổng số sản phẩm bán được trong khoảng thời gian lọc
-      totalRevenue: result.reduce((sum, p) => sum + p.revenue, 0), // Tổng doanh thu của tất cả sản phẩm (đã trừ giảm giá)
-      totalQuantity: result.reduce((sum, p) => sum + p.quantity, 0), // Tổng số lượng sản phẩm đã bán (cộng dồn từ các sản phẩm)
-      totalOrderCount: uniqueOrderIds.size, // Tổng số đơn hàng có ít nhất một sản phẩm bán ra (không trùng đơn hàng)
+      docs: pagedResult, // Danh sách các sản phẩm bán chạy theo trang
+      totalDocs,
+      totalPages,
+      page,
       limit,
+      totalRevenue: result.reduce((sum, p) => sum + p.revenue, 0),
+      totalQuantity: result.reduce((sum, p) => sum + p.quantity, 0),
+      totalOrderCount: uniqueOrderIds.size,
+      allDocs: result, // Toàn bộ danh sách sản phẩm bán chạy đã lọc (không phân trang)
     });
   } catch (err) {
     console.error(err);
