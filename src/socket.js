@@ -19,17 +19,15 @@ export function setupSocket(httpServer) {
     // Nontification for admin
     socket.on("join-admin-room", () => {
       socket.join("admin");
-      console.log("Admin joined room");
     });
 
     socket.on("join-room", (userId) => {
       socket.join(userId);
-      console.log("User joined room");
     });
 
     socket.on("join-conversation", (conversationId) => {
       socket.join(conversationId);
-      console.log("User joined conversation");
+      console.log("Join conversation", conversationId);
     });
 
     // Check account status

@@ -27,6 +27,7 @@ const ParticipantSchema = new Schema(
     },
   },
   {
+    _id: false,
     versionKey: false,
   }
 );

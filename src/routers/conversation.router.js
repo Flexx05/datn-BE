@@ -1,6 +1,5 @@
 import { Router } from "express";
 import {
-  addParticipantAndRead,
   deleteMessage,
   getAllConversations,
   getConversationById,
@@ -21,6 +20,6 @@ router.get(
   getConversationById
 );
 router.post("/read-message", verifyToken, readMessage);
-router.get("conversation/user", verifyToken, getMessagesFromClient); // API Hiển thị tin nhắn phía client
+router.get("/conversation/user", verifyToken, getMessagesFromClient); // API Hiển thị tin nhắn phía client
 router.delete("/message/delete/:id", verifyToken, deleteMessage); // API Xóa tin nhắn có hiệu lực trong 5 phút
 export default router;

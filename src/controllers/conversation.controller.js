@@ -2,10 +2,11 @@ import dayjs from "dayjs";
 import mongoose from "mongoose";
 import Conversation from "../models/conversation.model";
 import { getSocketInstance } from "../socket";
+import { nontifyAdmin } from "./nontification.controller";
 
 export const getAllConversations = async (req, res) => {
   try {
-    const conversations = await Conversation.find();
+    const conversations = await Conversation.find().sort({ lastUpdated: -1 });
     return res.status(200).json(conversations);
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -70,7 +71,7 @@ export const sendMessage = async (req, res) => {
               updatedAt: new Date(),
             },
           ],
-          // chartType mặc định là 1
+          // chatType mặc định là 1
           createdBy: senderId,
           lastUpdated: new Date(),
         });
@@ -124,6 +125,23 @@ export const sendMessage = async (req, res) => {
       conversation: conversation._id,
       message: newMessage,
     });
+    io.to(conversation._id.toString()).emit("receive-message", {
+      senderId,
+      content: savedMessage.content,
+      createdAt: savedMessage.createdAt,
+    });
+    const customer = conversation.participants.find(
+      (participant) => participant.role === "user"
+    );
+    if (user.role === "user") {
+      await nontifyAdmin(
+        3,
+        "Có tin nhắn mới",
+        `Khách hàng ${customer.fullName} đã gửi tin nhắn mới`,
+        conversation._id
+      );
+    }
+
     return res.status(200).json({
       message: "Gửi tin nhắn thành công",
       conversation: conversation._id,
@@ -218,11 +236,21 @@ export const deleteMessage = async (req, res) => {
 export const getMessagesFromClient = async (req, res) => {
   try {
     const user = req.user;
-    const conversation = await Conversation.findOne({
+    let conversation = await Conversation.findOne({
       participants: { $elemMatch: { userId: user._id } },
     }).sort({ lastUpdated: -1 });
-    if (!conversation)
-      return res.status(404).json({ error: "Conversation not found" });
+    if (!conversation) {
+      conversation = await Conversation.create({
+        participants: [
+          {
+            userId: user._id,
+            role: user.role,
+            joinedAt: new Date(),
+            fullName: user.fullName,
+          },
+        ],
+      });
+    }
     return res.status(200).json(conversation);
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -232,3 +260,4 @@ export const getMessagesFromClient = async (req, res) => {
 // TODO: Tích hợp realtime chat
 // TODO: Tích hợp realtime cho cập nhật trạng thái đã đọc
 // TODO: Tích hợp realtime cho chức năng thêm người tham gia với quyền admin/staff
+// ! join vào phòng của admin để xử lý thông báo tin nhắn từ đó sẽ refech được danh sách đoạn chat

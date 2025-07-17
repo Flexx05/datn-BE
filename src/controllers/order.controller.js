@@ -398,15 +398,13 @@ export const createOrder = async (req, res) => {
 
         try {
           await nontifyAdmin(
-            "order",
-            orderSave.recipientInfo.name,
-            orderSave.status,
-            orderSave.orderCode,
+            0,
+            "Đơn hàng mới",
+            `Có một đơn hàng mới từ khách hàng ${orderSave.recipientInfo.name}`,
             orderSave._id
           );
         } catch (error) {
           console.error("Lỗi gửi thống báo cho admin:", error);
-          return res.status(400).json({ error: error.message });
         }
 
         return res.status(201).json({
@@ -729,10 +727,11 @@ export const updateOrderStatus = async (req, res) => {
         return res.status(404).json({ error: "Không tìm thấy người dùng" });
       if (user.role === "user") {
         await nontifyAdmin(
-          "status",
-          user.fullName,
-          order.status,
-          order.orderCode,
+          1,
+          "Đơn hàng cập nhật trạng thái",
+          `Đơn hàng ${order.orderCode} đã được cập nhật trạng thái: ${
+            statusMap[order.status]
+          }`,
           order._id
         );
       } else {
@@ -745,10 +744,7 @@ export const updateOrderStatus = async (req, res) => {
         });
       }
     } catch (error) {
-      console.log("Lỗi gửi thống báo cho người dùng: ", error);
-      return res
-        .status(500)
-        .json({ error: "Lỗi gửi thông báo cho người dùng" });
+      console.error("Lỗi gửi thống báo cho người dùng: ", error.message);
     }
 
     return res.status(200).json({
