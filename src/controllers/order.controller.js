@@ -1017,6 +1017,58 @@ export const cancelOrder = async (req, res) => {
   }
 };
 
-export const processOrderReturn = async(req, res) => {
-  
-}
+export const updateOrderTotal = async (req, res) => {
+  const session = await mongoose.startSession();
+  try {
+    session.startTransaction();
+
+    const { id } = req.params;
+    const { refundAmount } = req.body;
+
+    // Validate input
+    if (!refundAmount || typeof refundAmount !== "number" || refundAmount < 0) {
+      throw new Error("Refund amount must be a non-negative number");
+    }
+
+    // Find the order
+    const order = await Order.findById(id).session(session);
+    if (!order) {
+      throw new Error("Order not found");
+    }
+
+    // Calculate new totalAmount
+    const newTotalAmount = Math.max(0, order.totalAmount - refundAmount);
+
+    // Update order
+    order.totalAmount = newTotalAmount;
+
+    // If fully refunded, update paymentStatus to 2 ("Hoàn tiền")
+    if (newTotalAmount === 0) {
+      order.paymentStatus = 2;
+    }
+    order.status = 4
+    await order.save({ session });
+
+    await session.commitTransaction();
+    return res.status(200).json({
+      success: true,
+      message: "Order total updated successfully",
+      order: {
+        _id: order._id,
+        orderCode: order.orderCode,
+        totalAmount: order.totalAmount,
+        paymentStatus: order.paymentStatus,
+      },
+    });
+  } catch (error) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    return res.status(400).json({
+      success: false,
+      message: error.message || "Failed to update order total",
+    });
+  } finally {
+    await session.endSession();
+  }
+};
