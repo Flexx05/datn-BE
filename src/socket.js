@@ -27,7 +27,6 @@ export function setupSocket(httpServer) {
 
     socket.on("join-conversation", (conversationId) => {
       socket.join(conversationId);
-      console.log("Join conversation", conversationId);
     });
 
     // Check account status

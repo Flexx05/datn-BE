@@ -20,6 +20,7 @@ import staffRrouter from "./routers/staff.router";
 import voucherRouter from "./routers/voucher.router";
 import { setupSocket } from "./socket";
 import conversationRouter from "./routers/conversation.router";
+import { startConversationStatusCheckJob } from "./cron/conversationStatusCheck.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -45,8 +46,9 @@ mongoose
   .then(() => {
     console.log("Connected to MongoDB");
 
-    // 👉 Khởi động cron job cập nhật trạng thái voucher
-    startVoucherStatusJob();
+    // Start cron jobs
+    startVoucherStatusJob(); // Cron voucher
+    startConversationStatusCheckJob(); // Cron check conversation status
   })
   .catch((err) => {
     console.error("MongoDB connection failed:", err.message);

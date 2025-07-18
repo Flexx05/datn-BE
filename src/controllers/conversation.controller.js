@@ -49,7 +49,6 @@ export const sendMessage = async (req, res) => {
     if (!conversation && user.role !== "staff" && user.role !== "admin") {
       conversation = await Conversation.findOne({
         "participants.userId": senderId,
-        status: { $ne: "closed" },
       }).sort({ lastUpdated: -1 });
       //? Nếu không tìm thấy cuộc trò chuyện thì tạo mới
       if (!conversation) {
@@ -249,6 +248,13 @@ export const getMessagesFromClient = async (req, res) => {
             fullName: user.fullName,
           },
         ],
+        statusLogs: [
+          {
+            status: "active",
+            updateBy: user._id,
+            updatedAt: new Date(),
+          },
+        ],
       });
     }
     return res.status(200).json(conversation);
@@ -256,8 +262,9 @@ export const getMessagesFromClient = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-// TODO: Viết middleware ghi log vào statusLogs
-// TODO: Tích hợp realtime chat
-// TODO: Tích hợp realtime cho cập nhật trạng thái đã đọc
-// TODO: Tích hợp realtime cho chức năng thêm người tham gia với quyền admin/staff
-// ! join vào phòng của admin để xử lý thông báo tin nhắn từ đó sẽ refech được danh sách đoạn chat
+
+export const closedConversation = async (req, res) => {};
+
+// TODO: Tích hợp realtime cho chức năng thay đổi trạng thái cuộc trò chuyện
+// TODO: Thêm chức năng tin nhắn tự động
+// TODO: Thêm chức năng chat nhanh cho admin/staff
