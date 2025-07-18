@@ -23,6 +23,7 @@ import nontificationRouter from "./routers/nontification.router";
 import statisticsRouter from "./routers/statistics.router";
 import { startVoucherStatusJob } from "./cron/voucherStatusCron.js";
 import conversationRouter from "./routers/conversation.router";
+import orderStatisticsRouter from "./routers/order-statistics.router.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -71,6 +72,7 @@ app.use("/api", orderRouter);
 app.use("/api", nontificationRouter);
 app.use("/api", statisticsRouter);
 app.use("/api", conversationRouter);
+app.use("/api", orderStatisticsRouter);
 
 httpServer.listen(process.env.PORT || 8080, () => {
   console.log(

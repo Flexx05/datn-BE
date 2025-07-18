@@ -70,7 +70,7 @@ export const getTopProducts = async (req, res) => {
         999
       );
 
-  const { categoryId, brandId, limit = 10 } = value;
+  const { categoryId, brandId, limit = 10, page = 1 } = value;
 
   try {
     const orders = await Order.find({
@@ -87,9 +87,18 @@ export const getTopProducts = async (req, res) => {
     }
 
     const productStats = {};
+    const uniqueOrderIds = new Set();
 
+    // Duyệt qua từng đơn hàng để thống kê sản phẩm
     for (const order of orders) {
-      const seenProducts = new Set();
+      const seenProducts = new Set(); // Để đảm bảo mỗi sản phẩm chỉ được tính 1 lần cho orderCount
+      uniqueOrderIds.add(order._id.toString());
+
+      const discountAmount = order.discountAmount || 0;
+      const totalItemAmount = order.items.reduce(
+        (sum, item) => sum + (item.totalPrice || 0),
+        0
+      );
 
       for (const item of order.items) {
         const productId = item.productId?.toString();
@@ -103,11 +112,22 @@ export const getTopProducts = async (req, res) => {
           };
         }
 
+        const itemTotal = item.totalPrice || 0;
+
+        // Phân bổ giảm giá theo tỷ lệ nếu có voucher hoặc giảm giá
+        const itemDiscount =
+          totalItemAmount > 0
+            ? (itemTotal / totalItemAmount) * discountAmount
+            : 0;
+
+        const revenueAfterDiscount = itemTotal - itemDiscount;
+
         productStats[productId].quantity += item.quantity;
-        productStats[productId].revenue += item.totalPrice;
+        productStats[productId].revenue += revenueAfterDiscount;
         seenProducts.add(productId);
       }
 
+      // Tăng số đơn hàng chứa sản phẩm
       seenProducts.forEach((id) => {
         productStats[id].orderCount += 1;
       });
@@ -136,28 +156,32 @@ export const getTopProducts = async (req, res) => {
           0
         );
         return {
-          id: p._id,
-          name: p.name,
-          image: p.image?.[0] || null,
-          category: p.categoryName || null,
-          brand: p.brandName || null,
-          quantity: stat.quantity,
-          revenue: stat.revenue,
+          id: p._id, // ID của sản phẩm
+          name: p.name, // Tên sản phẩm
+          image: p.image?.[0] || null, // Ảnh đại diện sản phẩm (ảnh đầu tiên hoặc null nếu không có)
+          category: p.categoryName || null, // Tên danh mục (nếu có)
+          brand: p.brandName || null, // Tên thương hiệu (nếu có)
+          quantity: stat.quantity, // Tổng số lượng sản phẩm đã bán trong khoảng thời gian lọc
+          revenue: stat.revenue, // Tổng doanh thu từ sản phẩm (sau giảm giá nếu có)
           unitPrice:
-            stat.quantity > 0 ? Math.round(stat.revenue / stat.quantity) : 0,
-          orderCount: stat.orderCount || 0,
+            stat.quantity > 0 ? Math.round(stat.revenue / stat.quantity) : 0, // Đơn giá trung bình = doanh thu / số lượng (làm tròn số nguyên)
+          orderCount: stat.orderCount || 0, // Tổng số đơn hàng chứa sản phẩm này
           soldPercentage:
             totalQuantity > 0
               ? parseFloat(((stat.quantity / totalQuantity) * 100).toFixed(2))
-              : 0,
-          price:
-            p.variation?.[0]?.salePrice || p.variation?.[0]?.regularPrice || 0,
-          totalStock,
+              : 0, // Tỷ lệ bán = (số lượng sản phẩm này / tổng tất cả) * 100 (%)
+          currentPrice:
+            p.variation?.[0]?.salePrice || p.variation?.[0]?.regularPrice || 0, // Giá hiện tại của sản phẩm (ưu tiên salePrice nếu có)
+          totalStock, // Tổng số lượng tồn kho của tất cả các phiên bản sản phẩm
         };
       })
       .sort((a, b) => b.quantity - a.quantity);
 
-    if (!result.length) {
+    const totalDocs = result.length;
+    const totalPages = Math.ceil(totalDocs / limit);
+    const pagedResult = result.slice((page - 1) * limit, page * limit);
+
+    if (!pagedResult.length) {
       return res.status(404).json({
         success: false,
         message: "Không có sản phẩm bán chạy trong khoảng thời gian này",
@@ -166,12 +190,15 @@ export const getTopProducts = async (req, res) => {
 
     return res.json({
       success: true,
-      docs: result,
-      totalDocs: result.length,
+      docs: pagedResult, // Danh sách các sản phẩm bán chạy theo trang
+      totalDocs,
+      totalPages,
+      page,
+      limit,
       totalRevenue: result.reduce((sum, p) => sum + p.revenue, 0),
       totalQuantity: result.reduce((sum, p) => sum + p.quantity, 0),
-      totalOrderCount: result.reduce((sum, p) => sum + p.orderCount, 0),
-      limit,
+      totalOrderCount: uniqueOrderIds.size,
+      allDocs: result, // Toàn bộ danh sách sản phẩm bán chạy đã lọc (không phân trang)
     });
   } catch (err) {
     console.error(err);

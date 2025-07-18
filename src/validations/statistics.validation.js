@@ -32,4 +32,9 @@ export const getTopProductsSchema = Joi.object({
       "number.min": "Số lượng hiển thị tối thiểu là 1",
       "number.max": "Số lượng hiển thị tối đa là 100",
     }),
+  page: Joi.number().integer().min(1).optional().default(1).messages({
+    "number.base": "Trang phải là số",
+    "number.integer": "Trang phải là số nguyên",
+    "number.min": "Trang tối thiểu là 1",
+  }),
 });
