@@ -1,0 +1,236 @@
+import dayjs from "dayjs";
+import mongoose from "mongoose";
+import Conversation from "../models/conversation.model";
+
+export const getAllConversations = async (req, res) => {
+  try {
+    const conversations = await Conversation.find();
+    return res.status(200).json(conversations);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const getConversationById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const conversation = await Conversation.findById(id);
+    if (!conversation) {
+      return res.status(404).json({ error: "Conversation not found" });
+    }
+    return res.status(200).json(conversation);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const sendMessage = async (req, res) => {
+  try {
+    const { content, conversationId } = req.body;
+    const user = req.user;
+    const senderId = user._id;
+    if (!content) return res.status(400).json({ error: "Content is required" });
+
+    let conversation;
+
+    // ? Nếu có truyền conversationId thì tìm kiếm theo ID
+    if (conversationId) {
+      if (!mongoose.Types.ObjectId.isValid(conversationId))
+        return res.status(400).json({ error: "ConversationId không hợp lệ" });
+
+      conversation = await Conversation.findById(conversationId);
+      if (!conversation)
+        return res.status(404).json({ error: "Conversation not found" });
+    }
+
+    // ? Nếu không có thì tìm kiếm theo người dùng và trạng thái khác "closed"
+    if (!conversation && user.role !== "staff" && user.role !== "admin") {
+      conversation = await Conversation.findOne({
+        "participants.userId": senderId,
+        status: { $ne: "closed" },
+      }).sort({ lastUpdated: -1 });
+      //? Nếu không tìm thấy cuộc trò chuyện thì tạo mới
+      if (!conversation) {
+        conversation = await Conversation.create({
+          participants: [
+            {
+              userId: senderId,
+              fullName: user.fullName,
+              role: user.role,
+              joinedAt: new Date(),
+            },
+          ],
+          messages: [],
+          // status mặc định là active
+          statusLogs: [
+            {
+              status: "active",
+              updateBy: senderId,
+              updatedAt: new Date(),
+            },
+          ],
+          // chartType mặc định là 1
+          createdBy: senderId,
+          lastUpdated: new Date(),
+        });
+      }
+    }
+    if (!conversation)
+      return res
+        .status(400)
+        .json({ error: "Id đoạn chat là bắt buộc đối với staff/admin" });
+
+    // ? Tạo tin nhắn mới
+    const newMessage = {
+      senderId,
+      senderRole: user.role,
+      content,
+      readBy: [senderId],
+    };
+
+    // ? Thêm tin nhắn vào cuộc trò chuyện
+    conversation.messages.push(newMessage);
+    conversation.lastUpdated = new Date();
+
+    // ? Kiểm tra admin/staff nếu tham gia sẽ bị chặn
+    if (user.role === "staff" || user.role === "admin") {
+      const participantExists = conversation.participants.some(
+        (participant) => participant.userId.toString() === senderId
+      );
+      if (!participantExists)
+        return res
+          .status(400)
+          .json({ error: "Bạn chưa tham gia cuộc trò chuyện này" });
+    }
+
+    // ? Cập nhật trạng thái và lưu log nếu cần
+    if (conversation.status !== "active") {
+      conversation.status = "active";
+      conversation.updatedBy = senderId;
+    }
+
+    await conversation.save();
+    return res.status(200).json({
+      message: "Gửi tin nhắn thành công",
+      conversation: conversation._id,
+      data: newMessage,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// TODO: Viết API cập nhật trạng thái đã đọc
+export const readMessage = async (req, res) => {
+  try {
+    const user = req.user;
+    const { conversationId } = req.body;
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation)
+      return res.status(404).json({ error: "Conversation not found" });
+    // ? Tìm ra các tin nhắn đã đọc
+    const readedMessage = conversation.messages.find((message) => {
+      return message.readBy.includes(user._id);
+    });
+    if (!readedMessage) {
+      conversation.messages.forEach((message) => {
+        message.readBy.push(user._id);
+      });
+      await conversation.save();
+      return res.status(200).json({
+        message: "Đọc tin nhắn thành công",
+        conversation: conversation._id,
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// TODO: Viết API xóa tin nhắn
+export const deleteMessage = async (req, res) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    const conversation = await Conversation.findOne({
+      messages: {
+        $elemMatch: {
+          _id: id,
+          senderId: user._id,
+        },
+      },
+    });
+    if (!conversation)
+      return res.status(404).json({ error: "Conversation not found" });
+    const message = conversation.messages.find(
+      (message) => message._id.toString() == id
+    );
+    if (!message) return res.status(404).json({ error: "Message not found" });
+    const messageId = message._id;
+    const isWithin5Minutes = dayjs().diff(message.createdAt, "minute") <= 5;
+    if (!isWithin5Minutes)
+      return res
+        .status(400)
+        .json({ error: "Tin nhắn đã quá 5 phút, không thể xóa" });
+    await Conversation.findOneAndUpdate(
+      { "messages._id": messageId, "messages.senderId": user._id },
+      { $pull: { messages: { _id: messageId } } }
+    );
+    return res.status(200).json({
+      message: "Xóa tin nhắn thành công",
+      conversation: conversation._id,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+// TODO: Viết API thêm người tham gia với quyền admin/staff và cập nhật người đọc
+export const addParticipantAndRead = async (req, res) => {
+  try {
+    const user = req.user;
+    const { conversationId } = req.params;
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation)
+      return res.status(404).json({ error: "Conversation not found" });
+    conversation.participants.push({
+      userId: user._id,
+      fullName: user.fullName,
+      role: user.role,
+      joinedAt: new Date(),
+    });
+    conversation.status = "active";
+    conversation.messages.forEach((message) => {
+      message.readBy.push(user._id);
+    });
+    conversation.statusLogs.push({
+      status: "active",
+      updateBy: user._id,
+      updatedAt: new Date(),
+    });
+    await conversation.save();
+    return res.status(200).json({
+      message: "Thêm người tham gia thành công",
+      conversation: conversation._id,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+// TODO: Viết API hiển thị tin nhắn phía người dùng
+export const getMessagesFromClient = async (req, res) => {
+  try {
+    const user = req.user;
+    const conversation = await Conversation.findOne({
+      participants: { $elemMatch: { userId: user._id } },
+    }).sort({ lastUpdated: -1 });
+    if (!conversation)
+      return res.status(404).json({ error: "Conversation not found" });
+    return res.status(200).json(conversation);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+// TODO: Viết middleware ghi log vào statusLogs
+// TODO: Tích hợp realtime chat
+// TODO: Tích hợp realtime cho cập nhật trạng thái đã đọc
+// TODO: Tích hợp realtime cho chức năng thêm người tham gia với quyền admin/staff

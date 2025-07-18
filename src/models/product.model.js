@@ -109,6 +109,14 @@ const productSchema = new Schema(
       type: Boolean,
       default: true,
     },
+    inStock: {
+      type: Boolean,
+      default: true,
+    },
+    selled: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,

@@ -174,6 +174,10 @@ export const deleteBrand = async (req, res) => {
           isActive: true,
         });
       }
+      if (brand.slug === unBrand.slug)
+        return res
+          .status(400)
+          .json({ message: "Không thể xóa thương hiệu không xác định" });
       await productModel.updateMany(
         { brandId: id },
         { brandId: unBrand._id, brandName: unBrand.name }

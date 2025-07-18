@@ -140,6 +140,38 @@
               ]
             }
           }
+        },
+        {
+          "name": "Update Product Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/product/update-status/{{id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "update-status", "{{id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Variation Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/product/update-variation-status/{{id}}/{{variationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["product", "update-variation-status", "{{id}}", "{{variationId}}"]
+            }
+          }
         }
       ]
     },
@@ -544,9 +576,9 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{base_url}}/api/categories/get-all-subcategory/:parentId",
+              "raw": "{{baseUrl}}/api/categories/get-all-subcategory/:parentId",
               "host": [
-                "{{base_url}}/api/categories"
+                "{{baseUrl}}/api/categories"
               ],
               "path": [
                 "get-all-subcategory",
@@ -560,9 +592,9 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{base_url}}/api/categories/get-subcategory-by-id/:id",
+              "raw": "{{baseUrl}}/api/categories/get-subcategory-by-id/:id",
               "host": [
-                "{{base_url}}/api/categories"
+                "{{baseUrl}}/api/categories"
               ],
               "path": [
                 "get-subcategory-by-id",
@@ -576,9 +608,9 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{base_url}}/api/categories/show-subcategory/:slug",
+              "raw": "{{baseUrl}}/api/categories/show-subcategory/:slug",
               "host": [
-                "{{base_url}}/api/categories"
+                "{{baseUrl}}/api/categories"
               ],
               "path": [
                 "show-subcategory",
@@ -618,14 +650,63 @@
           "request": {
             "method": "DELETE",
             "url": {
-              "raw": "{{base_url}}/api/categories/delete-subcategory/:id",
+              "raw": "{{baseUrl}}/api/categories/delete-subcategory/:id",
               "host": [
-                "{{base_url}}/api/categories"
+                "{{baseUrl}}/api/categories"
               ],
               "path": [
                 "delete-subcategory",
                 ":id"
               ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Conversation",
+      "item": [
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"senderId\": \"user_id_1\",\n  \"receiverId\": \"user_id_2\",\n  \"message\": \"Xin chào!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/send-message",
+              "host": ["{{baseUrl}}"],
+              "path": ["send-message"]
+            }
+          }
+        },
+        {
+          "name": "Get All Conversations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/conversations",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations"]
+            }
+          }
+        },
+        {
+          "name": "Get Conversation By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/conversations/{{id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations", "{{id}}"]
             }
           }
         }
