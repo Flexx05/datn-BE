@@ -1,4 +1,3 @@
-// controllers/statistics.controller.js
 import Order from "../models/order.model.js";
 import { getOrderStatisticsSchema } from "../validations/order-statistics.validation.js";
 
@@ -71,20 +70,46 @@ export const getOrderStatistics = async (req, res) => {
       });
     }
 
+    // Tổng doanh thu
     const totalRevenue = allOrders.reduce(
       (sum, o) => sum + (o.totalAmount || 0),
       0
     );
-
     const totalOrders = allOrders.length;
     const totalPages = Math.ceil(totalDocs / limit);
+
+    // === THỐNG KÊ HÔM NAY ===
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    // Đơn hoàn thành và đã thanh toán hôm nay => tính doanh thu hôm nay
+    const todayRevenueOrders = await Order.find({
+      createdAt: { $gte: todayStart, $lte: todayEnd },
+      status: 4,
+      paymentStatus: 1,
+    });
+
+    const todayRevenue = todayRevenueOrders.reduce(
+      (sum, o) => sum + (o.totalAmount || 0),
+      0
+    );
+
+    // Đơn đã xác nhận hôm nay => tính số lượng đơn đặt hôm nay
+    const todayOrdersCount = await Order.countDocuments({
+      createdAt: { $gte: todayStart, $lte: todayEnd },
+      status: { $nin: [5, 6] }, // không tính đơn đã hủy hoặc hoàn trả
+    });
 
     return res.json({
       success: true,
       totalOrders,
       totalRevenue,
-      orders, // cho bảng (limit)
-      allOrders, // cho biểu đồ (không limit)
+      todayRevenue,
+      todayOrdersCount,
+      orders, // phân trang
+      allOrders, // không phân trang, cho biểu đồ
       pagination: {
         totalDocs,
         totalPages,
