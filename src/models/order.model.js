@@ -16,6 +16,18 @@ const orderItemSchema = new Schema(
       type: String,
       required: true,
     },
+    image: {
+      type: String
+    },
+    slug: {
+      type: String,
+    },
+    size: {
+      type: String,
+    },
+    color: {
+      type: String,
+    },
     quantity: {
       type: Number,
       required: true,
@@ -97,7 +109,7 @@ const orderSchema = new mongoose.Schema(
       // 6: Hoan hang
       default: 0,
     },
-  
+
     paymentStatus: {
       type: Number,
       enum: [0, 1, 2, 3],
@@ -119,25 +131,16 @@ const orderSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    returnRequest: {
-      returnStatus: {
-        type: String,
-        enum: ["Khong yeu cau", "Yeu cau hoan hang", "Da duyet", "Tu choi"],
-        default: "Khong yeu cau",
-      },
-      clientReason: {
-        type: String,
-        default: null, // lý do của khách hàng khi yêu cầu hoàn hàng
-      },
-      adminNote: {
-        type: String,
-        default: null, // ghi chú của admin về yêu cầu hoàn hàng
-      },
-      refundMethod: {
-        type: String,
-        enum: ["COD", "Vi"],
-        default: null,
-      },
+    returnStatus: {
+      type: Number,
+      enum: [0, 1, 2, 3, 4, 5],
+      // 0: Chua yeu cau
+      // 1: Da yeu cau
+      // 2: Da duyet
+      // 3: Da tu choi
+      // 4: Da hoan tien
+      // 5: Da huy
+      default: 0,
     },
     completedBy: {
       type: String,
@@ -151,6 +154,11 @@ const orderSchema = new mongoose.Schema(
     cancelReason: {
       type: String,
       default: null,
+    },
+    transactionId: {
+      type: Schema.Types.ObjectId,
+      ref: "Transaction",
+      default: null, // Liên kết với giao dịch hoàn tiền
     },
   },
   {
