@@ -49,6 +49,11 @@ const authSchema = new Schema(
       type: String,
       default: null,
     },
+    walletId: {
+      type: Schema.Types.ObjectId,
+      ref: "Wallet",
+      default: null
+    },
   },
   {
     timestamps: true,
