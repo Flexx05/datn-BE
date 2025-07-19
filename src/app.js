@@ -18,10 +18,13 @@ import voucherRouter from "./routers/voucher.router";
 import { createServer } from "http";
 import { setupSocket } from "./socket";
 import nontificationRouter from "./routers/nontification.router";
+import statisticsRouter from "./routers/statistics.router";
+import { startVoucherStatusJob } from "./cron/voucherStatusCron.js";
+import nontificationRouter from "./routers/nontification.router";
 import walletRouter from "./routers/wallet.router.js";
 import returnRequestRouter from "./routers/returnRequest.router.js";
 import conversationRouter from "./routers/conversation.router";
-import { startVoucherStatusJob } from "./cron/voucherStatusCron.js";
+import orderStatisticsRouter from "./routers/order-statistics.router.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -68,12 +71,16 @@ app.use("/api", staffRrouter);
 app.use("/api", paymentRouter);
 app.use("/api", orderRouter);
 app.use("/api", nontificationRouter);
+app.use("/api", statisticsRouter);
 app.use("/api", walletRouter);
 app.use("/api", returnRequestRouter);
 app.use("/api", conversationRouter);
+app.use("/api", orderStatisticsRouter);
 
 httpServer.listen(process.env.PORT || 8080, () => {
   console.log(
     `Server listening on: http://localhost:${process.env.PORT || 8080}`
   );
 });
+
+export const viteNodeApp = app;

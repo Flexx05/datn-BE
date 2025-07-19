@@ -16,7 +16,7 @@ export function setupSocket(httpServer) {
   io.on("connection", (socket) => {
     console.log("A client connected: " + socket.id);
 
-    // Nontification for admin Admin
+    // Nontification Admin
     socket.on("join-admin-room", () => {
       socket.join("admin");
       console.log("Admin joined room");

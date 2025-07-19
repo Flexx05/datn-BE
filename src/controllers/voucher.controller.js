@@ -65,13 +65,21 @@ export const getAllVoucher = async (req, res) => {
     const { _page=1, _limit= 10, _sort="createdAt", _order, code, status, voucherType, isDeleted } = req.query;
     let query = {};
     
-    // Filter theo isDeleted (mặc định là false - chưa xóa)
-    if (isDeleted !== undefined) {
-      query.isDeleted = isDeleted === 'true';
-    } else {
-      query.isDeleted = false; // Mặc định chỉ lấy voucher chưa xóa
+
+    // Nếu truyền ?isDeleted=true
+    if (isDeleted === 'true') {
+      query.isDeleted = true;
     }
-    
+    // Nếu truyền ?isDeleted=false
+    else if (isDeleted === 'false') {
+      query.isDeleted = false;
+    }
+    // Nếu là all → không thêm gì → sẽ lấy hết tất cả
+    // Nếu không truyền gì → mặc định là false
+    else if (!isDeleted || isDeleted === '') {
+      query.isDeleted = false;
+    }
+ 
     // Tìm kiếm theo code nếu có
     if (code) {
       query.code = { $regex: code, $options: "i" };
@@ -146,6 +154,41 @@ export const updateVoucher = async (req, res) => {
         message: "Không tìm thấy voucher để cập nhật",
       });
     }
+
+    if (currentVoucher.isDeleted) {
+      return res.status(400).json({
+        message: "Voucher đã bị xóa. Không thể cập nhật.",
+      });
+    }
+
+    if (currentVoucher.voucherStatus === "expired") {
+      return res.status(400).json({
+        message: "Voucher đã hết hạn. Không thể cập nhật.",
+      });
+    }
+
+
+    if (
+      currentVoucher.voucherStatus === "active" &&
+      req.body.startDate &&
+      new Date(req.body.startDate).getTime() !== new Date(currentVoucher.startDate).getTime()
+    ) {
+      return res.status(400).json({
+        message: "Không thể thay đổi ngày bắt đầu khi voucher đang hoạt động.",
+      });
+    }
+    
+
+
+    if (currentVoucher.voucherStatus === "active") {
+      if (req.body.quantity && req.body.quantity < currentVoucher.quantity) {
+        return res.status(400).json({
+          message: "Không thể giảm số lượng voucher khi đang hoạt động.",
+        });
+      }
+    }
+    
+    
     // Chuẩn bị dữ liệu cập nhật
     const updateData = { ...req.body };
     const now = new Date();

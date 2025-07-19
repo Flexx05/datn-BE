@@ -151,7 +151,7 @@ export const getAllCategories = async (req, res) => {
     );
 
     if (options.pagination === false) {
-      return res.status(200).json(resultDocs);
+      return res.status(200).json({docs: resultDocs});
     } else {
       return res.status(200).json({ ...categories, docs: resultDocs });
     }
