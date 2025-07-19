@@ -19,26 +19,28 @@ export const startConversationStatusCheckJob = () => {
 
       // Cập nhật active => waiting
       for (const conv of conversationActive) {
-        const lastMessage = conv.messages?.[conv.messages.length - 1];
-        const lastSender = lastMessage?.senderId || null;
-
-        await Conversation.findByIdAndUpdate(conv._id, {
+        conv.status = "waiting";
+        conv.updatedBy;
+        conv.statusLogs.push({
           status: "waiting",
-          updatedBy: lastSender,
-          lastUpdated: now,
+          updateBy: conv.updatedBy,
+          updatedAt: now,
         });
+        conv.lastUpdated = now;
+        await conv.save();
       }
 
       // Cập nhật waiting => closed
       for (const conv of conversationWaiting) {
-        const lastMessage = conv.messages?.[conv.messages.length - 1];
-        const lastSender = lastMessage?.senderId || null;
-
-        await Conversation.findByIdAndUpdate(conv._id, {
+        conv.status = "closed";
+        conv.updatedBy;
+        conv.statusLogs.push({
           status: "closed",
-          updatedBy: lastSender,
-          lastUpdated: now,
+          updateBy: conv.updatedBy,
+          updatedAt: now,
         });
+        conv.lastUpdated = now;
+        await conv.save();
       }
 
       if (conversationActive.length > 0 || conversationWaiting.length > 0) {
