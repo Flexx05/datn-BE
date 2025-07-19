@@ -3,6 +3,7 @@ import authModel from "../models/auth.model";
 import { getSocketInstance } from "../socket";
 import { updateUserInfoSchema } from "../validations/auth.validation";
 import Order from "../models/order.model";
+import { sendMail } from "../utils/sendMail";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -81,7 +82,7 @@ export const getUserById = async (req, res) => {
 export const updateUserStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { isActive } = req.body;
+    const { isActive, reason } = req.body;
 
     if (isActive === undefined || typeof isActive !== "boolean") {
       return res.status(400).json({
@@ -123,6 +124,30 @@ export const updateUserStatus = async (req, res) => {
         isActive: false,
         error: "Tài khoản đã bị khóa",
       });
+      
+      if (reason && updatedUser.email) {
+        const subject = "Tài khoản của bạn đã bị khóa";
+        const html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #f5222d;">Tài khoản của bạn đã bị khóa</h2>
+            <p>Xin chào <strong>${updatedUser.fullName || updatedUser.email}</strong>,</p>
+            <p>Tài khoản của bạn đã bị khóa bởi quản trị viên với lý do sau:</p>
+            <div style="background: #fffbe6; border-left: 4px solid #faad14; padding: 12px 16px; margin: 16px 0;">
+              <b>Lý do:</b> ${reason}
+            </div>
+            <p>Nếu bạn có thắc mắc hoặc cần hỗ trợ, vui lòng liên hệ với chúng tôi để được giải đáp.</p>
+            <div style="text-align: right; margin-top: 40px;">
+              <p>Trân trọng,</p>
+              <i><strong>Đội ngũ Binova</strong></i>
+            </div>
+          </div>
+        `;
+        try {
+          await sendMail({ to: updatedUser.email, subject, html });
+        } catch (mailErr) {
+          console.error("Lỗi gửi email khóa tài khoản:", mailErr);
+        }
+      }
     }
 
     return res.status(200).json({
