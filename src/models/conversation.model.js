@@ -38,16 +38,19 @@ const MessageSchema = new Schema(
     senderId: {
       type: Schema.Types.ObjectId,
       ref: "Auth",
-      required: [true, "Sender ID is required"],
     },
     senderRole: {
       type: String,
-      enum: ["admin", "staff", "user"],
+      enum: ["admin", "staff", "user", "system"],
       required: [true, "Sender role is required"],
     },
     content: {
       type: String,
       required: [true, "Content is required"],
+    },
+    images: {
+      type: [String],
+      default: [],
     },
     readBy: {
       type: [String],
@@ -55,7 +58,7 @@ const MessageSchema = new Schema(
     },
   },
   {
-    timestamps: true,
+    timestamps: { createdAt: true, updatedAt: false },
     versionKey: false,
   }
 );
@@ -135,7 +138,6 @@ export default Conversation;
 
 // ! Middleware để ghi log vào statusLogs
 
-// Middleware: Ghi log trạng thái khi dùng .save()
 ConversationSchema.pre("save", function (next) {
   if (this.isModified("status") && this.updatedBy) {
     this.statusLogs.push({
@@ -147,34 +149,5 @@ ConversationSchema.pre("save", function (next) {
 
   // Cập nhật thời gian chỉnh sửa
   this.lastUpdated = new Date();
-  next();
-});
-
-// Middleware: Ghi log trạng thái khi dùng findByIdAndUpdate
-ConversationSchema.pre("findByIdAndUpdate", function (next) {
-  const update = this.getUpdate();
-
-  if (!update) return next();
-
-  // Trường hợp sử dụng $set: { status: ..., updatedBy: ... }
-  const status = update.status || update.$set?.status;
-  const updatedBy = update.updatedBy || update.$set?.updatedBy;
-
-  if (status && updatedBy) {
-    const logEntry = {
-      status,
-      updateBy: updatedBy,
-      updatedAt: new Date(),
-    };
-
-    // Thêm log vào statusLogs
-    if (!update.$push) update.$push = {};
-    update.$push.statusLogs = logEntry;
-  }
-
-  // Luôn cập nhật lastUpdated
-  if (!update.$set) update.$set = {};
-  update.$set.lastUpdated = new Date();
-
   next();
 });

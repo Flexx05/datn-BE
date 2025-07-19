@@ -31,9 +31,13 @@ export const sendMessage = async (req, res) => {
     const { content, conversationId } = req.body;
     const user = req.user;
     const senderId = user._id;
+    const io = getSocketInstance();
+
     if (!content) return res.status(400).json({ error: "Content is required" });
 
     let conversation;
+    let isNewConversation = false;
+    let isStatusChangedToActive = false;
 
     // ? Nếu có truyền conversationId thì tìm kiếm theo ID
     if (conversationId) {
@@ -52,6 +56,7 @@ export const sendMessage = async (req, res) => {
       }).sort({ lastUpdated: -1 });
       //? Nếu không tìm thấy cuộc trò chuyện thì tạo mới
       if (!conversation) {
+        isNewConversation = true;
         conversation = await Conversation.create({
           participants: [
             {
@@ -81,6 +86,18 @@ export const sendMessage = async (req, res) => {
         .status(400)
         .json({ error: "Id đoạn chat là bắt buộc đối với staff/admin" });
 
+    // ? Cập nhật trạng thái và lưu log nếu cần
+    if (conversation.status !== "active") {
+      isStatusChangedToActive = true;
+      conversation.status = "active";
+      conversation.updatedBy = senderId;
+      conversation.statusLogs.push({
+        status: "active",
+        updateBy: senderId,
+        updatedAt: new Date(),
+      });
+    }
+
     // ? Tạo tin nhắn mới
     const newMessage = {
       senderId,
@@ -92,6 +109,7 @@ export const sendMessage = async (req, res) => {
     // ? Thêm tin nhắn vào cuộc trò chuyện
     conversation.messages.push(newMessage);
     conversation.lastUpdated = new Date();
+    conversation.updatedBy = senderId;
 
     // ? Kiểm tra admin/staff nếu chưa tham gia cuộc trò chuyện thì thêm người dùng với quyền admin/staff
     if (user.role === "staff" || user.role === "admin") {
@@ -107,11 +125,30 @@ export const sendMessage = async (req, res) => {
         });
       }
     }
-
-    // ? Cập nhật trạng thái và lưu log nếu cần
-    if (conversation.status !== "active") {
-      conversation.status = "active";
-      conversation.updatedBy = senderId;
+    const lastMessage = conversation.messages[conversation.messages.length - 1];
+    if (isStatusChangedToActive && lastMessage.senderRole === "user") {
+      const systemMessage = {
+        senderId: null,
+        senderRole: "system",
+        content:
+          "Xin chào! Chúng tôi đã nhận được tin nhắn của bạn, nhưng do có quá nhiều yêu cầu nên phản hồi của chúng tôi có thể bị chậm trễ. Chúng tôi sẽ phản hồi lại bạn sớm nhất có thể. Cảm ơn sự thông cảm của bạn.",
+        createdAt: new Date(),
+        readBy: [],
+      };
+      conversation.messages.push(systemMessage);
+    } else if (isNewConversation) {
+      const systemMessage = {
+        senderId: null,
+        senderRole: "system",
+        content: "Xin chào! Cảm ơn vì đã tin tưởng Binova. Bạn cần hỗ trợ gì?",
+        createdAt: new Date(),
+        readBy: [],
+      };
+      conversation.messages.push(systemMessage);
+      io.to(conversation._id.toString()).emit("new-message", {
+        conversation: conversation._id,
+        message: systemMessage,
+      });
     }
 
     await conversation.save();
@@ -119,7 +156,6 @@ export const sendMessage = async (req, res) => {
     const savedMessage =
       conversation.messages[conversation.messages.length - 1];
 
-    const io = getSocketInstance();
     io.to(conversation?._id.toString()).emit("new-message", {
       conversation: conversation._id,
       message: newMessage,
@@ -238,7 +274,9 @@ export const getMessagesFromClient = async (req, res) => {
     let conversation = await Conversation.findOne({
       participants: { $elemMatch: { userId: user._id } },
     }).sort({ lastUpdated: -1 });
+    let isNewConversation = false;
     if (!conversation) {
+      isNewConversation = true;
       conversation = await Conversation.create({
         participants: [
           {
@@ -255,6 +293,25 @@ export const getMessagesFromClient = async (req, res) => {
             updatedAt: new Date(),
           },
         ],
+        status: "waiting",
+        updatedBy: user._id,
+      });
+    }
+    if (isNewConversation) {
+      const systemMessage = {
+        senderId: null,
+        senderRole: "system",
+        content: "Xin chào! Cảm ơn vì đã tin tưởng Binova. Bạn cần hỗ trợ gì?",
+        createdAt: new Date(),
+        readBy: [],
+      };
+      conversation.messages.push(systemMessage);
+      await conversation.save();
+      const io = getSocketInstance();
+      io.to(conversation._id.toString()).emit("receive-message", {
+        senderId: null,
+        content: systemMessage.content,
+        createdAt: systemMessage.createdAt,
       });
     }
     return res.status(200).json(conversation);
@@ -263,8 +320,36 @@ export const getMessagesFromClient = async (req, res) => {
   }
 };
 
-export const closedConversation = async (req, res) => {};
+export const closedConversation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = req.user;
+    const conversation = await Conversation.findById(id);
+    if (!conversation)
+      return res.status(404).json({ error: "Conversation not found" });
+    conversation.status = "closed";
+    conversation.updateBy = user._id;
+    conversation.lastUpdated = new Date();
+    await conversation.save();
+    return res.status(200).json(conversation);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
 
-// TODO: Tích hợp realtime cho chức năng thay đổi trạng thái cuộc trò chuyện
-// TODO: Thêm chức năng tin nhắn tự động
+export const changeChatType = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { chatType } = req.body;
+    const conversation = await Conversation.findByIdAndUpdate(id, {
+      chatType,
+    });
+    if (!conversation)
+      return res.status(404).json({ error: "Conversation not found" });
+    return res.status(200).json(conversation);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+// TODO: Thêm chức năng tin nhắn tự động realtimme
 // TODO: Thêm chức năng chat nhanh cho admin/staff

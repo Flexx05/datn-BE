@@ -1,5 +1,7 @@
 import { Router } from "express";
 import {
+  changeChatType,
+  closedConversation,
   deleteMessage,
   getAllConversations,
   getConversationById,
@@ -22,4 +24,16 @@ router.get(
 router.post("/read-message", verifyToken, readMessage);
 router.get("/conversation/user", verifyToken, getMessagesFromClient); // API Hiển thị tin nhắn phía client
 router.delete("/message/delete/:id", verifyToken, deleteMessage); // API Xóa tin nhắn có hiệu lực trong 5 phút
+router.patch(
+  "/conversation/closed/:id",
+  verifyToken,
+  isAdminOrStaff,
+  closedConversation
+);
+router.patch(
+  "/conversation/chat-type/:id",
+  verifyToken,
+  isAdminOrStaff,
+  changeChatType
+);
 export default router;

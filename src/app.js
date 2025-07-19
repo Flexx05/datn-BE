@@ -21,6 +21,7 @@ import voucherRouter from "./routers/voucher.router";
 import { setupSocket } from "./socket";
 import conversationRouter from "./routers/conversation.router";
 import { startConversationStatusCheckJob } from "./cron/conversationStatusCheck.js";
+import { startDeleteConversationJob } from "./cron/deleteConversation.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -49,6 +50,7 @@ mongoose
     // Start cron jobs
     startVoucherStatusJob(); // Cron voucher
     startConversationStatusCheckJob(); // Cron check conversation status
+    startDeleteConversationJob(); // Cron delete conversation
   })
   .catch((err) => {
     console.error("MongoDB connection failed:", err.message);
