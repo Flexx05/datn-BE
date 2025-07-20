@@ -1,4 +1,3 @@
-import dayjs from "dayjs";
 import mongoose from "mongoose";
 import Conversation from "../models/conversation.model";
 import { getSocketInstance } from "../socket";
@@ -6,7 +5,30 @@ import { nontifyAdmin } from "./nontification.controller";
 
 export const getAllConversations = async (req, res) => {
   try {
-    const conversations = await Conversation.find().sort({ lastUpdated: -1 });
+    const { chatType, status } = req.query;
+    const query = {};
+
+    if (chatType !== undefined) {
+      const chatTypeNumber = Number(chatType);
+
+      if (chatTypeNumber === 0) {
+        // Lấy tất cả các loại chat cụ thể (nếu muốn lọc)
+        query.chatType = { $in: [1, 2, 3, 4] };
+      } else {
+        query.chatType = chatTypeNumber;
+      }
+    }
+
+    if (status !== undefined) {
+      if (status === "all") {
+        query.status = { $in: ["active", "waiting", "closed"] };
+      } else query.status = status;
+    }
+
+    const conversations = await Conversation.find(query).sort({
+      lastUpdated: -1,
+    });
+
     return res.status(200).json(conversations);
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -190,83 +212,6 @@ export const sendMessage = async (req, res) => {
   }
 };
 
-// TODO: Viết API cập nhật trạng thái đã đọc
-export const readMessage = async (req, res) => {
-  try {
-    const user = req.user;
-    const { conversationId } = req.body;
-    const conversation = await Conversation.findById(conversationId);
-    const participantExists = conversation.participants.some(
-      (participant) => participant.userId.toString() === user._id
-    );
-    if (!participantExists) {
-      conversation.participants.push({
-        userId: user._id,
-        fullName: user.fullName,
-        role: user.role,
-        joinedAt: new Date(),
-      });
-    }
-    if (!conversation)
-      return res.status(404).json({ error: "Conversation not found" });
-    // ? Tìm ra các tin nhắn đã đọc
-    const readedMessage = conversation.messages.find((message) => {
-      return message.readBy.includes(user._id);
-    });
-    if (!readedMessage) {
-      conversation.messages.forEach((message) => {
-        message.readBy.push(user._id);
-      });
-      await conversation.save();
-      return res.status(200).json({
-        message: "Đọc tin nhắn thành công",
-        conversation: conversation._id,
-      });
-    }
-    return res.status(200).json({ message: "Tin nhắn đã đọc" });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
-
-// TODO: Viết API xóa tin nhắn
-export const deleteMessage = async (req, res) => {
-  try {
-    const user = req.user;
-    const { id } = req.params;
-    const conversation = await Conversation.findOne({
-      messages: {
-        $elemMatch: {
-          _id: id,
-          senderId: user._id,
-        },
-      },
-    });
-    if (!conversation)
-      return res.status(404).json({ error: "Conversation not found" });
-    const message = conversation.messages.find(
-      (message) => message._id.toString() == id
-    );
-    if (!message) return res.status(404).json({ error: "Message not found" });
-    const messageId = message._id;
-    const isWithin5Minutes = dayjs().diff(message.createdAt, "minute") <= 5;
-    if (!isWithin5Minutes)
-      return res
-        .status(400)
-        .json({ error: "Tin nhắn đã quá 5 phút, không thể xóa" });
-    await Conversation.findOneAndUpdate(
-      { "messages._id": messageId, "messages.senderId": user._id },
-      { $pull: { messages: { _id: messageId } } }
-    );
-    return res.status(200).json({
-      message: "Xóa tin nhắn thành công",
-      conversation: conversation._id,
-    });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
-
 // TODO: Viết API hiển thị tin nhắn phía người dùng
 export const getMessagesFromClient = async (req, res) => {
   try {
@@ -351,5 +296,5 @@ export const changeChatType = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-// TODO: Thêm chức năng tin nhắn tự động realtimme
+// TODO: Tích hợp realtime vào cron thay đổi trạng thái
 // TODO: Thêm chức năng chat nhanh cho admin/staff

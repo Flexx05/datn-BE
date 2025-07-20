@@ -1,5 +1,6 @@
 import cron from "node-cron";
 import Conversation from "../models/conversation.model";
+import { getSocketInstance } from "../socket";
 
 export const startConversationStatusCheckJob = () => {
   cron.schedule("* * * * *", async () => {
@@ -42,6 +43,9 @@ export const startConversationStatusCheckJob = () => {
         conv.lastUpdated = now;
         await conv.save();
       }
+
+      const io = getSocketInstance();
+      io.to("admin").emit("conversation-updated");
 
       if (conversationActive.length > 0 || conversationWaiting.length > 0) {
         console.log(
