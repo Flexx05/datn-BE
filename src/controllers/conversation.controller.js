@@ -275,6 +275,11 @@ export const closedConversation = async (req, res) => {
     conversation.status = "closed";
     conversation.updateBy = user._id;
     conversation.lastUpdated = new Date();
+    conversation.statusLogs.push({
+      status: "closed",
+      updateBy: user._id,
+      updatedAt: new Date(),
+    });
     await conversation.save();
     return res.status(200).json(conversation);
   } catch (error) {
