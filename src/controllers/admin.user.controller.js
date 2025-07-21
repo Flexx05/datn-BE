@@ -245,16 +245,16 @@ export const resetUserPassword = async (req, res) => {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(trimpasswordNew, 10);
-    user.password = hashedPassword;
-    await user.save();
-
-    const isValid = await bcrypt.compare(trimpasswordOld, user.password);
-    if (!isValid) {
+       const isValid = await bcrypt.compare(trimpasswordOld, user.password);
+      if (!isValid) {
       return res
         .status(400)
         .json({ success: false, message: "Sai mật khẩu cũ" });
     }
+
+    const hashedPassword = await bcrypt.hash(trimpasswordNew, 10);
+    user.password = hashedPassword;
+    await user.save();
 
     console.log(`User ${id} đã đổi mật khẩu thành công lúc ${new Date()}`);
 
