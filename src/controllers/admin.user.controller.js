@@ -222,6 +222,7 @@ export const resetUserPassword = async (req, res) => {
         message: "Mật khẩu cũ và mật khẩu mới là bắt buộc",
       });
     }
+
     if (trimpasswordNew.length < 8) {
       return res.status(400).json({
         success: false,
@@ -237,7 +238,13 @@ export const resetUserPassword = async (req, res) => {
       });
     }
 
-    // kiểm tra tránh trùng lặp mật khẩu mới và cũ
+    const isValid = await bcrypt.compare(trimpasswordOld, user.password);
+    if (!isValid) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Sai mật khẩu cũ" });
+    }
+
     if (trimpasswordOld === trimpasswordNew) {
       return res.status(400).json({
         success: false,
@@ -248,13 +255,6 @@ export const resetUserPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(trimpasswordNew, 10);
     user.password = hashedPassword;
     await user.save();
-
-    const isValid = await bcrypt.compare(trimpasswordOld, user.password);
-    if (!isValid) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Sai mật khẩu cũ" });
-    }
 
     console.log(`User ${id} đã đổi mật khẩu thành công lúc ${new Date()}`);
 
