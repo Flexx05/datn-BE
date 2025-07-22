@@ -8,19 +8,6 @@ const ParticipantSchema = new Schema(
       ref: "Auth",
       required: [true, "Auth ID is required"],
     },
-    avatar: {
-      type: String,
-      default: null,
-    },
-    fullName: {
-      type: String,
-      required: [true, "Full name is required"],
-    },
-    role: {
-      type: String,
-      enum: ["admin", "staff", "user"],
-      required: [true, "Role is required"],
-    },
     joinedAt: {
       type: Date,
       default: Date.now,

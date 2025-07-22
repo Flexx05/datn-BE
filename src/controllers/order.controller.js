@@ -244,6 +244,7 @@ export const createOrder = async (req, res) => {
         discountAmount,
         totalAmount,
         status: 0,
+        review: 0,
         paymentStatus: 0,
         paymentMethod,
         expectedDeliveryDate,
@@ -525,6 +526,7 @@ export const updateOrderStatus = async (req, res) => {
       reason,
       cancelReason,
       userId,
+      review,
     } = req.body;
 
     // Kiểm tra các trường được phép cập nhật
@@ -535,6 +537,7 @@ export const updateOrderStatus = async (req, res) => {
       "cancelReason",
       "reason",
       "userId",
+      "review",
     ];
     const unknownFields = Object.keys(req.body).filter(
       (key) => !allowedFields.includes(key)
@@ -556,7 +559,28 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
     }
 
-    // Kiểm tra có thay đổi hay không
+    // Nếu có trường review, chỉ cập nhật review = 1
+    if (review !== undefined) {
+      order.review = 1;
+      // Lưu thay đổi
+      await order.save();
+      console.log("Order updated review:", order);
+
+      return res.status(200).json({
+        message: "Cập nhật review thành công",
+        order: {
+          id: order._id,
+          orderCode: order.orderCode,
+          status: order.status,
+          paymentStatus: order.paymentStatus,
+          deliveryDate: order.deliveryDate,
+          cancelReason: order.cancelReason,
+          review: order.review,
+        },
+      });
+    }
+
+    // Kiểm tra có thay đổi hay không cho các trường khác
     const isSame =
       order.status === status &&
       order.paymentStatus === paymentStatus &&
@@ -756,6 +780,7 @@ export const updateOrderStatus = async (req, res) => {
         paymentStatus: order.paymentStatus,
         deliveryDate: order.deliveryDate,
         cancelReason: order.cancelReason,
+        review: order.review,
       },
     });
   } catch (error) {
@@ -867,7 +892,7 @@ export const updatePaymentStatus = async (req, res) => {
                       order.orderCode
                     }</h2>
                     <p>Xin chào <strong>${
-                      orderSave.recipientInfo.name || "Quý khách"
+                      order.recipientInfo.name || "Quý khách"
                     }</strong>,</p>
                     <p>${paymentMessageMap[order.paymentStatus]}</p>
 

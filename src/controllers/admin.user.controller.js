@@ -124,13 +124,15 @@ export const updateUserStatus = async (req, res) => {
         isActive: false,
         error: "Tài khoản đã bị khóa",
       });
-      
+
       if (reason && updatedUser.email) {
         const subject = "Tài khoản của bạn đã bị khóa";
         const html = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
             <h2 style="color: #f5222d;">Tài khoản của bạn đã bị khóa</h2>
-            <p>Xin chào <strong>${updatedUser.fullName || updatedUser.email}</strong>,</p>
+            <p>Xin chào <strong>${
+              updatedUser.fullName || updatedUser.email
+            }</strong>,</p>
             <p>Tài khoản của bạn đã bị khóa bởi quản trị viên với lý do sau:</p>
             <div style="background: #fffbe6; border-left: 4px solid #faad14; padding: 12px 16px; margin: 16px 0;">
               <b>Lý do:</b> ${reason}
@@ -222,6 +224,7 @@ export const resetUserPassword = async (req, res) => {
         message: "Mật khẩu cũ và mật khẩu mới là bắt buộc",
       });
     }
+
     if (trimpasswordNew.length < 8) {
       return res.status(400).json({
         success: false,
@@ -237,19 +240,18 @@ export const resetUserPassword = async (req, res) => {
       });
     }
 
-    // kiểm tra tránh trùng lặp mật khẩu mới và cũ
+    const isValid = await bcrypt.compare(trimpasswordOld, user.password);
+    if (!isValid) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Sai mật khẩu cũ" });
+    }
+
     if (trimpasswordOld === trimpasswordNew) {
       return res.status(400).json({
         success: false,
         message: "Mật khẩu mới không được trùng với mật khẩu cũ",
       });
-    }
-
-       const isValid = await bcrypt.compare(trimpasswordOld, user.password);
-      if (!isValid) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Sai mật khẩu cũ" });
     }
 
     const hashedPassword = await bcrypt.hash(trimpasswordNew, 10);

@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Conversation from "../models/conversation.model";
 import { getSocketInstance } from "../socket";
 import { nontifyAdmin } from "./nontification.controller";
+import authModel from "../models/auth.model";
 
 export const getAllConversations = async (req, res) => {
   try {
@@ -25,9 +26,12 @@ export const getAllConversations = async (req, res) => {
       } else query.status = status;
     }
 
-    const conversations = await Conversation.find(query).sort({
-      lastUpdated: -1,
-    });
+    const conversations = await Conversation.find(query)
+      .sort({ lastUpdated: -1 })
+      .populate({
+        path: "participants.userId",
+        select: "fullName avatar role isActive",
+      });
 
     return res.status(200).json(conversations);
   } catch (error) {
@@ -38,7 +42,10 @@ export const getAllConversations = async (req, res) => {
 export const getConversationById = async (req, res) => {
   try {
     const { id } = req.params;
-    const conversation = await Conversation.findById(id);
+    const conversation = await Conversation.findById(id).populate({
+      path: "participants.userId",
+      select: "fullName avatar role isActive",
+    });
     if (!conversation) {
       return res.status(404).json({ error: "Conversation not found" });
     }
@@ -83,8 +90,6 @@ export const sendMessage = async (req, res) => {
           participants: [
             {
               userId: senderId,
-              fullName: user.fullName,
-              role: user.role,
               joinedAt: new Date(),
             },
           ],
@@ -128,6 +133,16 @@ export const sendMessage = async (req, res) => {
       readBy: [senderId],
     };
 
+    const customerInfo = await authModel.findById(
+      conversation.participants[0].userId
+    );
+
+    if (newMessage.senderRole !== "user" && customerInfo.isActive === false) {
+      return res
+        .status(400)
+        .json({ message: "Không thể gửi tin nhắn cho tài khoản bị khóa" });
+    }
+
     // ? Thêm tin nhắn vào cuộc trò chuyện
     conversation.messages.push(newMessage);
     conversation.lastUpdated = new Date();
@@ -141,8 +156,6 @@ export const sendMessage = async (req, res) => {
       if (!participantExists) {
         conversation.participants.push({
           userId: senderId,
-          fullName: user.fullName,
-          role: user.role,
           joinedAt: new Date(),
         });
       }
@@ -208,7 +221,8 @@ export const sendMessage = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Send Message Error:", error);
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -226,9 +240,7 @@ export const getMessagesFromClient = async (req, res) => {
         participants: [
           {
             userId: user._id,
-            role: user.role,
             joinedAt: new Date(),
-            fullName: user.fullName,
           },
         ],
         statusLogs: [
@@ -301,5 +313,3 @@ export const changeChatType = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-// TODO: Tích hợp realtime vào cron thay đổi trạng thái
-// TODO: Thêm chức năng chat nhanh cho admin/staff
