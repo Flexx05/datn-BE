@@ -133,12 +133,14 @@ export const sendMessage = async (req, res) => {
       readBy: [senderId],
     };
 
-    const customerInfo = await authModel.findById(participants[0].userId);
+    const customerInfo = await authModel.findById(
+      conversation.participants[0].userId
+    );
 
     if (newMessage.senderRole !== "user" && customerInfo.isActive === false) {
       return res
         .status(400)
-        .json({ error: "Không thể gửi tin nhắn cho tài khoản bị khóa" });
+        .json({ message: "Không thể gửi tin nhắn cho tài khoản bị khóa" });
     }
 
     // ? Thêm tin nhắn vào cuộc trò chuyện
@@ -219,7 +221,8 @@ export const sendMessage = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Send Message Error:", error);
+    return res.status(500).json({ message: error.message });
   }
 };
 
