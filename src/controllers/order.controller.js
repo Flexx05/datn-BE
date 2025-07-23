@@ -752,21 +752,30 @@ export const updateOrderStatus = async (req, res) => {
 
     try {
       const user = await authModel.findById(userId);
+      console.log(1);
+      
       if (!user)
         return res.status(404).json({ error: "Không tìm thấy người dùng" });
       if (user.role === "user") {
+        console.log(2);
         await nontifyAdmin(
-          "status",
+          1,
           user.fullName,
           order.status,
           order.orderCode,
           order._id
         );
       } else {
+        console.log(3);
+        
         const io = getSocketInstance();
+        console.log(4);
+        
         const message = `Đơn hàng ${
           order.orderCode
         } đã được cập nhật trạng thái: ${statusMap[order.status]}`;
+        console.log(5);
+        
         io.to(order.userId.toString()).emit("order-status-changed", {
           message,
         });
