@@ -27,6 +27,8 @@ import orderStatisticsRouter from "./routers/order-statistics.router.js";
 import { startConversationStatusCheckJob } from "./cron/conversationStatusCheck.js";
 import { startDeleteConversationJob } from "./cron/deleteConversation.js";
 import QuickChatRouter from "./routers/quickChat.router.js";
+import walletRouter from "./routers/wallet.router.js";
+import returnRequestRouter from "./routers/returnRequest.router.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -79,6 +81,8 @@ app.use("/api", statisticsRouter);
 app.use("/api", conversationRouter);
 app.use("/api", orderStatisticsRouter);
 app.use("/api", QuickChatRouter);
+app.use("/api", walletRouter);
+app.use("/api", returnRequestRouter);
 
 httpServer.listen(process.env.PORT || 8080, () => {
   console.log(
