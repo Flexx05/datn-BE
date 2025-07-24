@@ -26,6 +26,7 @@ import returnRequestRouter from "./routers/returnRequest.router.js";
 import conversationRouter from "./routers/conversation.router";
 import orderStatisticsRouter from "./routers/order-statistics.router.js";
 import rankRouter from "./routers/rank.router.js";
+import { startRankJob } from "./cron/rankCron.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -53,6 +54,7 @@ mongoose
 
     // 👉 Khởi động cron job cập nhật trạng thái voucher
     startVoucherStatusJob();
+    startRankJob();
   })
   .catch((err) => {
     console.error("MongoDB connection failed:", err.message);
