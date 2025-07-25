@@ -57,12 +57,10 @@ export const getConversationById = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { content, conversationId } = req.body;
+    const { content = "", files = [], conversationId } = req.body;
     const user = req.user;
     const senderId = user._id;
     const io = getSocketInstance();
-
-    if (!content) return res.status(400).json({ error: "Content is required" });
 
     let conversation;
     let isNewConversation = false;
@@ -130,6 +128,7 @@ export const sendMessage = async (req, res) => {
       senderId,
       senderRole: user.role,
       content,
+      files,
       readBy: [senderId],
     };
 

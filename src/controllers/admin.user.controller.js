@@ -168,46 +168,6 @@ export const updateUserStatus = async (req, res) => {
   }
 };
 
-export const updateUserActiveStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { activeStatus } = req.body;
-
-    if (activeStatus === undefined || typeof activeStatus !== "boolean") {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Trạng thái không hợp lệ, vui lòng cung cấp activeStatus là true hoặc false",
-      });
-    }
-
-    const updatedUser = await authModel
-      .findByIdAndUpdate(id, { activeStatus }, { new: true })
-      .select("-password");
-
-    if (!updatedUser) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy người dùng",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      data: updatedUser,
-      message: `Trạng thái hoạt động của người dùng đã được cập nhật thành ${
-        activeStatus ? "online" : "offline"
-      }`,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Lỗi khi cập nhật trạng thái hoạt động của người dùng",
-      error: error.message,
-    });
-  }
-};
-
 export const resetUserPassword = async (req, res) => {
   try {
     const { id } = req.params;

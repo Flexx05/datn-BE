@@ -33,9 +33,8 @@ const MessageSchema = new Schema(
     },
     content: {
       type: String,
-      required: [true, "Content is required"],
     },
-    images: {
+    files: {
       type: [String],
       default: [],
     },

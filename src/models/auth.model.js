@@ -29,9 +29,6 @@ const authSchema = new Schema(
       enum: ["staff", "admin", "user"],
       default: "user",
     },
-    activeStatus: {
-      type: Boolean,
-    },
     isActive: {
       type: Boolean,
       default: true,
