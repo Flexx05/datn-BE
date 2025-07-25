@@ -21,7 +21,7 @@ function getRankName(rank) {
 
 const calculateRank = async (user) => {
   const userId = user._id;
-  const date180DaysAgo = dayjs().subtract(7, "day").toDate();
+  const date180DaysAgo = dayjs().subtract(180, "day").toDate();
   const orders = await orderModel.find({
     userId,
     status: 4,
@@ -72,7 +72,7 @@ const calculateRank = async (user) => {
 const sendRankWarning = async (user) => {
   if (user.rank == null || user.rank === 0) return;
   const userId = user._id;
-  const date173DaysAgo = dayjs().subtract(3, "day").toDate();
+  const date173DaysAgo = dayjs().subtract(173, "day").toDate();
   const orders = await orderModel.find({
     userId,
     status: 4,

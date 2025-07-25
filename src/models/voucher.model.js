@@ -13,8 +13,17 @@ const voucherSchema = new Schema(
       required: [true, "Mã giảm giá là bắt buộc"],
       unique: true,
     },
-    link: {
+    userIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Auth",
+      },
+    ],
+    voucherScope: {
       type: String,
+      enum: ["shared", "private"],
+      default: "shared",
+      required: true,
     },
     description: {
       type: String,

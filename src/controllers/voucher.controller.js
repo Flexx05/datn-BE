@@ -1,15 +1,16 @@
-import Voucher from "../models/voucher.model.js"
+import Voucher from "../models/voucher.model.js";
 import {
   createVoucherSchema,
-  updateVoucherSchema
+  updateVoucherSchema,
 } from "../validations/voucher.validation.js";
-
 
 //Thêm mới voucher
 export const createVoucher = async (req, res) => {
   try {
     // Validate với Joi
-    const { error } = createVoucherSchema.validate(req.body, { abortEarly: false });
+    const { error } = createVoucherSchema.validate(req.body, {
+      abortEarly: false,
+    });
     if (error) {
       return res.status(400).json({
         message: "Dữ liệu không hợp lệ",
@@ -43,13 +44,24 @@ export const createVoucher = async (req, res) => {
       delete createData.maxDiscount;
     }
 
+    // Xử lý dùng riêng/dùng chung và quantity
+    if (Array.isArray(createData.userIds) && createData.userIds.length > 0) {
+      // Dùng riêng: quantity = số user, không cho nhập quantity từ client
+      createData.quantity = createData.userIds.length;
+    } else {
+      // Dùng chung: quantity lấy từ client, userIds là []
+      createData.userIds = [];
+      // quantity đã validate ở Joi
+    }
+
     // Tạo voucher mới
-    const newVoucher = await Voucher.create(createData);
+    const newVoucher = await Voucher.create({
+      ...createData,
+    });
     return res.status(200).json({
       message: "Tạo voucher thành công",
       data: newVoucher,
     });
-
   } catch (error) {
     return res.status(400).json({
       message: "Tạo voucher thất bại",
@@ -58,28 +70,35 @@ export const createVoucher = async (req, res) => {
   }
 };
 
-
 //Lấy tất cả voucher
 export const getAllVoucher = async (req, res) => {
   try {
-    const { _page=1, _limit= 10, _sort="createdAt", _order, code, status, voucherType, isDeleted } = req.query;
+    const {
+      _page = 1,
+      _limit = 10,
+      _sort = "createdAt",
+      _order,
+      code,
+      status,
+      voucherType,
+      isDeleted,
+    } = req.query;
     let query = {};
-    
 
     // Nếu truyền ?isDeleted=true
-    if (isDeleted === 'true') {
+    if (isDeleted === "true") {
       query.isDeleted = true;
     }
     // Nếu truyền ?isDeleted=false
-    else if (isDeleted === 'false') {
+    else if (isDeleted === "false") {
       query.isDeleted = false;
     }
     // Nếu là all → không thêm gì → sẽ lấy hết tất cả
     // Nếu không truyền gì → mặc định là false
-    else if (!isDeleted || isDeleted === '') {
+    else if (!isDeleted || isDeleted === "") {
       query.isDeleted = false;
     }
- 
+
     // Tìm kiếm theo code nếu có
     if (code) {
       query.code = { $regex: code, $options: "i" };
@@ -89,13 +108,14 @@ export const getAllVoucher = async (req, res) => {
       const allowedStatuses = ["active", "inactive", "expired"];
       if (!allowedStatuses.includes(status)) {
         return res.status(400).json({
-          message: "Trạng thái không hợp lệ. Chỉ chấp nhận: active, inactive, expired",
+          message:
+            "Trạng thái không hợp lệ. Chỉ chấp nhận: active, inactive, expired",
         });
       }
       query.voucherStatus = status;
     }
     //Tìm kiếm voucherType nếu có
-    if(voucherType){
+    if (voucherType) {
       query.voucherType = { $regex: voucherType, $options: "i" };
     }
 
@@ -106,14 +126,14 @@ export const getAllVoucher = async (req, res) => {
     };
 
     const listVouchers = await Voucher.paginate(query, options);
-    res.status(200).json(listVouchers)
+    res.status(200).json(listVouchers);
   } catch (error) {
     res.status(500).json({
       message: "Lỗi khi lấy danh sách voucher",
       error: error.message,
     });
   }
-}
+};
 
 // Lấy chi tiết voucher theo ID
 export const getByIdVoucher = async (req, res) => {
@@ -140,7 +160,9 @@ export const getByIdVoucher = async (req, res) => {
 export const updateVoucher = async (req, res) => {
   try {
     // Validate dữ liệu đầu vào
-    const { error } = updateVoucherSchema.validate(req.body, { abortEarly: false });
+    const { error } = updateVoucherSchema.validate(req.body, {
+      abortEarly: false,
+    });
     if (error) {
       return res.status(400).json({
         message: "Dữ liệu không hợp lệ",
@@ -167,34 +189,36 @@ export const updateVoucher = async (req, res) => {
       });
     }
 
-
     if (
       currentVoucher.voucherStatus === "active" &&
       req.body.startDate &&
-      new Date(req.body.startDate).getTime() !== new Date(currentVoucher.startDate).getTime()
+      new Date(req.body.startDate).getTime() !==
+        new Date(currentVoucher.startDate).getTime()
     ) {
       return res.status(400).json({
         message: "Không thể thay đổi ngày bắt đầu khi voucher đang hoạt động.",
       });
     }
-    
-
-
-    if (currentVoucher.voucherStatus === "active") {
-      if (req.body.quantity && req.body.quantity < currentVoucher.quantity) {
-        return res.status(400).json({
-          message: "Không thể giảm số lượng voucher khi đang hoạt động.",
-        });
-      }
+    if (
+      currentVoucher.voucherStatus === "active" &&
+      currentVoucher.voucherScope === "shared" &&
+      (!req.body.userIds || req.body.userIds.length === 0) && 
+      req.body.quantity &&
+      req.body.quantity < currentVoucher.quantity
+    ) {
+      return res.status(400).json({
+        message: "Không thể giảm số lượng voucher khi đang hoạt động.",
+      });
     }
-    
-    
+
     // Chuẩn bị dữ liệu cập nhật
     const updateData = { ...req.body };
     const now = new Date();
 
     // Tự động cập nhật trạng thái dựa trên ngày
-    const startDate = new Date(updateData.startDate || currentVoucher.startDate);
+    const startDate = new Date(
+      updateData.startDate || currentVoucher.startDate
+    );
     const endDate = new Date(updateData.endDate || currentVoucher.endDate);
 
     // Cập nhật trạng thái dựa trên thời gian hiện tại
@@ -204,6 +228,14 @@ export const updateVoucher = async (req, res) => {
       updateData.voucherStatus = "active";
     } else if (now < endDate) {
       updateData.voucherStatus = "inactive";
+    }
+
+    if (Array.isArray(updateData.userIds) && updateData.userIds.length > 0) {
+      updateData.voucherScope = "private";
+      updateData.quantity = updateData.userIds.length;
+    } else {
+      updateData.voucherScope = "shared";
+      updateData.userIds = [];
     }
 
     // Cập nhật voucher
@@ -257,7 +289,6 @@ export const deleteVoucher = async (req, res) => {
   }
 };
 
-
 // Khôi phục voucher từ thùng rác
 export const restoreVoucher = async (req, res) => {
   try {
@@ -282,7 +313,6 @@ export const restoreVoucher = async (req, res) => {
     return res.status(200).json({
       message: "Khôi phục voucher thành công.",
     });
-
   } catch (error) {
     return res.status(500).json({
       message: "Đã xảy ra lỗi. Vui lòng thử lại sau.",
@@ -290,9 +320,3 @@ export const restoreVoucher = async (req, res) => {
     });
   }
 };
-
-
-
-
-
-
