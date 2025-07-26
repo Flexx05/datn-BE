@@ -19,12 +19,6 @@ const voucherSchema = new Schema(
         ref: "Auth",
       },
     ],
-    voucherScope: {
-      type: String,
-      enum: ["shared", "private"],
-      default: "shared",
-      required: true,
-    },
     description: {
       type: String,
       required: [true, "Mô tả giảm giá là bắt buộc"],

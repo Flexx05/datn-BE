@@ -12,13 +12,6 @@ const createVoucherSchema = Joi.object({
   }),
   userIds: Joi.array().items(Joi.string()).optional(),
 
-  voucherScope: Joi.string()
-    .valid("shared", "private")
-    .default("shared")
-    .messages({
-      "any.only": "Phạm vi chỉ có thể là 'shared' hoặc 'private'",
-    }),
-
   description: Joi.string().required().messages({
     "any.required": "Mô tả giảm giá là bắt buộc",
   }),
@@ -77,7 +70,6 @@ const updateVoucherSchema = Joi.object({
   voucherType: Joi.string().valid("product", "shipping").optional(),
   userIds: Joi.array().items(Joi.string()).optional(),
   code: Joi.string().optional(),
-  voucherScope: Joi.string().valid("shared", "private").optional(),
   description: Joi.string().optional(),
   discountType: Joi.string().valid("fixed", "percent").optional(),
   discountValue: Joi.number().min(0).optional(),

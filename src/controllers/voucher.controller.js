@@ -199,16 +199,23 @@ export const updateVoucher = async (req, res) => {
         message: "Không thể thay đổi ngày bắt đầu khi voucher đang hoạt động.",
       });
     }
+
+    const wasPrivate =
+      Array.isArray(currentVoucher.userIds) &&
+      currentVoucher.userIds.length > 0;
+    const isNowShared = !req.body.userIds || req.body.userIds.length === 0;
+
     if (
       currentVoucher.voucherStatus === "active" &&
-      currentVoucher.voucherScope === "shared" &&
-      (!req.body.userIds || req.body.userIds.length === 0) && 
-      req.body.quantity &&
-      req.body.quantity < currentVoucher.quantity
+      isNowShared &&
+      !wasPrivate // chỉ chặn nếu vốn đã là shared
     ) {
-      return res.status(400).json({
-        message: "Không thể giảm số lượng voucher khi đang hoạt động.",
-      });
+      if (req.body.quantity && req.body.quantity < currentVoucher.quantity) {
+        return res.status(400).json({
+          message:
+            "Không thể giảm số lượng voucher dùng chung khi đang hoạt động.",
+        });
+      }
     }
 
     // Chuẩn bị dữ liệu cập nhật
@@ -231,10 +238,8 @@ export const updateVoucher = async (req, res) => {
     }
 
     if (Array.isArray(updateData.userIds) && updateData.userIds.length > 0) {
-      updateData.voucherScope = "private";
       updateData.quantity = updateData.userIds.length;
     } else {
-      updateData.voucherScope = "shared";
       updateData.userIds = [];
     }
 
