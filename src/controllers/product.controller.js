@@ -129,6 +129,10 @@ export const generateVariations = async (req, res) => {
       return res.status(400).json({ error: "Thuộc tính là bắt buộc" });
     }
 
+    if (attributes?.length <= 1) {
+      return res.status(400).json({ error: "Phải có ít nhất 2 thuộc tính" });
+    }
+
     /* ==== 1. KHÔNG cho trùng attributeId ==== */
     const attrIds = attributes.map((a) => a.attributeId);
     const dupAttrIds = attrIds.filter((id, i) => attrIds.indexOf(id) !== i);
@@ -226,6 +230,16 @@ export const createProductWithVariations = async (req, res) => {
       return res
         .status(400)
         .json({ error: "Trường attributes không tồn tại hoặc không hợp lệ" });
+    }
+
+    if (!Array.isArray(variation)) {
+      return res
+        .status(400)
+        .json({ error: "Trường variation không tồn tại hoặc không hợp lệ" });
+    }
+
+    if (!variation.length) {
+      return res.status(400).json({ error: "Hãy tạo biến thể" });
     }
 
     if (brandId) {
@@ -345,6 +359,27 @@ export const updateProduct = async (req, res) => {
 
     if (!mongoose.Types.ObjectId.isValid(productId)) {
       return res.status(400).json({ error: "ID sản phẩm không hợp lệ" });
+    }
+
+    const product = await productModel.findById(productId);
+    if (!product) {
+      return res.status(404).json({ error: "Không tìm thấy sản phẩm" });
+    }
+
+    if (!Array.isArray(attributes)) {
+      return res
+        .status(400)
+        .json({ error: "Trường attributes không tồn tại hoặc không hợp lệ" });
+    }
+
+    if (!Array.isArray(variation)) {
+      return res
+        .status(400)
+        .json({ error: "Trường variation không tồn tại hoặc không hợp lệ" });
+    }
+
+    if (!variation.length) {
+      return res.status(400).json({ error: "Hãy tạo biến thể" });
     }
 
     if (brandId) {
