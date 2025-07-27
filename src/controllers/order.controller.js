@@ -156,7 +156,7 @@ export const createOrder = async (req, res) => {
 
       for (const voucherCode of uniqueVoucherCodes) {
         const voucher = vouchers.find((v) => v.code.toString() === voucherCode);
-        console.log(voucher);
+        // console.log(voucher);
         
         if (!voucher) {
           throw new Error(`Voucher code ${voucher} không tồn tại`);
@@ -233,11 +233,6 @@ export const createOrder = async (req, res) => {
           `Discount amount không khớp: client (${clientDiscountAmount}) != server (${totalDiscount})`
         );
       }
-      console.log(productDiscount);
-      console.log(shippingDiscount);
-      console.log(shippingFeeValue);
-      console.log(subtotal);
-      
 
       // Calculate total amount
       const totalAmount =
@@ -270,7 +265,6 @@ export const createOrder = async (req, res) => {
           .padStart(4, "0");
         return `DH${year}${month}${day}-${random}`;
       };
-
       // Create order
       const order = new Order({
         userId: userId || undefined,
@@ -292,7 +286,7 @@ export const createOrder = async (req, res) => {
 
       // Save order
       const orderSave = await order.save({ session });
-
+      
       if (orderSave) {
         // Update voucher usage
         if (orderSave.voucherCode?.length) {

@@ -63,12 +63,11 @@ const orderSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    voucherId: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Voucher",
-      },
-    ],
+    voucherCode: {
+      type: [String],
+      default: [],
+    },
+
     shippingAddress: {
       type: String,
       required: true,
