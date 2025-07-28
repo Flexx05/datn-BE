@@ -1,12 +1,24 @@
 import Voucher from "../models/voucher.model.js";
 import { v4 as uuidv4 } from "uuid";
+import dayjs from "dayjs";
 
-/**
- * Tạo 1 voucher dùng riêng cho mỗi người vừa lên 1 hạng cụ thể
- * @param {Array} users - danh sách user object (có _id, email, isActive)
- * @param {Number} rank - hạng mà người dùng vừa được lên
- */
-export const createVoucherRank = async (users, rank) => {
+function getRankName(rank) {
+  switch (rank) {
+    case 3:
+      return "Kim cương";
+    case 2:
+      return "Vàng";
+    case 1:
+      return "Bạc";
+    case 0:
+      return "Đồng";
+    default:
+      return "Thành viên";
+  }
+}
+
+
+export const createVoucherRank = async (users, rank, monthKey) => {
   if (!Array.isArray(users) || users.length === 0) return;
 
   const rankConfig = {
@@ -51,27 +63,93 @@ export const createVoucherRank = async (users, rank) => {
     startDate: now,
     endDate: endDate,
     voucherStatus: "active",
+    monthIssued: monthKey,
   });
 
   await voucher.save();
   console.log(
-    `🎁 Đã tạo voucher cho ${
-      filteredUsers.length
-    } user lên hạng ${getRankName(rank)}`
+    `🎁 Đã tạo voucher cho ${filteredUsers.length} user lên hạng ${getRankName(
+      rank
+    )}`
   );
 };
 
-function getRankName(rank) {
-  switch (rank) {
-    case 3:
-      return "Kim cương";
-    case 2:
-      return "Vàng";
-    case 1:
-      return "Bạc";
-    case 0:
-      return "Đồng";
-    default:
-      return "Thành viên";
+
+export const createVoucherMonthly = async (rank, monthKey) => {
+  const monthlyRankConfig = {
+    0: {
+      voucherType: "shipping",
+      discountType: "percent",
+      discountValue: 100,
+      maxDiscount: 30000,
+      minOrderValues: 1000000,
+    },
+    1: {
+      voucherType: "product",
+      discountType: "percent",
+      discountValue: 3,
+      maxDiscount: 70000,
+      minOrderValues: 1200000,
+    },
+    2: {
+      voucherType: "product",
+      discountType: "percent",
+      discountValue: 5,
+      maxDiscount: 150000,
+      minOrderValues: 1500000,
+    },
+    3: {
+      voucherType: "product",
+      discountType: "percent",
+      discountValue: 7,
+      maxDiscount: 250000,
+      minOrderValues: 2000000,
+    },
+  };
+
+  const config = monthlyRankConfig[rank];
+  if (!config) {
+    return null;
   }
-}
+
+  const startDate = dayjs(`${monthKey}-01`).startOf("day").toDate();
+  const endDate = dayjs(`${monthKey}-01`).add(6, "day").endOf("day").toDate();
+
+  const codePrefix = {
+    0: "BRONZE",
+    1: "SILVER",
+    2: "GOLD",
+    3: "DIAMOND",
+  };
+
+  const code = `RANK-${codePrefix[rank]}-${monthKey.replace("-", "")}`;
+
+  // Kiểm tra voucher đã tồn tại chưa
+  const existed = await Voucher.findOne({ code, monthIssued: monthKey });
+  if (existed) {
+    console.log(`✅ Voucher ${code} đã tồn tại, không tạo lại.`);
+    return existed;
+  }
+
+  // Tạo mới nếu chưa có
+  const voucher = new Voucher({
+    voucherType: config.voucherType,
+    code,
+    description: `Ưu đãi tháng cho hạng ${getRankName(rank)}`,
+    discountType: config.discountType,
+    discountValue: config.discountValue,
+    maxDiscount: config.maxDiscount,
+    minOrderValues: config.minOrderValues,
+    quantity: 999999,
+    startDate,
+    endDate,
+    voucherStatus: "active",
+    monthIssued: monthKey,
+  });
+
+  await voucher.save();
+  console.log(
+    `🎁 Đã tạo voucher cho hạng ${getRankName(rank)}: ${voucher.code}`
+  );
+  return voucher;
+};

@@ -68,6 +68,7 @@ const voucherSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    monthIssued: { type: String, default: null },
   },
   {
     timestamps: true,
