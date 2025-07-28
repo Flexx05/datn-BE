@@ -1,96 +1,35 @@
 import cron from "node-cron";
 import authModel from "../models/auth.model.js";
-import orderModel from "../models/order.model.js";
 import dayjs from "dayjs";
 import { sendMail } from "../utils/sendMail.js";
+import orderModel from "../models/order.model.js";
 
-function getRankName(rank) {
-  switch (rank) {
-    case 3:
-      return "Kim cương";
-    case 2:
-      return "Vàng";
-    case 1:
-      return "Bạc";
-    case 0:
-      return "Đồng";
-    default:
-      return "Thành viên";
-  }
-}
-
-const calculateRank = async (user) => {
-  const userId = user._id;
-  const date180DaysAgo = dayjs().subtract(180, "day").toDate();
-  const orders = await orderModel.find({
-    userId,
-    status: 4,
-    paymentStatus: 1,
-    createdAt: { $gte: date180DaysAgo },
-  });
-
-  const totalSpending = orders.reduce((sum, o) => sum + o.totalAmount, 0);
-  const spendingScore = totalSpending / 1000;
-  let calculatedRank = null;
-
-  if (spendingScore >= 60000) {
-    calculatedRank = 3; // Kim cương
-  } else if (spendingScore >= 30000) {
-    calculatedRank = 2; // Vàng
-  } else if (spendingScore >= 15000) {
-    calculatedRank = 1; // Bạc
-  } else if (spendingScore >= 5000) {
-    calculatedRank = 0; // Đồng
-  }
-
-  // Logic tụt từng bậc: Nếu không đủ điều kiện giữ hạng hiện tại, chỉ tụt xuống 1 bậc
-  let rank = user.rank;
-  if (rank === null) {
-    // Người mới chưa từng đạt rank
-    rank = calculatedRank;
-  } else {
-    if (calculatedRank === null) {
-      // Không đủ điều kiện cho bất kỳ hạng nào, tụt 1 bậc
-      rank = Math.max(0, user.rank - 1);
-    } else if (calculatedRank < user.rank) {
-      // Đủ điều kiện cho hạng thấp hơn, nhưng chỉ tụt 1 bậc
-      rank = user.rank - 1;
-    } else {
-      // Đủ điều kiện giữ hoặc lên hạng
-      rank = calculatedRank;
-    }
-  }
-
-  if (user.rank !== rank) {
-    await authModel.findByIdAndUpdate(userId, {
-      rank,
-      rankUpdatedAt: new Date(),
-    });
-  }
-};
-
+// Hàm cảnh báo tụt hạng
 const sendRankWarning = async (user) => {
-  if (user.rank == null || user.rank === 0) return;
+  if (user?.isActive === false || user.rank == null || user.rank === 0) return;
+
   const userId = user._id;
-  const date173DaysAgo = dayjs().subtract(173, "day").toDate();
+  const date90DaysAgo = dayjs().subtract(90, "day").toDate();
   const orders = await orderModel.find({
     userId,
     status: 4,
     paymentStatus: 1,
-    createdAt: { $gte: date173DaysAgo },
+    createdAt: { $gte: date90DaysAgo },
   });
 
   const totalSpending = orders.reduce((sum, o) => sum + o.totalAmount, 0);
-  const spendingScore = totalSpending / 1000;
+  const spendingScore = Math.floor(totalSpending / 1000);
 
-  // Điều kiện giữ hạng hiện tại
-  let enough = false;
-  if (user.rank === 3 && spendingScore >= 60000) enough = true;
-  else if (user.rank === 2 && spendingScore >= 30000) enough = true;
-  else if (user.rank === 1 && spendingScore >= 15000) enough = true;
-  else if (user.rank === 0 && spendingScore >= 5000) enough = true;
+  // Kiểm tra điều kiện giữ hạng
+  const rankTarget = [3000, 7000, 15000, 30000];
+  const currentNeed = rankTarget[user.rank] ?? 0;
+  const enough = spendingScore >= currentNeed;
 
-  if (!enough && user.email) {
+  const cycleStart = orders[0]?.createdAt || date90DaysAgo;
+  const daysPassed = dayjs().diff(dayjs(cycleStart), "day");
+  const daysLeft = 90 - daysPassed;
+
+  if (daysLeft === 7 && !enough && user.email) {
     const nextRank = Math.max(0, user.rank - 1);
     const subject = "⚠️ Thông báo: Bạn sắp bị tụt hạng!";
     const html = `
@@ -117,36 +56,41 @@ const sendRankWarning = async (user) => {
       <p style="font-size: 12px; color: #999;">Đây là email tự động, vui lòng không trả lời lại.</p>
     </div>
   `;
-
     try {
       await sendMail({ to: user.email, subject, html });
-    } catch (e) {
-      console.error("Lỗi gửi email cảnh báo sắp tụt hạng:", e.message);
+      console.log("Gửi cảnh báo tụt hạng:", user.email);
+    } catch (err) {
+      console.error("Lỗi gửi mail cảnh báo:", err.message);
     }
   }
 };
 
+function getRankName(rank) {
+  switch (rank) {
+    case 3:
+      return "Kim cương";
+    case 2:
+      return "Vàng";
+    case 1:
+      return "Bạc";
+    case 0:
+      return "Đồng";
+    default:
+      return "Thành viên";
+  }
+}
+
 export const startRankJob = () => {
-  // Chạy vào 0h mỗi ngày theo múi giờ Việt Nam
   cron.schedule(
-    "0 0 * * *",
+    "0 0 * * *", // chạy 0h mỗi ngày
     async () => {
-      try {
-        const users = await authModel.find({});
-        for (const user of users) {
-          await calculateRank(user);
-          // Gửi cảnh báo nếu sắp tụt hạng
-          await sendRankWarning(user);
-        }
-        console.log(
-          `[${new Date().toLocaleString()}] ✅ Cron cập nhật rank cho tất cả user`
-        );
-      } catch (error) {
-        console.error("❌ Cron lỗi cập nhật rank:", error.message);
+      const users = await authModel.find({});
+      for (const user of users) {
+        if (user?.isActive === false) continue;
+        await sendRankWarning(user);
       }
+      console.log(`[${new Date().toLocaleString()}] Đã gửi cảnh báo tụt hạng`);
     },
-    {
-      timezone: "Asia/Ho_Chi_Minh",
-    }
+    { timezone: "Asia/Ho_Chi_Minh" }
   );
 };

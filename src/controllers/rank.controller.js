@@ -1,7 +1,8 @@
-import authModel from "../models/auth.model";
-import orderModel from "../models/order.model";
+import authModel from "../models/auth.model.js";
+import orderModel from "../models/order.model.js";
 import dayjs from "dayjs";
-import { sendMail } from "../utils/sendMail";
+import { sendMail } from "../utils/sendMail.js";
+import { createVoucherRank } from "../utils/createVoucherRank.js";
 
 function getRankName(rank) {
   switch (rank) {
@@ -22,63 +23,51 @@ export const getCustomerRank = async (req, res) => {
   try {
     const userId = req.params.id;
     const user = await authModel.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "Không tìm thấy user" });
-    }
+    if (!user) return res.status(404).json({ message: "Không tìm thấy user" });
 
-    const date180DaysAgo = dayjs().subtract(180, "day").toDate();
+    // --- Tính chi tiêu 90 ngày gần nhất ---
+    const date90DaysAgo = dayjs().subtract(90, "day").toDate();
     const orders = await orderModel.find({
       userId,
       status: 4,
       paymentStatus: 1,
-      createdAt: { $gte: date180DaysAgo },
+      createdAt: { $gte: date90DaysAgo },
     });
 
     const totalSpending = orders.reduce((sum, o) => sum + o.totalAmount, 0);
+    const spendingScore = Math.floor(totalSpending / 1000);
 
-    // Tính rank dựa trên tổng chi tiêu / 1000
-    const spendingScore = totalSpending / 1000;
+    // --- Xác định rank mới ---
     let calculatedRank = null;
+    if (spendingScore >= 30000) calculatedRank = 3;
+    else if (spendingScore >= 15000) calculatedRank = 2;
+    else if (spendingScore >= 7000) calculatedRank = 1;
+    else if (spendingScore >= 3000) calculatedRank = 0;
 
-    if (spendingScore >= 60000) {
-      calculatedRank = 3; // Kim cương
-    } else if (spendingScore >= 30000) {
-      calculatedRank = 2; // Vàng
-    } else if (spendingScore >= 15000) {
-      calculatedRank = 1; // Bạc
-    } else if (spendingScore >= 5000) {
-      calculatedRank = 0; // Đồng
-    }
-
-    // Logic tụt từng bậc: Nếu không đủ điều kiện giữ hạng hiện tại, chỉ tụt xuống 1 bậc
     let rank = user.rank;
     if (rank === null) {
-      // Người mới chưa từng đạt rank
       rank = calculatedRank;
     } else {
       if (calculatedRank === null) {
-        // Không đủ điều kiện cho bất kỳ hạng nào, tụt 1 bậc
         rank = Math.max(0, user.rank - 1);
       } else if (calculatedRank < user.rank) {
-        // Đủ điều kiện cho hạng thấp hơn, nhưng chỉ tụt 1 bậc
         rank = user.rank - 1;
       } else {
-        // Đủ điều kiện giữ hoặc lên hạng
         rank = calculatedRank;
       }
     }
 
-    // Cập nhật DB nếu rank thay đổi
-    if (user.rank !== rank) {
+    // --- Nếu có thay đổi rank ---
+    if (rank !== user.rank) {
       await authModel.findByIdAndUpdate(userId, {
         rank,
         rankUpdatedAt: new Date(),
       });
 
-      // Gửi email thông báo thay đổi hạng
       let subject = "";
-      let text = "";
-      if (rank > user.rank) {
+      let html = "";
+
+      if (rank > (user.rank ?? -1)) {
         subject = "🎉 Chúc mừng bạn đã lên hạng!";
         html = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #ddd; border-radius: 8px;">
@@ -101,7 +90,8 @@ export const getCustomerRank = async (req, res) => {
             <p style="font-size: 12px; color: #999;">Đây là email tự động, vui lòng không trả lời lại.</p>
           </div>
         `;
-      } else if (rank < user.rank && user.rank > 0 && user.rank != null) {
+        await createVoucherRank([user], rank); // tạo voucher khi lần đầu lên hạng
+      } else if (rank < user.rank && user.rank > 0) {
         subject = "⚠️ Bạn đã bị tụt hạng";
         html = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #ddd; border-radius: 8px;">
@@ -111,7 +101,7 @@ export const getCustomerRank = async (req, res) => {
 
             <p>Chúng tôi muốn thông báo rằng bạn đã bị <strong>hạ xuống hạng ${getRankName(
               rank
-            )}</strong> vì chưa đạt đủ mức chi tiêu cần thiết trong vòng 6 tháng qua.</p>
+            )}</strong> vì chưa đạt đủ mức chi tiêu cần thiết trong vòng 90 ngày qua.</p>
 
             <p>Hãy quay lại và tiếp tục mua sắm để nhanh chóng lấy lại hạng của mình và tận hưởng những ưu đãi hấp dẫn dành riêng cho bạn!</p>
 
@@ -129,32 +119,33 @@ export const getCustomerRank = async (req, res) => {
         `;
       }
 
-      if (subject && text && user.email) {
+      if (subject && user?.email && user?.isActive !== false) {
         try {
-          await sendMail(user.email, subject, text);
+          await sendMail({ to: user.email, subject, html });
         } catch (e) {
-          console.error("Lỗi gửi email thông báo thay đổi hạng:", e.message);
+          console.error("Lỗi gửi mail rank:", e.message);
         }
       }
     }
 
+    // --- Tính thêm các thông tin để trả về ---
+    const nextThresholds = [3000, 7000, 15000, 30000];
     const isMaxRank = rank === 3;
-    const nextThresholds = [5000, 15000, 30000, 60000];
     const nextThreshold = rank < 3 ? nextThresholds[rank + 1] : null;
     const percent = isMaxRank
       ? 100
       : Math.min(100, Math.floor((spendingScore / nextThreshold) * 100));
 
     const daysLeft =
-      180 - dayjs().diff(dayjs(orders[0]?.createdAt || date180DaysAgo), "day");
+      90 - dayjs().diff(dayjs(orders[0]?.createdAt || date90DaysAgo), "day");
 
     return res.status(200).json({
-      rank, // Hạng hiện tại của người dùng (0–3)
-      spending: totalSpending, // Tổng chi tiêu trong 90 ngày gần nhất (VND)
-      points: spendingScore, // Số điểm đạt được = spending / 1000
-      isMaxRank, // Đã đạt hạng cao nhất chưa (true nếu rank = 3)
-      percent, // % tiến độ đạt đến rank tiếp theo
-      daysLeft, // Số ngày còn lại trong chu kỳ 90 ngày
+      rank,
+      spending: totalSpending,
+      points: spendingScore,
+      isMaxRank,
+      percent,
+      daysLeft,
     });
   } catch (err) {
     return res.status(500).json({ message: err.message });
