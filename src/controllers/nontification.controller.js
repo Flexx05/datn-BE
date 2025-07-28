@@ -7,6 +7,7 @@ export const nontifyAdmin = async (type, title, message, link) => {
     title,
     message,
     link,
+    recipientId: null,
   });
   const io = getSocketInstance();
   io.to("admin").emit("new-nontification", nontification);

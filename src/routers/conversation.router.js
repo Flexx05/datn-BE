@@ -1,14 +1,21 @@
 import { Router } from "express";
 import {
+  assignConversationToStaff,
+  assignToConversation,
   changeChatType,
   closedConversation,
-  deleteMessage,
   getAllConversations,
   getConversationById,
   getMessagesFromClient,
   sendMessage,
+  unAssignToConversation,
 } from "../controllers/conversation.controller";
-import { isAdminOrStaff, verifyToken } from "../middlewares/checkAuth";
+import {
+  isAdmin,
+  isAdminOrStaff,
+  isStaff,
+  verifyToken,
+} from "../middlewares/checkAuth";
 
 const router = Router();
 
@@ -32,5 +39,23 @@ router.patch(
   verifyToken,
   isAdminOrStaff,
   changeChatType
+);
+router.patch(
+  "/conversation/assign/:id",
+  verifyToken,
+  isStaff,
+  assignToConversation
+);
+router.patch(
+  "/conversation/un-assign/:id",
+  verifyToken,
+  isAdminOrStaff,
+  unAssignToConversation
+);
+router.patch(
+  "/conversation/assign/staff/:id",
+  verifyToken,
+  isAdmin,
+  assignConversationToStaff
 );
 export default router;

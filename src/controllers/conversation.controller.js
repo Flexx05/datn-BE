@@ -7,7 +7,7 @@ import authModel from "../models/auth.model";
 export const getAllConversations = async (req, res) => {
   try {
     const { chatType, status } = req.query;
-    const query = {};
+    const query = { status: { $ne: "closed" } };
 
     if (chatType !== undefined) {
       const chatTypeNumber = Number(chatType);
@@ -31,6 +31,10 @@ export const getAllConversations = async (req, res) => {
       .populate({
         path: "participants.userId",
         select: "fullName avatar role isActive",
+      })
+      .populate({
+        path: "assignedTo",
+        select: "fullName",
       });
 
     return res.status(200).json(conversations);
@@ -42,10 +46,15 @@ export const getAllConversations = async (req, res) => {
 export const getConversationById = async (req, res) => {
   try {
     const { id } = req.params;
-    const conversation = await Conversation.findById(id).populate({
-      path: "participants.userId",
-      select: "fullName avatar role isActive",
-    });
+    const conversation = await Conversation.findById(id)
+      .populate({
+        path: "participants.userId",
+        select: "fullName avatar role isActive",
+      })
+      .populate({
+        path: "assignedTo",
+        select: "fullName",
+      });
     if (!conversation) {
       return res.status(404).json({ error: "Conversation not found" });
     }
@@ -142,6 +151,16 @@ export const sendMessage = async (req, res) => {
         .json({ message: "Không thể gửi tin nhắn cho tài khoản bị khóa" });
     }
 
+    if (newMessage.senderRole === "staff") {
+      if (
+        conversation.assignedTo === null ||
+        conversation.assignedTo !== senderId
+      ) {
+        return res
+          .status(400)
+          .json({ error: "Bạn chưa đăng ký cuộc trò chuyện này " });
+      }
+    }
     // ? Thêm tin nhắn vào cuộc trò chuyện
     conversation.messages.push(newMessage);
     conversation.lastUpdated = new Date();
@@ -307,6 +326,100 @@ export const changeChatType = async (req, res) => {
     });
     if (!conversation)
       return res.status(404).json({ error: "Conversation not found" });
+    return res.status(200).json(conversation);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const assignToConversation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = req.user;
+    const conversation = await Conversation.findById(id);
+
+    if (!conversation)
+      return res.status(404).json({ error: "Conversation not found" });
+    if (conversation.assignedTo !== null) {
+      return res.status(400).json({ error: "Đoạn chat này đã được đăng ký" });
+    }
+    if (conversation.status !== "closed") {
+      return res.status(400).json({ error: "Đoạn chat đã kết thúc" });
+    }
+    conversation.assignedTo = user._id;
+    await conversation.save();
+    return res.status(200).json(conversation);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const unAssignToConversation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = req.user;
+    const conversation = await Conversation.findById(id);
+    if (!conversation)
+      return res.status(404).json({ error: "Conversation not found" });
+    if (conversation.assignedTo === null) {
+      return res.status(400).json({ error: "Đoạn chat này chưa được đăng ký" });
+    }
+    const isAssignedToOthers =
+      conversation.assignedTo.toString() !== user._id.toString();
+
+    // Nếu là staff và cố gắng hủy đăng ký người khác
+    if (user.role !== "admin" && isAssignedToOthers) {
+      return res
+        .status(400)
+        .json({ error: "Không thể hủy đăng ký của người khác" });
+    }
+
+    const customerInfo = await authModel.findById(
+      conversation.participants[0].userId
+    );
+
+    if (user.role === "admin") {
+      await nontifyAdmin(
+        5,
+        "Hủy đăng ký",
+        `Đoạn chat với khách hàng ${
+          customerInfo?.fullName || "Không xác định"
+        } đã bị hủy đăng ký bởi Quản trị viên.`,
+        conversation._id,
+        conversation.assignedTo.toString()
+      );
+    }
+
+    conversation.assignedTo = null;
+    await conversation.save();
+    return res.status(200).json(conversation);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const assignConversationToStaff = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { staffId } = req.body;
+    const conversation = await Conversation.findById(id);
+    if (conversation.assignedTo !== null) {
+      return res.status(400).json({ error: "Đoạn chat này đã được đăng ký" });
+    }
+    if (!conversation)
+      return res.status(404).json({ error: "Conversation not found" });
+
+    await nontifyAdmin(
+      5,
+      "Đăng ký",
+      `Đoạn chat với khách hàng ${
+        conversation.participants[0].fullName || "Không xác định"
+      } đăng ký bởi Quản trị viên.`,
+      conversation._id,
+      staffId
+    );
+    conversation.assignedTo = staffId;
+    await conversation.save();
     return res.status(200).json(conversation);
   } catch (error) {
     return res.status(500).json({ error: error.message });

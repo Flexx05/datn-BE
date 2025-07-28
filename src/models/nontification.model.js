@@ -5,13 +5,14 @@ const notificationSchema = new Schema(
     type: {
       type: Number,
       required: [true, "Type is required"],
-      enum: [0, 1, 2, 3, 4],
+      enum: [0, 1, 2, 3, 4, 5],
       /**
        * 0: order
        * 1: order-status
        * 2: comment
        * 3: chat
        * 4: system
+       * 5: forStaff
        */
     },
     title: {
@@ -28,11 +29,11 @@ const notificationSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    // recipientId: {
-    //   type: Schema.Types.ObjectId,
-    //   ref: "Auth",
-    //   required: [true, "Recipient ID is required"],
-    // },
+    recipientId: {
+      type: Schema.Types.ObjectId,
+      ref: "Auth",
+      default: null,
+    },
     link: {
       type: String,
       default: null,
