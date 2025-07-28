@@ -165,7 +165,7 @@ export const getReturnRequests = async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const returnRequests = await ReturnRequest.find(query)
+    const returnRequests = await ReturnRequest.find()
       .sort({ [sortBy]: order === "desc" ? -1 : 1 })
       .skip(skip)
       .limit(parseInt(limit))
