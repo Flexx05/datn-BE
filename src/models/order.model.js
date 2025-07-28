@@ -17,7 +17,7 @@ const orderItemSchema = new Schema(
       required: true,
     },
     image: {
-      type: String
+      type: String,
     },
     slug: {
       type: String,
@@ -63,12 +63,11 @@ const orderSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    voucherId: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Voucher",
-      },
-    ],
+    voucherCode: {
+      type: [String],
+      default: [],
+    },
+
     shippingAddress: {
       type: String,
       required: true,
@@ -97,7 +96,7 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
-      review:{
+    review: {
       type: Number,
       enum: [0, 1],
       default: 0,

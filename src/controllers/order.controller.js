@@ -17,7 +17,7 @@ export const createOrder = async (req, res) => {
       recipientInfo,
       shippingAddress,
       items,
-      shippingFee,
+      shippingFee: clientShippingFee,
       paymentMethod,
       cartItemIds = [],
       subtotal: clientSubtotal,
@@ -25,11 +25,11 @@ export const createOrder = async (req, res) => {
       totalAmount: clientTotalAmount,
     } = req.body;
 
-    // Validation cơ bản
+    // Basic validation
     if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        error: "Đơn hàng phải có ít nhất một sản phẩm",
-      });
+      return res
+        .status(400)
+        .json({ error: "Đơn hàng phải có ít nhất một sản phẩm" });
     }
 
     if (
@@ -38,18 +38,16 @@ export const createOrder = async (req, res) => {
       !recipientInfo.email ||
       !recipientInfo.phone
     ) {
-      return res.status(400).json({
-        error: "Thông tin người nhận không đầy đủ",
-      });
+      return res
+        .status(400)
+        .json({ error: "Thông tin người nhận không đầy đủ" });
     }
 
     if (!shippingAddress) {
-      return res.status(400).json({
-        error: "Địa chỉ giao hàng không đầy đủ",
-      });
+      return res.status(400).json({ error: "Địa chỉ giao hàng không đầy đủ" });
     }
 
-    // Bắt đầu transaction
+    // Start transaction
     session.startTransaction();
 
     if (paymentMethod === "COD" || paymentMethod === "VNPAY") {
@@ -59,24 +57,21 @@ export const createOrder = async (req, res) => {
       }).session(session);
 
       const orderItems = [];
-      const voucherIds = [];
-      let discountAmount = 0;
-      const shippingFeeValue = shippingFee || 40000; // Default to 40000 as per example
+      let productDiscount = 0;
+      let shippingDiscount = 0;
+      const shippingFeeValue = clientShippingFee || 30000;
 
-      // Xử lý và validate từng item
+      // Process and validate items
       for (const item of items) {
-        // 1. Tìm product chứa variation
         const product = products.find((p) =>
           p.variation.some((v) => v._id.toString() === item.variationId)
         );
-
         if (!product) {
           throw new Error(
             `Không tìm thấy sản phẩm chứa biến thể ${item.variationId}`
           );
         }
 
-        // 2. Lấy biến thể
         const variation = product.variation.id(item.variationId);
         if (!variation) {
           throw new Error(`Không tìm thấy biến thể ${item.variationId}`);
@@ -87,11 +82,15 @@ export const createOrder = async (req, res) => {
             `Biến thể ${variation._id} của sản phẩm ${product.name} không khả dụng`
           );
         }
-        if (item.priceAtOrder !== variation.regularPrice) {
+
+        if (
+          item.priceAtOrder !== variation.regularPrice && item.priceAtOrder !== variation.salePrice
+        ) {
           throw new Error(
             `Giá sản phẩm ${product.name} đã thay đổi. Vui lòng kiểm tra lại`
           );
         }
+
         if (item.quantity <= 0) {
           throw new Error("Số lượng phải lớn hơn 0");
         }
@@ -102,7 +101,6 @@ export const createOrder = async (req, res) => {
           );
         }
 
-        // 3. Tính giá
         let price = variation.regularPrice;
         if (variation.salePrice && variation.salePrice > 0) {
           price = variation.salePrice;
@@ -122,43 +120,49 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      // Tính subtotal
+      // Calculate subtotal
       const subtotal = orderItems.reduce(
         (sum, item) => sum + item.totalPrice,
         0
       );
 
-      // Kiểm tra subtotal từ client
+      // Validate client subtotal
       if (clientSubtotal !== subtotal) {
         throw new Error(
           `Subtotal không khớp: client (${clientSubtotal}) != server (${subtotal})`
         );
       }
 
-      // Xử lý voucher
-      let hasVoucher = false;
-
-      // Kiểm tra voucher trùng lặp
-      const uniqueVoucher = new Set(voucherCode);
-      if (uniqueVoucher.size !== voucherCode.length) {
+      // Process vouchers
+      const uniqueVoucherCodes = new Set(voucherCode);
+      if (uniqueVoucherCodes.size !== voucherCode.length) {
         throw new Error(
           "Không được sử dụng voucher giống nhau trong cùng một đơn hàng"
         );
       }
 
-      // Xử lý từng voucher
-      for (const code of voucherCode) {
-        const voucher = await Voucher.findOne({ code }).session(session);
+      let productVoucherCount = 0;
+      let shippingVoucherCount = 0;
 
+      if (voucherCode.length > 2) {
+        throw new Error(
+          "Chỉ được sử dụng tối đa một voucher sản phẩm và một voucher vận chuyển"
+        );
+      }
+
+      const vouchers = await Voucher.find({
+        code: { $in: voucherCode },
+      }).session(session);
+
+      for (const voucherCode of uniqueVoucherCodes) {
+        const voucher = vouchers.find((v) => v.code.toString() === voucherCode);
+        // console.log(voucher);
+        
         if (!voucher) {
-          throw new Error(`Voucher ${code} không tồn tại`);
+          throw new Error(`Voucher code ${voucher} không tồn tại`);
         }
 
-        voucherIds.push(voucher._id);
-
         const now = new Date();
-
-        // Kiểm tra tính hợp lệ của voucher
         if (
           voucher.voucherStatus === "inactive" ||
           voucher.voucherStatus === "expired" ||
@@ -174,56 +178,83 @@ export const createOrder = async (req, res) => {
           throw new Error(`Voucher ${voucher.code} đã hết lượt sử dụng`);
         }
 
-        if (voucher.minOrderValues > subtotal) {
-          throw new Error(
-            `Đơn hàng tối thiểu để sử dụng voucher ${
-              voucher.code
-            } là ${voucher.minOrderValues.toLocaleString()}₫`
-          );
-        }
-
-        // Áp dụng voucher (luôn giảm vào subtotal)
-        if (hasVoucher) {
-          throw new Error("Chỉ được sử dụng 1 voucher mỗi đơn hàng");
-        }
-        hasVoucher = true;
-
-        if (voucher.discountType === "fixed") {
-          discountAmount += Math.min(voucher.discountValue, subtotal);
-        } else if (voucher.discountType === "percent") {
-          const discount = (subtotal * voucher.discountValue) / 100;
-          discountAmount += voucher.maxDiscount
-            ? Math.min(discount, voucher.maxDiscount)
-            : discount;
+        if (voucher.voucherType === "product") {
+          if (productVoucherCount > 0) {
+            throw new Error(
+              "Chỉ được sử dụng một voucher sản phẩm mỗi đơn hàng"
+            );
+          }
+          if (voucher.minOrderValues > subtotal) {
+            throw new Error(
+              `Đơn hàng tối thiểu để sử dụng voucher ${
+                voucher.code
+              } là ${voucher.minOrderValues.toLocaleString()}₫`
+            );
+          }
+          productVoucherCount++;
+          if (voucher.discountType === "fixed") {
+            productDiscount += Math.min(
+              Number(voucher.discountValue) || 0,
+              subtotal
+            );
+          } else if (voucher.discountType === "percent") {
+            const discount =
+              (subtotal * (Number(voucher.discountValue) || 0)) / 100;
+            productDiscount += voucher.maxDiscount
+              ? Math.min(discount, Number(voucher.maxDiscount) || Infinity)
+              : discount;
+          }
+        } else if (voucher.voucherType === "shipping") {
+          if (shippingVoucherCount > 0) {
+            throw new Error(
+              "Chỉ được sử dụng một voucher vận chuyển mỗi đơn hàng"
+            );
+          }
+          shippingVoucherCount++;
+          if (voucher.discountType === "fixed") {
+            shippingDiscount += Math.min(
+              Number(voucher.discountValue) || 0,
+              shippingFeeValue
+            );
+          } else if (voucher.discountType === "percent") {
+            const discount =
+              (shippingFeeValue * (Number(voucher.discountValue) || 0)) / 100;
+            shippingDiscount += voucher.maxDiscount
+              ? Math.min(discount, Number(voucher.maxDiscount) || Infinity)
+              : discount;
+          }
         }
       }
 
-      // Kiểm tra discountAmount từ client
-      if (clientDiscountAmount !== discountAmount) {
+      // Validate client discount amount
+      const totalDiscount = productDiscount + shippingDiscount;
+      if (clientDiscountAmount !== totalDiscount) {
         throw new Error(
-          `Discount amount không khớp: client (${clientDiscountAmount}) != server (${discountAmount})`
+          `Discount amount không khớp: client (${clientDiscountAmount}) != server (${totalDiscount})`
         );
       }
 
-      // Tính tổng tiền
-      const totalAmount = subtotal + shippingFeeValue - discountAmount;
+      // Calculate total amount
+      const totalAmount =
+        subtotal + shippingFeeValue - productDiscount - shippingDiscount;
 
-      // Kiểm tra totalAmount từ client
+      // Validate client total amount
       if (clientTotalAmount !== totalAmount) {
         throw new Error(
           `Total amount không khớp: client (${clientTotalAmount}) != server (${totalAmount})`
         );
       }
 
-      // Đảm bảo tổng tiền không âm
+      // Ensure total amount is non-negative
       if (totalAmount < 0) {
         throw new Error("Tổng tiền đơn hàng không thể âm");
       }
 
-      // Tính ngày giao hàng dự kiến (7 ngày từ hiện tại)
+      // Calculate expected delivery date
       const expectedDeliveryDate = new Date();
       expectedDeliveryDate.setDate(expectedDeliveryDate.getDate() + 7);
 
+      // Generate order code
       const generateOrderCode = () => {
         const date = new Date();
         const year = date.getFullYear().toString().slice(-2);
@@ -234,18 +265,17 @@ export const createOrder = async (req, res) => {
           .padStart(4, "0");
         return `DH${year}${month}${day}-${random}`;
       };
-
-      // Tạo order object
+      // Create order
       const order = new Order({
         userId: userId || undefined,
         recipientInfo,
         orderCode: generateOrderCode(),
-        voucherId: voucherIds,
+        voucherCode,
         shippingAddress,
         items: orderItems,
         subtotal,
         shippingFee: shippingFeeValue,
-        discountAmount,
+        discountAmount: totalDiscount,
         totalAmount,
         status: 0,
         review: 0,
@@ -254,20 +284,20 @@ export const createOrder = async (req, res) => {
         expectedDeliveryDate,
       });
 
-      // Lưu order với session
+      // Save order
       const orderSave = await order.save({ session });
-
+      
       if (orderSave) {
-        // Cập nhật voucher usage
-        if (orderSave.voucherId?.length) {
+        // Update voucher usage
+        if (orderSave.voucherCode?.length) {
           await Voucher.updateMany(
-            { _id: { $in: orderSave.voucherId } },
+            { code: { $in: orderSave.voucherCode } },
             { $inc: { used: 1 } },
             { session }
           );
         }
 
-        // Cập nhật stock sản phẩm
+        // Update product stock
         for (const item of orderSave.items) {
           await Product.updateOne(
             { "variation._id": item.variationId },
@@ -276,9 +306,9 @@ export const createOrder = async (req, res) => {
           );
         }
 
-        // Xóa cart items nếu có
+        // Remove cart items
         if (cartItemIds && cartItemIds.length > 0) {
-          const deleteResult = await Cart.deleteMany(
+          await Cart.deleteMany(
             {
               _id: { $in: cartItemIds },
               userId: userId,
@@ -290,7 +320,7 @@ export const createOrder = async (req, res) => {
         // Commit transaction
         await session.commitTransaction();
 
-        // Gửi email xác nhận (sau khi commit thành công)
+        // Send confirmation email
         try {
           const transporter = nodemailer.createTransport({
             service: "gmail",
@@ -380,9 +410,9 @@ export const createOrder = async (req, res) => {
                     )} VNĐ</span></li>
                 </ul>
 
-                <p style="margin-top: 30px;">Cảm ơn bạn đã mua sắm tại <strong>Binova</strong>! Nếu có bất kỳ thắc mắc nào, hãy phản hồi lại email này để được hỗ trợ.</p>
-                <div style="display: flex; justify-content: flex-end; margin-left: 68%;">
-                    <div style="text-align: center;">
+                <p style="margin-top: 20px;">Cảm ơn bạn đã mua sắm tại <strong>Binova</strong>! Nếu có bất kỳ thắc mắc nào, hãy phản hồi email này để được hỗ trợ.</p>
+                <div style="display: flex; justify-content: flex-end;">
+                    <div style="text-align: right;">
                         <p>Trân trọng</p>
                         <i><strong>Đội ngũ Binova</strong></i>
                     </div>
@@ -391,10 +421,10 @@ export const createOrder = async (req, res) => {
             `,
           });
         } catch (emailError) {
-          console.error("Lỗi gửi email:", emailError);
-          // Không throw error để không ảnh hưởng đến response
+          console.error("Email error:", emailError);
         }
 
+        // Notify admin
         try {
           await nontifyAdmin(
             "order",
@@ -404,8 +434,7 @@ export const createOrder = async (req, res) => {
             orderSave._id
           );
         } catch (error) {
-          console.error("Lỗi gửi thông báo cho admin:", error);
-          // Không throw error để không ảnh hưởng đến response
+          console.error("Admin notification error:", error);
         }
 
         return res.status(201).json({
@@ -419,16 +448,12 @@ export const createOrder = async (req, res) => {
       throw new Error("Phương thức thanh toán không được hỗ trợ");
     }
   } catch (error) {
-    console.error("Lỗi trong transaction:", error);
-
-    // Chỉ abort nếu transaction chưa được commit
+    console.error("Transaction error:", error);
     if (session.inTransaction()) {
       await session.abortTransaction();
     }
-
     return res.status(400).json({ error: error.message });
   } finally {
-    // Luôn end session
     await session.endSession();
   }
 };
@@ -524,7 +549,7 @@ export const updateOrderStatus = async (req, res) => {
       reason,
       cancelReason,
       userId,
-      review
+      review,
     } = req.body;
 
     // Kiểm tra các trường được phép cập nhật
@@ -535,7 +560,7 @@ export const updateOrderStatus = async (req, res) => {
       "cancelReason",
       "reason",
       "userId",
-      "review"
+      "review",
     ];
     const unknownFields = Object.keys(req.body).filter(
       (key) => !allowedFields.includes(key)
@@ -752,21 +777,30 @@ export const updateOrderStatus = async (req, res) => {
 
     try {
       const user = await authModel.findById(userId);
+      console.log(1);
+      
       if (!user)
         return res.status(404).json({ error: "Không tìm thấy người dùng" });
       if (user.role === "user") {
+        console.log(2);
         await nontifyAdmin(
-          "status",
+          1,
           user.fullName,
           order.status,
           order.orderCode,
           order._id
         );
       } else {
+        console.log(3);
+        
         const io = getSocketInstance();
+        console.log(4);
+        
         const message = `Đơn hàng ${
           order.orderCode
         } đã được cập nhật trạng thái: ${statusMap[order.status]}`;
+        console.log(5);
+        
         io.to(order.userId.toString()).emit("order-status-changed", {
           message,
         });
@@ -992,9 +1026,9 @@ export const cancelOrder = async (req, res) => {
       );
     }
 
-    if (order.voucherId?.length > 0) {
+    if (order.voucherCode?.length > 0) {
       await Voucher.updateMany(
-        { _id: { $in: order.voucherId } },
+        { _id: { $in: order.voucherCode } },
         { $inc: { used: -1 } }
       );
     }
@@ -1070,7 +1104,7 @@ export const updateOrderTotal = async (req, res) => {
     if (newTotalAmount === 0) {
       order.paymentStatus = 2;
     }
-    order.status = 4
+    order.status = 4;
     await order.save({ session });
 
     await session.commitTransaction();

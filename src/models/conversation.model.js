@@ -8,25 +8,13 @@ const ParticipantSchema = new Schema(
       ref: "Auth",
       required: [true, "Auth ID is required"],
     },
-    avatar: {
-      type: String,
-      default: null,
-    },
-    fullName: {
-      type: String,
-      required: [true, "Full name is required"],
-    },
-    role: {
-      type: String,
-      enum: ["admin", "staff", "user"],
-      required: [true, "Role is required"],
-    },
     joinedAt: {
       type: Date,
       default: Date.now,
     },
   },
   {
+    _id: false,
     versionKey: false,
   }
 );
@@ -37,16 +25,18 @@ const MessageSchema = new Schema(
     senderId: {
       type: Schema.Types.ObjectId,
       ref: "Auth",
-      required: [true, "Sender ID is required"],
     },
     senderRole: {
       type: String,
-      enum: ["admin", "staff", "user"],
+      enum: ["admin", "staff", "user", "system"],
       required: [true, "Sender role is required"],
     },
     content: {
       type: String,
-      required: [true, "Content is required"],
+    },
+    files: {
+      type: [String],
+      default: [],
     },
     readBy: {
       type: [String],
@@ -54,7 +44,7 @@ const MessageSchema = new Schema(
     },
   },
   {
-    timestamps: true,
+    timestamps: { createdAt: true, updatedAt: false },
     versionKey: false,
   }
 );
@@ -139,8 +129,11 @@ ConversationSchema.pre("save", function (next) {
     this.statusLogs.push({
       status: this.status,
       updateBy: this.updatedBy,
-      updatedAt: Date.now(),
+      updatedAt: new Date(),
     });
   }
+
+  // Cập nhật thời gian chỉnh sửa
+  this.lastUpdated = new Date();
   next();
 });

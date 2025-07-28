@@ -27,6 +27,11 @@ import conversationRouter from "./routers/conversation.router";
 import orderStatisticsRouter from "./routers/order-statistics.router.js";
 import rankRouter from "./routers/rank.router.js";
 import { startRankJob } from "./cron/rankCron.js";
+import { startConversationStatusCheckJob } from "./cron/conversationStatusCheck.js";
+import { startDeleteConversationJob } from "./cron/deleteConversation.js";
+import QuickChatRouter from "./routers/quickChat.router.js";
+import walletRouter from "./routers/wallet.router.js";
+import returnRequestRouter from "./routers/returnRequest.router.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -55,6 +60,10 @@ mongoose
     // 👉 Khởi động cron job cập nhật trạng thái voucher
     startVoucherStatusJob();
     startRankJob();
+    // Start cron jobs
+    startVoucherStatusJob(); // Cron voucher
+    startConversationStatusCheckJob(); // Cron check conversation status
+    startDeleteConversationJob(); // Cron delete conversation
   })
   .catch((err) => {
     console.error("MongoDB connection failed:", err.message);
@@ -80,6 +89,9 @@ app.use("/api", returnRequestRouter);
 app.use("/api", conversationRouter);
 app.use("/api", orderStatisticsRouter);
 app.use("/api", rankRouter);
+app.use("/api", QuickChatRouter);
+app.use("/api", walletRouter);
+app.use("/api", returnRequestRouter);
 
 httpServer.listen(process.env.PORT || 8080, () => {
   console.log(

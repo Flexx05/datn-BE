@@ -1,44 +1,54 @@
 import mongoose, { model, Schema } from "mongoose";
 
-const nontificationSchema = new Schema(
+const notificationSchema = new Schema(
   {
     type: {
-      type: String,
+      type: Number,
       required: [true, "Type is required"],
-      enum: ["order", "status"],
+      enum: [0, 1, 2, 3, 4, 5],
+      /**
+       * 0: order
+       * 1: order-status
+       * 2: comment
+       * 3: chat
+       * 4: system
+       * 5: forStaff
+       */
     },
-    userName: {
+    title: {
       type: String,
-      required: [true, "User name is required"],
+      required: [true, "Title is required"],
+      trim: true,
     },
-    orderCode: {
+    message: {
       type: String,
-      required: [true, "Order code is required"],
-    },
-    orderStatus: {
-      type: String,
-    },
-    orderId: {
-      type: Schema.Types.ObjectId,
-      ref: "Order",
-      required: [true, "Order is required"],
+      required: [true, "Message is required"],
+      trim: true,
     },
     isRead: {
       type: Boolean,
       default: false,
     },
-    receiver: {
+    recipientId: {
+      type: Schema.Types.ObjectId,
+      ref: "Auth",
+      default: null,
+    },
+    link: {
       type: String,
-      default: "admin",
+      default: null,
     },
   },
   {
-    timestamps: true,
+    timestamps: {
+      createdAt: true,
+      updatedAt: false,
+    },
     versionKey: false,
   }
 );
 
-export const nontificationModel =
-  mongoose.models.Nontification || model("Nontification", nontificationSchema);
+export const notificationModel =
+  mongoose.models.Notification || model("Notification", notificationSchema);
 
-export default nontificationModel;
+export default notificationModel;

@@ -1,14 +1,21 @@
 import { Router } from "express";
 import {
-  addParticipantAndRead,
-  deleteMessage,
+  assignConversationToStaff,
+  assignToConversation,
+  changeChatType,
+  closedConversation,
   getAllConversations,
   getConversationById,
   getMessagesFromClient,
-  readMessage,
   sendMessage,
+  unAssignToConversation,
 } from "../controllers/conversation.controller";
-import { isAdminOrStaff, verifyToken } from "../middlewares/checkAuth";
+import {
+  isAdmin,
+  isAdminOrStaff,
+  isStaff,
+  verifyToken,
+} from "../middlewares/checkAuth";
 
 const router = Router();
 
@@ -20,13 +27,35 @@ router.get(
   isAdminOrStaff,
   getConversationById
 );
-router.post(
-  "/participants/add",
+router.get("/conversation/user", verifyToken, getMessagesFromClient); // API Hiển thị tin nhắn phía client
+router.patch(
+  "/conversation/closed/:id",
   verifyToken,
   isAdminOrStaff,
-  addParticipantAndRead
+  closedConversation
 );
-router.post("/read-message", verifyToken, readMessage);
-router.get("conversation/user", verifyToken, getMessagesFromClient); // API Hiển thị tin nhắn phía client
-router.delete("/message/delete/:id", verifyToken, deleteMessage); // API Xóa tin nhắn có hiệu lực trong 5 phút
+router.patch(
+  "/conversation/chat-type/:id",
+  verifyToken,
+  isAdminOrStaff,
+  changeChatType
+);
+router.patch(
+  "/conversation/assign/:id",
+  verifyToken,
+  isStaff,
+  assignToConversation
+);
+router.patch(
+  "/conversation/un-assign/:id",
+  verifyToken,
+  isAdminOrStaff,
+  unAssignToConversation
+);
+router.patch(
+  "/conversation/assign/staff/:id",
+  verifyToken,
+  isAdmin,
+  assignConversationToStaff
+);
 export default router;

@@ -156,7 +156,7 @@ export const login = async (req, res) => {
       { id: user._id },
       process.env.JWT_SECRET_KEY || "binova",
       {
-        expiresIn: "5m",
+        expiresIn: "1d",
       }
     );
 
@@ -235,8 +235,30 @@ export const loginGoogle = async (req, res) => {
       // Nếu chưa tồn tại, tạo người dùng mới
       user = await authModel.create({ email, name, password: null });
     }
-    const accessToken = jwt.sign({ id: user.id }, "chutrang", {
-      expiresIn: "5m",
+    const accessToken = jwt.sign(
+      { id: user.id },
+      process.env.JWT_SECRET_KEY || "binova",
+      {
+        expiresIn: "5m",
+      }
+    );
+    user.isVerify = true;
+    const refreshToken = jwt.sign(
+      { id: user._id },
+      process.env.JWT_REFRESH_SECRET || "refresh_binova",
+      {
+        expiresIn: "7d",
+      }
+    );
+
+    user.refreshToken = refreshToken;
+    await user.save();
+    user.password = undefined; // Không trả về mật khẩu trong response
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
     return res.status(200).json({ user, accessToken });
   } catch (error) {

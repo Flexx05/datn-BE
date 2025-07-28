@@ -135,6 +135,35 @@ export const getAllVoucher = async (req, res) => {
   }
 };
 
+export const getVoucherByCode = async (req, res) => {
+  try {
+    const { code } = req.params;
+
+    if (!code) {
+      return res.status(400).json({ message: "Mã voucher là bắt buộc" });
+    }
+
+    const voucher = await Voucher.findOne({
+      code: code.toUpperCase(),
+      isDeleted: false,
+    });
+
+    if (!voucher) {
+      return res
+        .status(404)
+        .json({ message: "Voucher không tồn tại hoặc đã bị xoá" });
+    }
+
+    res.status(200).json(voucher);
+  } catch (error) {
+    res.status(500).json({
+      message: "Lỗi khi tìm voucher theo mã",
+      error: error.message,
+    });
+  }
+};
+
+
 // Lấy chi tiết voucher theo ID
 export const getByIdVoucher = async (req, res) => {
   try {

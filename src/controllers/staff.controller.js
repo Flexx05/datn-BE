@@ -38,15 +38,12 @@ export const getAllStaff = async (req, res) => {
     const total = await authModel.countDocuments(query);
 
     return res.status(200).json({
-      message: "Lấy danh sách nhân viên thành công",
-      data: {
-        staffs,
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages: Math.ceil(total / parseInt(limit)),
-          totalItems: total,
-          itemsPerPage: parseInt(limit),
-        },
+      staffs,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / parseInt(limit)),
+        totalItems: total,
+        itemsPerPage: parseInt(limit),
       },
     });
   } catch (error) {

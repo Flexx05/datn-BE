@@ -13,7 +13,6 @@ const authSchema = new Schema(
     },
     password: {
       type: String,
-      required: [true, "Password is required"],
     },
     phone: {
       type: String,
@@ -29,9 +28,6 @@ const authSchema = new Schema(
       type: String,
       enum: ["staff", "admin", "user"],
       default: "user",
-    },
-    activeStatus: {
-      type: Boolean,
     },
     isActive: {
       type: Boolean,
