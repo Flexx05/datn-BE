@@ -96,7 +96,7 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
-    review: {
+    review:{
       type: Number,
       enum: [0, 1],
       default: 0,

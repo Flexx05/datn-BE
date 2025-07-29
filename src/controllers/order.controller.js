@@ -78,6 +78,7 @@ export const createOrder = async (req, res) => {
       let shippingDiscount = 0;
       const shippingFeeValue = clientShippingFee || 30000;
 
+
       // Process and validate items
       for (const item of items) {
         const product = products.find((p) =>
@@ -118,6 +119,7 @@ export const createOrder = async (req, res) => {
           );
         }
 
+        // 3. Tính giá
         let price = variation.regularPrice;
         if (variation.salePrice && variation.salePrice > 0) {
           price = variation.salePrice;
@@ -142,7 +144,7 @@ export const createOrder = async (req, res) => {
         (sum, item) => sum + item.totalPrice,
         0
       );
-
+      
       // Validate client subtotal
       if (clientSubtotal !== subtotal) {
         throw new Error(
@@ -194,6 +196,7 @@ export const createOrder = async (req, res) => {
         if (voucher.used >= voucher.quantity) {
           throw new Error(`Voucher ${voucher.code} đã hết lượt sử dụng`);
         }
+
 
         if (voucher.voucherType === "product") {
           if (productVoucherCount > 0) {
@@ -303,7 +306,7 @@ export const createOrder = async (req, res) => {
 
       // Save order
       const orderSave = await order.save({ session });
-      
+
       if (orderSave) {
         // Update voucher usage
         if (orderSave.voucherCode?.length) {
@@ -436,7 +439,6 @@ export const createOrder = async (req, res) => {
                 </div>
                 <p>Nếu bạn muốn hủy đơn hàng, hãy bấm vào liên kết sau:</p>
                 <p><a href="http://localhost:5173/guest-cancel?orderCode=${orderSave.orderCode}&email=${recipientInfo.email}">Hủy đơn hàng</a></p>
-
               </div>
             `,
           });
