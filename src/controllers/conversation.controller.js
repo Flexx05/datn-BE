@@ -7,7 +7,7 @@ import authModel from "../models/auth.model";
 export const getAllConversations = async (req, res) => {
   try {
     const { chatType, status } = req.query;
-    const query = { status: { $ne: "closed" } };
+    const query = {};
 
     if (chatType !== undefined) {
       const chatTypeNumber = Number(chatType);
@@ -34,7 +34,7 @@ export const getAllConversations = async (req, res) => {
       })
       .populate({
         path: "assignedTo",
-        select: "fullName",
+        select: "fullName email",
       });
 
     return res.status(200).json(conversations);
@@ -53,7 +53,7 @@ export const getConversationById = async (req, res) => {
       })
       .populate({
         path: "assignedTo",
-        select: "fullName",
+        select: "fullName email",
       });
     if (!conversation) {
       return res.status(404).json({ error: "Conversation not found" });
@@ -218,9 +218,10 @@ export const sendMessage = async (req, res) => {
       content: savedMessage.content,
       createdAt: savedMessage.createdAt,
     });
-    const customer = conversation.participants.find(
-      (participant) => participant.role === "user"
+    const customer = await authModel.findById(
+      conversation.participants[0].userId
     );
+
     if (user.role === "user") {
       await nontifyAdmin(
         3,
@@ -252,7 +253,7 @@ export const getMessagesFromClient = async (req, res) => {
       participants: { $elemMatch: { userId: user._id } },
     }).sort({ lastUpdated: -1 });
     let isNewConversation = false;
-    if (!conversation) {
+    if (!conversation || conversation.status === "closed") {
       isNewConversation = true;
       conversation = await Conversation.create({
         participants: [
@@ -343,7 +344,7 @@ export const assignToConversation = async (req, res) => {
     if (conversation.assignedTo !== null) {
       return res.status(400).json({ error: "Đoạn chat này đã được đăng ký" });
     }
-    if (conversation.status !== "closed") {
+    if (conversation.status === "closed") {
       return res.status(400).json({ error: "Đoạn chat đã kết thúc" });
     }
     conversation.assignedTo = user._id;
@@ -403,11 +404,14 @@ export const assignConversationToStaff = async (req, res) => {
     const { id } = req.params;
     const { staffId } = req.body;
     const conversation = await Conversation.findById(id);
+    if (!conversation)
+      return res.status(404).json({ error: "Conversation not found" });
     if (conversation.assignedTo !== null) {
       return res.status(400).json({ error: "Đoạn chat này đã được đăng ký" });
     }
-    if (!conversation)
-      return res.status(404).json({ error: "Conversation not found" });
+    if (conversation.status === "closed") {
+      return res.status(400).json({ error: "Đoạn chat đã kết thúc" });
+    }
 
     await nontifyAdmin(
       5,
