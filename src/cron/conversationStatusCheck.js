@@ -6,6 +6,7 @@ export const startConversationStatusCheckJob = () => {
   cron.schedule("* * * * *", async () => {
     const now = new Date();
     const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     try {
       const conversationActive = await Conversation.find({
@@ -15,7 +16,7 @@ export const startConversationStatusCheckJob = () => {
 
       const conversationWaiting = await Conversation.find({
         status: "waiting",
-        lastUpdated: { $lte: thirtyMinutesAgo },
+        lastUpdated: { $lte: oneDayAgo },
       });
 
       // Cập nhật active => waiting
