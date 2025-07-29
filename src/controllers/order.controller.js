@@ -7,6 +7,23 @@ import Voucher from "../models/voucher.model.js";
 import { nontifyAdmin } from "./nontification.controller.js";
 import { getSocketInstance } from "../socket.js";
 
+const ORDER_STATUS_MAP = {
+  0: "Chờ xác nhận",
+  1: "Đã xác nhận",
+  2: "Đang giao hàng",
+  3: "Đã giao hàng",
+  4: "Hoàn thành",
+  5: "Đã hủy",
+  6: "Hoàn hàng",
+};
+
+const PAYMENT_STATUS_MAP = {
+  0: "Chưa thanh toán",
+  1: "Đã thanh toán",
+  2: "Hoàn tiền",
+  3: "Đã hủy",
+};
+
 export const createOrder = async (req, res) => {
   const session = await mongoose.startSession();
 
@@ -349,12 +366,12 @@ export const createOrder = async (req, res) => {
                     <li><strong>Mã đơn hàng:</strong> ${
                       orderSave.orderCode
                     }</li>
-                    <li><strong>Trạng thái:</strong> ${orderSave.status}</li>
+                    <li><strong>Trạng thái:</strong> ${ORDER_STATUS_MAP[orderSave.status]}</li>
                     <li><strong>Phương thức thanh toán:</strong> ${
                       orderSave.paymentMethod
                     }</li>
                     <li><strong>Trạng thái thanh toán:</strong> ${
-                      orderSave.paymentStatus
+                      PAYMENT_STATUS_MAP[orderSave.paymentStatus]
                     }</li>
                     <li><strong>Ngày giao dự kiến:</strong> ${new Date(
                       orderSave.expectedDeliveryDate
@@ -1001,10 +1018,10 @@ export const cancelOrder = async (req, res) => {
     }
 
     // 4. Chỉ cho phép hủy nếu trạng thái là "Chờ xác nhận" hoặc "Đã xác nhận"
-    const cancelableStatus = ["Cho xac nhan", "Da xac nhan"];
+    const cancelableStatus = [0, 1];
     if (!cancelableStatus.includes(order.status)) {
       return res.status(400).json({
-        error: `Chỉ được hủy đơn hàng khi đang ở trạng thái: ${cancelableStatus.join(
+        error: `Chỉ được hủy đơn hàng ở trạng thái: ${cancelableStatus.map((s) => ORDER_STATUS_MAP[s]).join(
           ", "
         )}`,
       });
