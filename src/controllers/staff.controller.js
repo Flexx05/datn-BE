@@ -3,49 +3,39 @@ import authModel from "../models/auth.model";
 export const getAllStaff = async (req, res) => {
   try {
     const {
-      page = 1,
-      limit = 10,
-      sortBy = "createdAt",
-      order = "desc",
-      search = "",
-      status,
+      search,
+      isActive,
+      _page = 1,
+      _limit = 10,
+      _sort = "createdAt",
+      _order,
     } = req.query;
+    const query = { role: { $in: ["admin", "staff"] } };
 
-    const query = {
-      role: "staff",
-    };
-
-    if (status) {
-      query.status = status;
+    if (isActive !== undefined) {
+      query.isActive = isActive === "true";
     }
 
     if (search) {
       query.$or = [
         { fullName: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
+        { phone: { $regex: search, $options: "i" } },
       ];
     }
+    const options = {};
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    if (_limit === "off") {
+      options.pagination = false;
+    } else {
+      options.page = parseInt(_page, 10) || 1;
+      options.limit = parseInt(_limit, 10) || 10;
+      options.sort = { [_sort]: _order === "desc" ? -1 : 1 };
+    }
 
-    const staffs = await authModel
-      .find(query)
-      .sort({ [sortBy]: order === "desc" ? -1 : 1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .select("-password");
+    const staffs = await authModel.paginate(query, options);
 
-    const total = await authModel.countDocuments(query);
-
-    return res.status(200).json({
-      staffs,
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(total / parseInt(limit)),
-        totalItems: total,
-        itemsPerPage: parseInt(limit),
-      },
-    });
+    return res.status(200).json(staffs);
   } catch (error) {
     console.error("Get Staff Error:", error);
     return res.status(400).json({
