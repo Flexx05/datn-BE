@@ -44,18 +44,29 @@ export const getCustomerRank = async (req, res) => {
     else if (spendingScore >= 7000) calculatedRank = 1;
     else if (spendingScore >= 3000) calculatedRank = 0;
 
-    let rank = user.rank;
-    if (rank === null) {
-      rank = calculatedRank;
-    } else {
-      if (calculatedRank === null) {
-        rank = Math.max(0, user.rank - 1);
-      } else if (calculatedRank < user.rank) {
-        rank = user.rank - 1;
-      } else {
+      let rank = user.rank;
+      const lastOrderDate = orders[0]?.createdAt;
+      const hasNewOrder =
+        lastOrderDate &&
+        (!user.rankUpdatedAt ||
+          dayjs(lastOrderDate).isAfter(user.rankUpdatedAt));
+
+      if (rank === null) {
         rank = calculatedRank;
+      } else {
+        if (calculatedRank === null || calculatedRank < user.rank) {
+          // Chỉ tụt nếu có đơn mới kể từ lần cập nhật rank trước
+          if (hasNewOrder) {
+            rank = Math.max(0, user.rank - 1);
+          } else {
+            rank = user.rank; // Giữ nguyên hạng nếu không có đơn mới
+          }
+        } else if (calculatedRank > user.rank) {
+          rank = calculatedRank;
+        } else {
+          rank = user.rank;
+        }
       }
-    }
 
     // --- Nếu có thay đổi rank ---
     if (rank !== user.rank) {
@@ -69,6 +80,9 @@ export const getCustomerRank = async (req, res) => {
 
       if (rank > (user.rank ?? -1)) {
         subject = "🎉 Chúc mừng bạn đã lên hạng!";
+        const vouchers = await createVoucherRank([user], rank);
+        const voucher = vouchers?.[0]?.voucher;
+
         html = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #ddd; border-radius: 8px;">
             <h2 style="color: #4CAF50;">${subject}</h2>
@@ -76,21 +90,37 @@ export const getCustomerRank = async (req, res) => {
             <p>Chúc mừng bạn đã được <strong>thăng hạng lên ${getRankName(
               rank
             )}</strong> 🎉</p>
-            <p>Hãy tận hưởng các ưu đãi đặc biệt dành riêng cho bạn ở cấp bậc mới này!</p>
 
-            <p style="margin-top: 24px;">Nếu bạn có bất kỳ câu hỏi nào, đừng ngần ngại liên hệ với chúng tôi.</p>
-
-            <p style="margin-top: 32px;">
-              Trân trọng,<br/>
-              <strong>Binova Shop</strong><br/>
-              <i>Chăm sóc khách hàng</i>
-            </p>
-
+            ${
+              voucher
+                ? `
+                <p>Hãy tận hưởng ưu đãi đặc biệt dành riêng cho bạn ở cấp bậc mới này!</p>
+              <div style="margin-top: 24px; padding: 16px; background-color: #f9f9f9; border-left: 4px solid #4CAF50;">
+                <p><strong>Mã ưu đãi:</strong> ${voucher.code}</p>
+                <p><strong>Giảm:</strong> ${
+                  voucher.discountType === "fixed"
+                    ? `${voucher.discountValue.toLocaleString()}đ`
+                    : `${
+                        voucher.discountValue
+                      }% (tối đa ${voucher.maxDiscount.toLocaleString()}đ)`
+                }</p>
+                <p><strong>Đơn tối thiểu:</strong> ${voucher.minOrderValues.toLocaleString()}đ</p>
+                <p><strong>Hạn dùng:</strong> đến ${dayjs(
+                  voucher.endDate
+                ).format("DD/MM/YYYY")}</p>
+              </div>
+              <div style="text-align:center; margin-top: 24px;">
+                <a href="http://localhost:5174/products" style="display:inline-block; background-color:#4CAF50; color:white; padding:12px 24px; border-radius:4px; text-decoration:none;">Sử dụng ngay</a>
+              </div>
+            `
+                : ""
+            }
+             <p style="margin-top: 24px;">Nếu bạn có bất kỳ câu hỏi nào, đừng ngần ngại liên hệ với chúng tôi.</p>
+            <p style="margin-top: 32px;">Trân trọng,<br/> <strong>Binova Shop</strong><br/> <i>Chăm sóc khách hàng</i></p>
             <hr style="margin: 24px 0;" />
             <p style="font-size: 12px; color: #999;">Đây là email tự động, vui lòng không trả lời lại.</p>
           </div>
         `;
-        await createVoucherRank([user], rank); // tạo voucher khi lần đầu lên hạng
       } else if (rank < user.rank && user.rank > 0) {
         subject = "⚠️ Bạn đã bị tụt hạng";
         html = `
@@ -104,6 +134,10 @@ export const getCustomerRank = async (req, res) => {
             )}</strong> vì chưa đạt đủ mức chi tiêu cần thiết trong vòng 90 ngày qua.</p>
 
             <p>Hãy quay lại và tiếp tục mua sắm để nhanh chóng lấy lại hạng của mình và tận hưởng những ưu đãi hấp dẫn dành riêng cho bạn!</p>
+
+            <div style="text-align:center; margin-top: 24px;">
+                <a href="http://localhost:5174/products" style="display:inline-block; background-color:#ff9800; color:white; padding:12px 24px; border-radius:4px; text-decoration:none;">Lấy lại hạng ngay</a>
+            </div>
 
             <p style="margin-top: 24px;">Nếu bạn có bất kỳ câu hỏi nào, đừng ngần ngại liên hệ với chúng tôi.</p>
 

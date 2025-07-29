@@ -3,7 +3,6 @@ import authModel from "../models/auth.model.js";
 import dayjs from "dayjs";
 import { sendMail } from "../utils/sendMail.js";
 import orderModel from "../models/order.model.js";
-import Voucher from "../models/voucher.model.js";
 import { createVoucherMonthly } from "../utils/createVoucherRank.js";
 
 function getRankName(rank) {
@@ -42,11 +41,16 @@ const sendRankWarning = async (user) => {
   const currentNeed = rankTarget[user.rank] ?? 0;
   const enough = spendingScore >= currentNeed;
 
+  const lastOrderDate = orders[0]?.createdAt;
+  const hasNewOrder =
+    lastOrderDate &&
+    (!user.rankUpdatedAt || dayjs(lastOrderDate).isAfter(user.rankUpdatedAt));
+
   const cycleStart = orders[0]?.createdAt || date90DaysAgo;
   const daysPassed = dayjs().diff(dayjs(cycleStart), "day");
   const daysLeft = 90 - daysPassed;
 
-  if (daysLeft === 7 && !enough && user.email) {
+  if (hasNewOrder && daysLeft === 7 && !enough && user.email) {
     const nextRank = Math.max(0, user.rank - 1);
     const subject = "⚠️ Thông báo: Bạn sắp bị tụt hạng!";
     const html = `
@@ -60,6 +64,10 @@ const sendRankWarning = async (user) => {
       nextRank
     )}</strong>.</p>
         <p>Hãy mua sắm ngay hôm nay để giữ vững hạng và tiếp tục nhận nhiều ưu đãi hấp dẫn!</p>
+
+        <div style="text-align:center; margin-top: 24px;">
+          <a href="http://localhost:5174/products" style="display:inline-block; background-color:#ff9800; color:white; padding:12px 24px; border-radius:4px; text-decoration:none;">Mua sắm ngay</a>
+        </div>
 
         <p style="margin-top: 24px;">Nếu bạn có bất kỳ câu hỏi nào, đừng ngần ngại liên hệ với chúng tôi.</p>
 

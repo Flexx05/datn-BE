@@ -17,6 +17,12 @@ function getRankName(rank) {
   }
 }
 
+  const codePrefix = {
+    0: "BRONZE",
+    1: "SILVER",
+    2: "GOLD",
+    3: "DIAMOND",
+  };
 
 export const createVoucherRank = async (users, rank, monthKey) => {
   if (!Array.isArray(users) || users.length === 0) return;
@@ -35,44 +41,60 @@ export const createVoucherRank = async (users, rank, monthKey) => {
   const endDate = new Date();
   endDate.setMonth(endDate.getMonth() + 1);
 
-  // Lọc user đủ điều kiện: chưa từng nhận voucher này và còn active
-  const filteredUsers = [];
-  for (const user of users) {
-    if (user?.isActive === false) continue; // Bỏ user không active
+  const createdVouchers = [];
 
+  for (const user of users) {
+    if (user?.isActive === false) continue;
+
+    // Kiểm tra voucher rank-up của hạng này đã tồn tại chưa (cho user này)
     const existed = await Voucher.findOne({
       userIds: user._id,
-      description: { $regex: `hạng ${getRankName(rank)}`, $options: "i" },
+      code: { $regex: `^RANKUP-${codePrefix[rank]}-`, $options: "i" },
     });
 
-    if (!existed) filteredUsers.push(user);
+    if (existed) {
+      console.log(
+        `⚠️ User ${user._id} đã có voucher lên hạng ${getRankName(rank)}: ${
+          existed.code
+        }`
+      );
+      continue;
+    }
+
+    // Tạo mã voucher mới, kèm prefix hạng
+    const code = `RANKUP-${codePrefix[rank]}-${uuidv4()
+      .slice(0, 8)
+      .toUpperCase()}`;
+
+    const voucher = new Voucher({
+      voucherType: "product",
+      code,
+      userIds: [user._id],
+      description: `Ưu đãi đặc biệt khi lên hạng ${getRankName(rank)}`,
+      discountType: "percent",
+      discountValue: config.discountValue,
+      maxDiscount: config.maxDiscount,
+      minOrderValues: config.minOrderValues,
+      quantity: 1,
+      startDate: now,
+      endDate: endDate,
+      voucherStatus: "active",
+      monthIssued: monthKey,
+    });
+
+    await voucher.save();
+    createdVouchers.push({ user, voucher });
   }
 
-  if (filteredUsers.length === 0) return;
-
-  const voucher = new Voucher({
-    voucherType: "product",
-    code: `RANKUP-${uuidv4().slice(0, 8).toUpperCase()}`,
-    userIds: filteredUsers.map((u) => u._id),
-    description: `Ưu đãi đặc biệt khi lên hạng ${getRankName(rank)}`,
-    discountType: "percent",
-    discountValue: config.discountValue,
-    maxDiscount: config.maxDiscount,
-    minOrderValues: config.minOrderValues,
-    quantity: filteredUsers.length,
-    startDate: now,
-    endDate: endDate,
-    voucherStatus: "active",
-    monthIssued: monthKey,
-  });
-
-  await voucher.save();
   console.log(
-    `🎁 Đã tạo voucher cho ${filteredUsers.length} user lên hạng ${getRankName(
-      rank
-    )}`
+    `🎁 Đã tạo ${
+      createdVouchers.length
+    } voucher cá nhân cho user lên hạng ${getRankName(rank)}`
   );
+
+  return createdVouchers;
 };
+
 
 
 export const createVoucherMonthly = async (rank, monthKey) => {
@@ -115,14 +137,7 @@ export const createVoucherMonthly = async (rank, monthKey) => {
   const startDate = dayjs(`${monthKey}-01`).startOf("day").toDate();
   const endDate = dayjs(`${monthKey}-01`).add(6, "day").endOf("day").toDate();
 
-  const codePrefix = {
-    0: "BRONZE",
-    1: "SILVER",
-    2: "GOLD",
-    3: "DIAMOND",
-  };
-
-  const code = `RANK-${codePrefix[rank]}-${monthKey.replace("-", "")}`;
+  const code = `RANK-MONTHLY-${codePrefix[rank]}-${monthKey.replace("-", "")}`;
 
   // Kiểm tra voucher đã tồn tại chưa
   const existed = await Voucher.findOne({ code, monthIssued: monthKey });
