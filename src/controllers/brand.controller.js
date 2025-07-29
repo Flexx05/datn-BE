@@ -14,12 +14,12 @@ export const createBrand = async (req, res) => {
     });
     if (error) {
       const errors = error.details.map((err) => err.message);
-      return res.status(400).json({ message: errors });
+      return res.status(400).json({ error: errors });
     }
     const { name } = req.body;
     const checkName = await brandModel.findOne({ name: name });
     if (checkName) {
-      return res.status(400).json({ message: "Tên thương hiệu đã tồn tại" });
+      return res.status(400).json({ error: "Tên thương hiệu đã tồn tại" });
     }
     const brands = await brandModel.find();
     const newBrand = await brandModel.create({
@@ -31,7 +31,7 @@ export const createBrand = async (req, res) => {
     });
     return res
       .status(201)
-      .json({ message: "Brand created successfully", newBrand });
+      .json({ error: "Brand created successfully", newBrand });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -85,7 +85,7 @@ export const getAllBrands = async (req, res) => {
 
     if (options.pagination === false) {
       // Trả về mảng khi không phân trang
-      return res.status(200).json({docs: countProduct});
+      return res.status(200).json({ docs: countProduct });
     } else {
       // Trả về object phân trang như cũ
       return res.status(200).json({ ...brands, docs: countProduct });
@@ -117,7 +117,7 @@ export const updateBrand = async (req, res) => {
     });
     if (error) {
       const errors = error.details.map((err) => err.message);
-      return res.status(400).json({ message: errors });
+      return res.status(400).json({ error: errors });
     }
     const listBrand = await brandModel.find();
     const slug = generateSlug(
@@ -132,9 +132,7 @@ export const updateBrand = async (req, res) => {
     if (!brand) {
       return res.status(404).json({ error: "Brand not found" });
     }
-    return res
-      .status(200)
-      .json({ message: "Brand updated successfully", brand });
+    return res.status(200).json({ error: "Brand updated successfully", brand });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -147,7 +145,7 @@ export const showBrand = async (req, res) => {
     if (!brand) {
       return res.status(404).json({ error: "Brand not found" });
     }
-    return res.status(200).json({ message: "Brand show successfully", brand });
+    return res.status(200).json({ error: "Brand show successfully", brand });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -177,7 +175,7 @@ export const deleteBrand = async (req, res) => {
       if (brand.slug === unBrand.slug)
         return res
           .status(400)
-          .json({ message: "Không thể xóa thương hiệu không xác định" });
+          .json({ error: "Không thể xóa thương hiệu không xác định" });
       await productModel.updateMany(
         { brandId: id },
         { brandId: unBrand._id, brandName: unBrand.name }
@@ -191,9 +189,7 @@ export const deleteBrand = async (req, res) => {
     } else {
       // Xóa cứng
       await brandModel.findByIdAndDelete(id);
-      return res
-        .status(200)
-        .json({ message: "Brand hard deleted successfully" });
+      return res.status(200).json({ error: "Brand hard deleted successfully" });
     }
   } catch (error) {
     return res.status(500).json({ error: error.message });

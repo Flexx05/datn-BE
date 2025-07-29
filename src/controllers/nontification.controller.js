@@ -29,7 +29,7 @@ export const getAllNontification = async (req, res) => {
       .sort(sortOption);
     return res.status(200).json(nontifications);
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -39,7 +39,7 @@ export const deleteNontification = async (req, res) => {
     const nontification = await notificationModel.findByIdAndDelete(id);
     return res.status(200).json(nontification);
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -52,9 +52,9 @@ export const changeReadingStatus = async (req, res) => {
       { new: true }
     );
     if (!nontification)
-      return res.status(404).json({ message: "Thông báo không tồn tại" });
+      return res.status(404).json({ error: "Thông báo không tồn tại" });
     return res.status(200).json(nontification);
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };

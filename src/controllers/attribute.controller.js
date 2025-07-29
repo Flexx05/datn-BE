@@ -53,7 +53,7 @@ export const getAllAttribute = async (req, res) => {
       return res.status(200).json({ ...attributes, docs: countProduct });
     }
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    return res.status(400).json({ error: error.message });
   }
 };
 
@@ -62,10 +62,10 @@ export const getAttributeBySlug = async (req, res) => {
     const { slug } = req.params;
     const attribute = await attributeModel.findOne({ slug });
     if (!attribute)
-      return res.status(404).json({ message: "Thuộc tính không tồn tại" });
+      return res.status(404).json({ error: "Thuộc tính không tồn tại" });
     return res.status(200).json(attribute);
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    return res.status(400).json({ error: error.message });
   }
 };
 
@@ -74,10 +74,10 @@ export const getAttributeById = async (req, res) => {
     const { id } = req.params;
     const attribute = await attributeModel.findById(id);
     if (!attribute)
-      return res.status(404).json({ message: "Thuộc tinh không tồn tại" });
+      return res.status(404).json({ error: "Thuộc tinh không tồn tại" });
     return res.status(200).json(attribute);
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    return res.status(400).json({ error: error.message });
   }
 };
 
@@ -92,7 +92,7 @@ export const deleteAttribute = async (req, res) => {
       if (productExist) {
         return res
           .status(400)
-          .json({ message: "Thuộc tính đang tồn tại sản phẩm" });
+          .json({ error: "Thuộc tính đang tồn tại sản phẩm" });
       }
       const attribute = await attributeModel.findByIdAndUpdate(
         id,
@@ -100,17 +100,17 @@ export const deleteAttribute = async (req, res) => {
         { new: true }
       );
       if (!attribute)
-        return res.status(404).json({ message: "Thuộc tinh không tồn tại" });
+        return res.status(404).json({ error: "Thuộc tinh không tồn tại" });
       return res.status(200).json(attribute);
     }
     const attribute = await attributeModel.findByIdAndDelete(id);
     if (!attribute)
-      return res.status(404).json({ message: "Thuộc tinh không tồn tại" });
+      return res.status(404).json({ error: "Thuộc tinh không tồn tại" });
     return res
       .status(200)
-      .json({ message: "Thuộc tính đã được xóa thành công", attribute });
+      .json({ error: "Thuộc tính đã được xóa thành công", attribute });
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    return res.status(400).json({ error: error.message });
   }
 };
 
@@ -122,7 +122,7 @@ export const createAttribute = async (req, res) => {
     });
     if (error) {
       const errors = error.details.map((err) => err.message);
-      return res.status(400).json({ message: errors });
+      return res.status(400).json({ error: errors });
     }
 
     // Kiểm tra trùng tên thuộc tính (không phân biệt hoa thường, loại bỏ khoảng trắng)
@@ -132,7 +132,7 @@ export const createAttribute = async (req, res) => {
       (attr) => attr.name && attr.name.trim().toLowerCase() === normalizedName
     );
     if (hasNameDuplicate) {
-      return res.status(400).json({ message: "Tên thuộc tính đã tồn tại." });
+      return res.status(400).json({ error: "Tên thuộc tính đã tồn tại." });
     }
 
     // Kiểm tra trùng tên value (không phân biệt hoa thường, loại bỏ khoảng trắng)
@@ -141,7 +141,7 @@ export const createAttribute = async (req, res) => {
     if (hasDuplicate) {
       return res
         .status(400)
-        .json({ message: "Các giá trị value không được trùng tên." });
+        .json({ error: "Các giá trị value không được trùng tên." });
     }
 
     const values = value.values.map((val) => val);
@@ -155,7 +155,7 @@ export const createAttribute = async (req, res) => {
     });
     return res.status(200).json(attribute);
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    return res.status(400).json({ error: error.message });
   }
 };
 
@@ -168,7 +168,7 @@ export const updateAttribute = async (req, res) => {
     });
     if (error) {
       const errors = error.details.map((err) => err.message);
-      return res.status(400).json({ message: errors });
+      return res.status(400).json({ error: errors });
     }
 
     // Kiểm tra trùng tên thuộc tính (không phân biệt hoa thường, loại bỏ khoảng trắng, loại trừ chính nó)
@@ -181,7 +181,7 @@ export const updateAttribute = async (req, res) => {
         attr.name.trim().toLowerCase() === normalizedName
     );
     if (hasNameDuplicate) {
-      return res.status(400).json({ message: "Tên thuộc tính đã tồn tại." });
+      return res.status(400).json({ error: "Tên thuộc tính đã tồn tại." });
     }
 
     // Kiểm tra trùng tên value (không phân biệt hoa thường, loại bỏ khoảng trắng)
@@ -190,7 +190,7 @@ export const updateAttribute = async (req, res) => {
     if (hasDuplicate) {
       return res
         .status(400)
-        .json({ message: "Các giá trị value không được trùng tên." });
+        .json({ error: "Các giá trị value không được trùng tên." });
     }
 
     const values = value.values.map((val) => val);
@@ -209,9 +209,9 @@ export const updateAttribute = async (req, res) => {
       }
     );
     if (!attribute)
-      return res.status(404).json({ message: "Thuộc tinh không tồn tại" });
+      return res.status(404).json({ error: "Thuộc tinh không tồn tại" });
     return res.status(200).json(attribute);
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    return res.status(400).json({ error: error.message });
   }
 };

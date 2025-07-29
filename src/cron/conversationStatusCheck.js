@@ -14,10 +14,28 @@ export const startConversationStatusCheckJob = () => {
         lastUpdated: { $lte: thirtyMinutesAgo },
       });
 
-      const conversationWaiting = await Conversation.find({
-        status: "waiting",
-        lastUpdated: { $lte: oneDayAgo },
-      });
+      const conversationWaiting = await Conversation.aggregate([
+        {
+          $match: {
+            status: "waiting",
+            lastUpdated: { $lte: oneDayAgo },
+          },
+        },
+        {
+          $project: {
+            participants: 1,
+            messages: 1,
+            lastMessage: { $arrayElemAt: ["$messages", -1] }, // Tin nhắn cuối cùng
+            status: 1,
+            lastUpdated: 1,
+          },
+        },
+        {
+          $match: {
+            "lastMessage.senderRole": { $ne: "user" }, // Người gửi cuối không phải user
+          },
+        },
+      ]);
 
       // Cập nhật active => waiting
       for (const conv of conversationActive) {

@@ -64,10 +64,10 @@ export const getProductById = async (req, res) => {
     const { id } = req.params;
     const product = await productModel.findById(id);
     if (!product)
-      return res.status(404).json({ message: "Sản phẩm khôn tồn tại" });
+      return res.status(404).json({ error: "Sản phẩm khôn tồn tại" });
     return res.status(200).json(product);
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    return res.status(400).json({ error: error.message });
   }
 };
 
@@ -76,10 +76,10 @@ export const getProductBySlug = async (req, res) => {
     const { slug } = req.params;
     const product = await productModel.findOne({ slug });
     if (!product)
-      return res.status(404).json({ message: "Sản phẩm khôn tồn tại" });
+      return res.status(404).json({ error: "Sản phẩm khôn tồn tại" });
     return res.status(200).json(product);
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    return res.status(400).json({ error: error.message });
   }
 };
 
@@ -88,7 +88,7 @@ export const deleteProduct = async (req, res) => {
     const { id } = req.params;
     const product = await productModel.findById(id);
     if (!product) {
-      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+      return res.status(404).json({ error: "Sản phẩm không tồn tại" });
     }
     if (product.isActive === true) {
       // Xóa mềm: chuyển isActive = false cho sản phẩm và các biến thể
@@ -106,10 +106,10 @@ export const deleteProduct = async (req, res) => {
     } else {
       // Xóa cứng
       await productModel.findByIdAndDelete(id);
-      return res.status(200).json({ message: "Xóa sản phẩm thành công" });
+      return res.status(200).json({ error: "Xóa sản phẩm thành công" });
     }
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    return res.status(400).json({ error: error.message });
   }
 };
 
@@ -211,7 +211,7 @@ export const createProductWithVariations = async (req, res) => {
     });
     if (error) {
       const errors = error.details.map((err) => err.message);
-      return res.status(400).json({ message: errors });
+      return res.status(400).json({ error: errors });
     }
     let brandName = "";
     let categoryName = "";
@@ -343,7 +343,7 @@ export const updateProduct = async (req, res) => {
     });
     if (error) {
       const errors = error.details.map((err) => err.message);
-      return res.status(400).json({ message: errors });
+      return res.status(400).json({ error: errors });
     }
     let brandName = "";
     let categoryName = "";
@@ -477,7 +477,7 @@ export const updateProductStatus = async (req, res) => {
     const product = await productModel.findById(id);
 
     if (!product) {
-      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+      return res.status(404).json({ error: "Sản phẩm không tồn tại" });
     }
 
     // Cập nhật trạng thái sản phẩm
@@ -494,7 +494,7 @@ export const updateProductStatus = async (req, res) => {
 
     await product.save();
 
-    return res.status(200).json({ message: "Cập nhật trạng thái thành công" });
+    return res.status(200).json({ error: "Cập nhật trạng thái thành công" });
   } catch (error) {
     console.error("Lỗi cập nhật trạng thái sản phẩm:", error);
     return res.status(500).json({ error: "Lỗi server" });
@@ -508,18 +508,18 @@ export const updateVariaionStatus = async (req, res) => {
 
     const product = await productModel.findById(productId);
     if (!product) {
-      return res.status(404).json({ message: "Sản phẩm không tồn tại" });
+      return res.status(404).json({ error: "Sản phẩm không tồn tại" });
     }
 
     const variation = product.variation.find((v) => v._id.toString() === id);
 
     if (!variation) {
-      return res.status(404).json({ message: "Biến thể không tìm thấy" });
+      return res.status(404).json({ error: "Biến thể không tìm thấy" });
     }
 
     // Nếu hết hàng và đang tắt rồi thì không cho bật lại
     if (variation.stock === 0 && variation.isActive === false) {
-      return res.status(400).json({ message: "Sản phẩm này đã hết hàng" });
+      return res.status(400).json({ error: "Sản phẩm này đã hết hàng" });
     }
 
     // Toggle trạng thái của biến thể

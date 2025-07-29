@@ -148,7 +148,7 @@ export const sendMessage = async (req, res) => {
     if (newMessage.senderRole !== "user" && customerInfo.isActive === false) {
       return res
         .status(400)
-        .json({ message: "Không thể gửi tin nhắn cho tài khoản bị khóa" });
+        .json({ error: "Không thể gửi tin nhắn cho tài khoản bị khóa" });
     }
 
     if (newMessage.senderRole === "staff") {
@@ -241,7 +241,7 @@ export const sendMessage = async (req, res) => {
     });
   } catch (error) {
     console.error("Send Message Error:", error);
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -303,6 +303,12 @@ export const closedConversation = async (req, res) => {
     const conversation = await Conversation.findById(id);
     if (!conversation)
       return res.status(404).json({ error: "Conversation not found" });
+    const lastMessage = conversation.messages[conversation.messages.length - 1];
+    if (lastMessage.senderRole === "user") {
+      return res
+        .status(400)
+        .json({ error: "Không thể đóng khi chưa trả lời khách hàng" });
+    }
     conversation.status = "closed";
     conversation.updateBy = user._id;
     conversation.lastUpdated = new Date();
