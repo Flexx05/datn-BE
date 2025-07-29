@@ -428,8 +428,8 @@ export const createOrder = async (req, res) => {
                 </ul>
 
                 <p style="margin-top: 20px;">Cảm ơn bạn đã mua sắm tại <strong>Binova</strong>! Nếu có bất kỳ thắc mắc nào, hãy phản hồi email này để được hỗ trợ.</p>
-                <div style="display: flex; justify-content: flex-end;">
-                    <div style="text-align: right;">
+                <div style="display: flex; margin-left: 68%;">
+                    <div style="text-align: center;">
                         <p>Trân trọng</p>
                         <i><strong>Đội ngũ Binova</strong></i>
                     </div>
