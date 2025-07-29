@@ -434,6 +434,9 @@ export const createOrder = async (req, res) => {
                         <i><strong>Đội ngũ Binova</strong></i>
                     </div>
                 </div>
+                <p>Nếu bạn muốn hủy đơn hàng, hãy bấm vào liên kết sau:</p>
+                <p><a href="http://localhost:5173/guest-cancel?orderCode=${orderSave.orderCode}&email=${recipientInfo.email}">Hủy đơn hàng</a></p>
+
               </div>
             `,
           });
@@ -818,9 +821,9 @@ export const updateOrderStatus = async (req, res) => {
         } đã được cập nhật trạng thái: ${statusMap[order.status]}`;
         console.log(5);
         
-        io.to(order.userId.toString()).emit("order-status-changed", {
+        if(order.userId) {io.to(order.userId.toString()).emit("order-status-changed", {
           message,
-        });
+        });}
       }
     } catch (error) {
       console.log("Lỗi gửi thống báo cho người dùng: ", error);
