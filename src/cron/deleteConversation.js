@@ -2,7 +2,7 @@ import cron from "node-cron";
 import Conversation from "../models/conversation.model";
 
 export const startDeleteConversationJob = () => {
-  cron.schedule("* * * * *", async () => {
+  cron.schedule("0 0 * * *", async () => {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
