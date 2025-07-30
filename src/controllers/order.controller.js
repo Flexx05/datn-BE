@@ -535,6 +535,43 @@ export const getOrderById = async (req, res) => {
     return res.status(400).json({ error: error.message });
   }
 };
+export const getOrderByCode = async (req, res) => {
+  try {
+    const { code } = req.params;
+
+    // Tìm đơn hàng theo orderCode và populate product + variation
+    const order = await Order.findOne({ orderCode: code }).populate({
+      path: "items.productId",
+      select: "name variation",
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
+    }
+
+    // Xử lý items để chỉ lấy variation attributes tương ứng
+    const processedItems = order.items.map((item) => {
+      const product = item.productId;
+
+      const matchedVariation = product?.variation?.find(
+        (v) => v._id.toString() === item.variationId.toString()
+      );
+
+      return {
+        ...item.toObject(),
+        variantAttributes: matchedVariation ? matchedVariation.attributes : [],
+      };
+    });
+
+    const orderObject = order.toObject();
+    orderObject.items = processedItems;
+
+    return res.status(200).json(orderObject);
+  } catch (error) {
+    return res.status(400).json({ error: "Đã xảy ra lỗi khi tìm đơn hàng" });
+  }
+};
+
 
 export const getOrderByUserId = async (req, res) => {
   try {

@@ -6,6 +6,7 @@ import {
   updateReturnRequestStatus,
   processRefundForReturnRequest,
   getReturnRequestByOrderId,
+  getReturnRequestByOrderCode,
 } from "../controllers/returnRequest.controller.js";
 import { verifyToken, isAdmin } from "../middlewares/checkAuth.js";
 
@@ -17,6 +18,7 @@ router.post("/return-requests", verifyToken, createReturnRequest);
 // Lấy chi tiết yêu cầu hoàn hàng theo ID
 router.get("/return-requests/:id", verifyToken, getReturnRequestById);
 router.get("/return-requests/order/:orderId", verifyToken, getReturnRequestByOrderId);
+router.get("/return-requests/order-code/:orderCode", getReturnRequestByOrderCode);
 
 // Lấy danh sách yêu cầu hoàn hàng
 router.get("/return-requests", verifyToken, getReturnRequests);
