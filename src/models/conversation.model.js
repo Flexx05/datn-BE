@@ -121,19 +121,3 @@ export const Conversation =
   models.Conversation || model("Conversation", ConversationSchema);
 
 export default Conversation;
-
-// ! Middleware để ghi log vào statusLogs
-
-ConversationSchema.pre("save", function (next) {
-  if (this.isModified("status") && this.updatedBy) {
-    this.statusLogs.push({
-      status: this.status,
-      updateBy: this.updatedBy,
-      updatedAt: new Date(),
-    });
-  }
-
-  // Cập nhật thời gian chỉnh sửa
-  this.lastUpdated = new Date();
-  next();
-});

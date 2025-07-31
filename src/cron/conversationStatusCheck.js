@@ -14,7 +14,7 @@ export const startConversationStatusCheckJob = () => {
         lastUpdated: { $lte: thirtyMinutesAgo },
       });
 
-      const conversationWaiting = await Conversation.aggregate([
+      const waitingConversationsRaw = await Conversation.aggregate([
         {
           $match: {
             status: "waiting",
@@ -23,19 +23,22 @@ export const startConversationStatusCheckJob = () => {
         },
         {
           $project: {
-            participants: 1,
-            messages: 1,
-            lastMessage: { $arrayElemAt: ["$messages", -1] }, // Tin nhắn cuối cùng
-            status: 1,
-            lastUpdated: 1,
+            _id: 1,
+            lastMessage: { $arrayElemAt: ["$messages", -1] },
           },
         },
         {
           $match: {
-            "lastMessage.senderRole": { $ne: "user" }, // Người gửi cuối không phải user
+            "lastMessage.senderRole": { $ne: "user" },
           },
         },
       ]);
+
+      const waitingIds = waitingConversationsRaw.map((conv) => conv._id);
+
+      const conversationWaiting = await Conversation.find({
+        _id: { $in: waitingIds },
+      });
 
       // Cập nhật active => waiting
       for (const conv of conversationActive) {

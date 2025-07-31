@@ -21,7 +21,7 @@ export const getAllConversations = async (req, res) => {
     }
 
     if (search) {
-      query = {
+      query.search = {
         "participants.userId.fullName": { $regex: search, $options: "i" },
       };
     }
