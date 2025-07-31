@@ -130,6 +130,9 @@ export const sendMessage = async (req, res) => {
         .status(400)
         .json({ error: "Id đoạn chat là bắt buộc đối với staff/admin" });
 
+    if (conversation.status === "closed")
+      return res.status(400).json({ error: "Đoạn chat đã đóng" });
+
     // ? Cập nhật trạng thái và lưu log nếu cần
     if (conversation.status !== "active") {
       isStatusChangedToActive = true;
@@ -315,10 +318,10 @@ export const closedConversation = async (req, res) => {
         .status(400)
         .json({ error: "Không thể đóng khi chưa trả lời khách hàng" });
     }
-    conversation.status = "closed";
-    conversation.updateBy = user._id;
-    conversation.lastUpdated = new Date();
     if (conversation.status !== "closed") {
+      conversation.status = "closed";
+      conversation.updateBy = user._id;
+      conversation.lastUpdated = new Date();
       conversation.statusLogs.push({
         status: "closed",
         updateBy: user._id,

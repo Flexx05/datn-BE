@@ -9,8 +9,9 @@ export const getAllStaff = async (req, res) => {
       _limit = 10,
       _sort = "createdAt",
       _order,
+      role,
     } = req.query;
-    const query = { role: { $in: ["admin", "staff"] } };
+    const query = {};
 
     if (isActive !== undefined) {
       query.isActive = isActive === "true";
@@ -22,6 +23,10 @@ export const getAllStaff = async (req, res) => {
         { email: { $regex: search, $options: "i" } },
         { phone: { $regex: search, $options: "i" } },
       ];
+    }
+
+    if (role) {
+      query.role = role;
     }
     const options = {};
 
