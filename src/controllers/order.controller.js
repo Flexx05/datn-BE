@@ -78,7 +78,6 @@ export const createOrder = async (req, res) => {
       let shippingDiscount = 0;
       const shippingFeeValue = clientShippingFee || 30000;
 
-
       // Process and validate items
       for (const item of items) {
         const product = products.find((p) =>
@@ -102,7 +101,8 @@ export const createOrder = async (req, res) => {
         }
 
         if (
-          item.priceAtOrder !== variation.regularPrice && item.priceAtOrder !== variation.salePrice
+          item.priceAtOrder !== variation.regularPrice &&
+          item.priceAtOrder !== variation.salePrice
         ) {
           throw new Error(
             `Giá sản phẩm ${product.name} đã thay đổi. Vui lòng kiểm tra lại`
@@ -144,7 +144,7 @@ export const createOrder = async (req, res) => {
         (sum, item) => sum + item.totalPrice,
         0
       );
-      
+
       // Validate client subtotal
       if (clientSubtotal !== subtotal) {
         throw new Error(
@@ -176,7 +176,7 @@ export const createOrder = async (req, res) => {
       for (const voucherCode of uniqueVoucherCodes) {
         const voucher = vouchers.find((v) => v.code.toString() === voucherCode);
         // console.log(voucher);
-        
+
         if (!voucher) {
           throw new Error(`Voucher code ${voucher} không tồn tại`);
         }
@@ -196,7 +196,6 @@ export const createOrder = async (req, res) => {
         if (voucher.used >= voucher.quantity) {
           throw new Error(`Voucher ${voucher.code} đã hết lượt sử dụng`);
         }
-
 
         if (voucher.voucherType === "product") {
           if (productVoucherCount > 0) {
@@ -369,7 +368,9 @@ export const createOrder = async (req, res) => {
                     <li><strong>Mã đơn hàng:</strong> ${
                       orderSave.orderCode
                     }</li>
-                    <li><strong>Trạng thái:</strong> ${ORDER_STATUS_MAP[orderSave.status]}</li>
+                    <li><strong>Trạng thái:</strong> ${
+                      ORDER_STATUS_MAP[orderSave.status]
+                    }</li>
                     <li><strong>Phương thức thanh toán:</strong> ${
                       orderSave.paymentMethod
                     }</li>
@@ -438,7 +439,9 @@ export const createOrder = async (req, res) => {
                     </div>
                 </div>
                 <p>Nếu bạn muốn hủy đơn hàng, hãy bấm vào liên kết sau:</p>
-                <p><a href="http://localhost:5173/guest-cancel?orderCode=${orderSave.orderCode}&email=${recipientInfo.email}">Hủy đơn hàng</a></p>
+                <p><a href="http://localhost:5173/guest-cancel?orderCode=${
+                  orderSave.orderCode
+                }&email=${recipientInfo.email}">Hủy đơn hàng</a></p>
               </div>
             `,
           });
@@ -449,14 +452,14 @@ export const createOrder = async (req, res) => {
         // Notify admin
         try {
           await nontifyAdmin(
-            "order",
-            orderSave.recipientInfo.name,
-            orderSave.status,
-            orderSave.orderCode,
-            orderSave._id
+            0,
+            "Có đơn hàng mới",
+            `Có đơn hàng mới từ khách hàng ${recipientInfo.name}`,
+            orderSave._id,
+            null
           );
         } catch (error) {
-          console.error("Admin notification error:", error);
+          console.error("Admin notification error:", error.message);
         }
 
         return res.status(201).json({
@@ -571,7 +574,6 @@ export const getOrderByCode = async (req, res) => {
     return res.status(400).json({ error: "Đã xảy ra lỗi khi tìm đơn hàng" });
   }
 };
-
 
 export const getOrderByUserId = async (req, res) => {
   try {
@@ -836,33 +838,29 @@ export const updateOrderStatus = async (req, res) => {
 
     try {
       const user = await authModel.findById(userId);
-      console.log(1);
-      
       if (!user)
         return res.status(404).json({ error: "Không tìm thấy người dùng" });
       if (user.role === "user") {
-        console.log(2);
         await nontifyAdmin(
           1,
-          user.fullName,
-          order.status,
-          order.orderCode,
-          order._id
+          "Cập nhật trạng thái đơn hàng",
+          `Đơn hàng ${order.orderCode} đã được cập nhật trạng thái: ${
+            statusMap[order.status]
+          }`,
+          order._id,
+          null
         );
       } else {
-        console.log(3);
-        
         const io = getSocketInstance();
-        console.log(4);
-        
         const message = `Đơn hàng ${
           order.orderCode
         } đã được cập nhật trạng thái: ${statusMap[order.status]}`;
-        console.log(5);
-        
-        if(order.userId) {io.to(order.userId.toString()).emit("order-status-changed", {
-          message,
-        });}
+
+        if (order.userId) {
+          io.to(order.userId.toString()).emit("order-status-changed", {
+            message,
+          });
+        }
       }
     } catch (error) {
       console.log("Lỗi gửi thống báo cho người dùng: ", error);
@@ -1063,9 +1061,9 @@ export const cancelOrder = async (req, res) => {
     const cancelableStatus = [0, 1];
     if (!cancelableStatus.includes(order.status)) {
       return res.status(400).json({
-        error: `Chỉ được hủy đơn hàng ở trạng thái: ${cancelableStatus.map((s) => ORDER_STATUS_MAP[s]).join(
-          ", "
-        )}`,
+        error: `Chỉ được hủy đơn hàng ở trạng thái: ${cancelableStatus
+          .map((s) => ORDER_STATUS_MAP[s])
+          .join(", ")}`,
       });
     }
 

@@ -1,13 +1,13 @@
 import notificationModel from "../models/nontification.model";
 import { getSocketInstance } from "../socket";
 
-export const nontifyAdmin = async (type, title, message, link) => {
+export const nontifyAdmin = async (type, title, message, link, recipientId) => {
   const nontification = await notificationModel.create({
     type,
     title,
     message,
     link,
-    recipientId: null,
+    recipientId,
   });
   const io = getSocketInstance();
   io.to("admin").emit("new-nontification", nontification);
@@ -17,10 +17,18 @@ export const nontifyAdmin = async (type, title, message, link) => {
 
 export const getAllNontification = async (req, res) => {
   try {
-    const { _sort = "createdAt", _order = "desc", link } = req.query;
+    const {
+      _sort = "createdAt",
+      _order = "desc",
+      link,
+      recipientId,
+    } = req.query;
     const filter = {};
     if (typeof link === "string" && link.trim() !== "") {
       filter.link = { $regex: link, $options: "i" };
+    }
+    if (recipientId) {
+      filter.$or = [{ recipientId: recipientId }, { recipientId: null }];
     }
     const sortOption = {};
     sortOption[_sort] = _order.toLowerCase() === "asc" ? 1 : -1;

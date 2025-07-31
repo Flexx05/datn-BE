@@ -6,7 +6,7 @@ import authModel from "../models/auth.model";
 
 export const getAllConversations = async (req, res) => {
   try {
-    const { chatType, status, assignedTo } = req.query;
+    const { chatType, status, assignedTo, search } = req.query;
     const query = {};
 
     if (chatType !== undefined) {
@@ -18,6 +18,12 @@ export const getAllConversations = async (req, res) => {
       } else {
         query.chatType = chatTypeNumber;
       }
+    }
+
+    if (search) {
+      query = {
+        "participants.userId.fullName": { $regex: search, $options: "i" },
+      };
     }
 
     if (assignedTo && assignedTo !== undefined) {
@@ -240,7 +246,8 @@ export const sendMessage = async (req, res) => {
         3,
         "Có tin nhắn mới",
         `Khách hàng ${customer.fullName} đã gửi tin nhắn mới`,
-        conversation._id
+        conversation._id,
+        null
       );
     }
 
@@ -404,7 +411,7 @@ export const unAssignToConversation = async (req, res) => {
           customerInfo?.fullName || "Không xác định"
         } đã bị hủy đăng ký bởi Quản trị viên.`,
         conversation._id,
-        conversation.assignedTo.toString()
+        conversation.assignedTo
       );
     }
 
@@ -430,11 +437,15 @@ export const assignConversationToStaff = async (req, res) => {
       return res.status(400).json({ error: "Đoạn chat đã kết thúc" });
     }
 
+    const customerInfo = await authModel.findById(
+      conversation.participants[0].userId
+    );
+
     await nontifyAdmin(
       5,
       "Đăng ký",
       `Đoạn chat với khách hàng ${
-        conversation.participants[0].fullName || "Không xác định"
+        customerInfo?.fullName || "Không xác định"
       } đăng ký bởi Quản trị viên.`,
       conversation._id,
       staffId
