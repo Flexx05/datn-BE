@@ -49,6 +49,14 @@ export const getAllStaff = async (req, res) => {
   }
 };
 
+export const getOneStaff = async (req, res) => {};
+
+export const createStaff = async (req, res) => {};
+
+export const updateStaff = async (req, res) => {};
+
+export const changeStaffAccountStatus = async (req, res) => {};
+
 export const updateStaffRole = async (req, res) => {
   try {
     const { id } = req.params;
