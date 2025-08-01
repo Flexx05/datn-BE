@@ -66,3 +66,18 @@ export const changeReadingStatus = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
+export const changeManyReadingStatus = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0)
+      return res.status(400).json({ error: "Thông báo không tồn tại" });
+    const nontifications = await notificationModel.updateMany(
+      { _id: { $in: ids } },
+      { $set: { isRead: true } }
+    );
+    return res.status(200).json(nontifications);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
