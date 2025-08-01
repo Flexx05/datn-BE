@@ -6,6 +6,7 @@ import Product from "../models/product.model.js";
 import Voucher from "../models/voucher.model.js";
 import { nontifyAdmin } from "./nontification.controller.js";
 import { getSocketInstance } from "../socket.js";
+import { handleRankUpdate } from "./rank.controller.js";
 
 export const createOrder = async (req, res) => {
   const session = await mongoose.startSession();
@@ -289,6 +290,8 @@ export const createOrder = async (req, res) => {
       
       if (orderSave) {
         // Update voucher usage
+        // Cập nhập lại rank khi hoàn tất đơn hàng
+         await handleRankUpdate(orderSave.userId);
         if (orderSave.voucherCode?.length) {
           await Voucher.updateMany(
             { code: { $in: orderSave.voucherCode } },
@@ -465,7 +468,9 @@ export const getAllOrders = async (req, res) => {
     const sortOption = {};
     sortOption[_sort] = _order.toLowerCase() === "asc" ? 1 : -1;
 
-    const orders = await Order.find().sort(sortOption);
+    const orders = await Order.find()
+      .populate("userId", "fullName email avatar rank")
+      .sort(sortOption);
 
     if (!orders || orders.length === 0) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
