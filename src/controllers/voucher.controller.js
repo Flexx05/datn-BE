@@ -163,7 +163,6 @@ export const getVoucherByCode = async (req, res) => {
   }
 };
 
-
 // Lấy chi tiết voucher theo ID
 export const getByIdVoucher = async (req, res) => {
   try {
@@ -354,3 +353,65 @@ export const restoreVoucher = async (req, res) => {
     });
   }
 };
+
+// Lấy danh sách voucher của người dùng
+export const getUserVouchers = async (req, res) => {
+  try {
+    const { q } = req.query;
+    const userId = req.user?._id || null;
+
+    const visibilityCondition = userId
+      ? [{ userIds: { $size: 0 } }, { userIds: { $in: [userId] } }]
+      : [{ userIds: { $size: 0 } }];
+
+    const baseQuery = {
+      isDeleted: false,
+      voucherStatus: "active",
+      $or: visibilityCondition,
+    };
+
+    if (q?.trim()) {
+      const keyword = q.trim();
+      baseQuery.$and = [
+        {
+          $or: [
+            { code: { $regex: keyword, $options: "i" } },
+            { description: { $regex: keyword, $options: "i" } },
+          ],
+        },
+      ];
+    }
+
+    const vouchers = await Voucher.find(baseQuery).sort({ endDate: 1 });
+
+    const result = vouchers.map((voucher) => ({
+      _id: voucher._id,
+      code: voucher.code,
+      userIds: voucher.userIds,
+      description: voucher.description,
+      discountType: voucher.discountType,
+      discountValue: voucher.discountValue,
+      maxDiscount: voucher.maxDiscount || null,
+      minOrderValues: voucher.minOrderValues,
+      startDate: voucher.startDate,
+      endDate: voucher.endDate,
+      voucherType: voucher.voucherType,
+      quantity: voucher.quantity,
+      used: voucher.used,
+      status: voucher.voucherStatus,
+    }));
+
+    return res.status(200).json({
+      message: userId
+        ? "Danh sách voucher khi đã đăng nhập"
+        : "Danh sách voucher khi chưa đăng nhập",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Lỗi khi lấy danh sách voucher",
+      error: error.message,
+    });
+  }
+};
+
