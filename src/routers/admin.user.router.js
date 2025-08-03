@@ -3,21 +3,24 @@ import {
   getAllUsers,
   getUserById,
   resetUserPassword,
-  updateUserActiveStatus,
-  updateUserStatus,
   updateUserInfo,
+  updateUserStatus,
 } from "../controllers/admin.user.controller.js";
 import { verifyToken } from "../middlewares/checkAuth.js";
 
 const router = express.Router();
 
-router.get("/admin/users", getAllUsers);
+router.get("/admin/users", verifyToken, getAllUsers);
 
-router.get("/admin/users/id/:id", getUserById);
+router.get("/admin/users/id/:id", verifyToken, getUserById);
 
-router.patch("/admin/users/:id/status", updateUserStatus);
+router.patch("/admin/users/:id/status", verifyToken, updateUserStatus);
 
-router.patch("/admin/users/:id/update-password", resetUserPassword);
+router.patch(
+  "/admin/users/:id/update-password",
+  verifyToken,
+  resetUserPassword
+);
 router.patch("/admin/users/edit/:id", verifyToken, updateUserInfo);
 
 export default router;
