@@ -173,7 +173,7 @@ export const sendMessage = async (req, res) => {
     if (newMessage.senderRole === "staff") {
       if (
         conversation.assignedTo === null ||
-        conversation.assignedTo !== senderId
+        conversation.assignedTo.toString() !== senderId.toString()
       ) {
         return res
           .status(400)
