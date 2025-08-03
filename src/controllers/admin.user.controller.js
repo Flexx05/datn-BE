@@ -4,6 +4,7 @@ import { getSocketInstance } from "../socket";
 import { updateUserInfoSchema } from "../validations/auth.validation";
 import Order from "../models/order.model";
 import { sendMail } from "../utils/sendMail";
+import Conversation from "../models/conversation.model";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -64,8 +65,7 @@ export const getUserById = async (req, res) => {
 
     if (!user) {
       return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy người dùng",
+        error: "Không tìm thấy người dùng",
       });
     }
 
@@ -82,13 +82,18 @@ export const getUserById = async (req, res) => {
 export const updateUserStatus = async (req, res) => {
   try {
     const { id } = req.params;
+    const user = req.user;
     const { isActive, reason } = req.body;
-
     if (isActive === undefined || typeof isActive !== "boolean") {
       return res.status(400).json({
-        success: false,
-        message:
+        error:
           "Trạng thái không hợp lệ, vui lòng cung cấp isActive là true hoặc false",
+      });
+    }
+
+    if (user.role !== "user" && user._id.toString() === id) {
+      return res.status(400).json({
+        error: "Không thể cập nhật trạng thái cho chính mình.",
       });
     }
 
@@ -99,22 +104,49 @@ export const updateUserStatus = async (req, res) => {
 
     if (countOrderNotSuccess > 0 && isActive === true) {
       return res.status(400).json({
-        success: false,
-        message:
+        error:
           "Không thể cập nhật trạng thái người dùng, người dùng có đơn hàng chưa thanh toán",
       });
     }
 
-    const updatedUser = await authModel
-      .findByIdAndUpdate(id, { isActive }, { new: true })
-      .select("-password");
+    const updatedUser = await authModel.findById(id).select("-password");
 
     if (!updatedUser) {
       return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy người dùng",
+        error: "Không tìm thấy người dùng",
       });
     }
+
+    if (user.role === "user") {
+      if (user._id.toString() !== id) {
+        return res.status(403).json({
+          error: "Bạn chỉ có thể cập nhật tài khoản của chính mình.",
+        });
+      }
+    }
+
+    if (user.role === "staff") {
+      if (updatedUser.role !== "user") {
+        return res.status(403).json({
+          error: "Bạn không có quyền thực hiện hành động này",
+        });
+      }
+    }
+
+    updatedUser.isActive = isActive;
+    if (updatedUser.role === "admin") {
+      updatedUser.role = "staff";
+    } else if (updatedUser.role === "staff") {
+      const conversationAssign = await Conversation.find({
+        assignedTo: id,
+      });
+      for (const conversation of conversationAssign) {
+        conversation.assignedTo = null;
+        await conversation.save();
+      }
+    }
+
+    await updatedUser.save();
 
     if (!isActive) {
       const io = getSocketInstance();
@@ -160,6 +192,8 @@ export const updateUserStatus = async (req, res) => {
       } thành công`,
     });
   } catch (error) {
+    console.log(error);
+
     return res.status(500).json({
       success: false,
       message: "Lỗi khi cập nhật trạng thái người dùng",
