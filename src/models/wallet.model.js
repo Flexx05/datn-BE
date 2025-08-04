@@ -8,10 +8,12 @@ const transactionSchema = new Schema(
       required: true,
     },
     type: {
-      type: String,
+      type: Number,
       required: true,
-      default: "refund",
-      enum: ["refund"],
+      default: 0,
+      enum: [0, 1],
+      // 0: Hoàn tiền
+      // 1: Thanh toán
     },
     amount: {
       type: Number,
