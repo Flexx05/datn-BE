@@ -97,6 +97,12 @@ export const updateStaffRole = async (req, res) => {
       );
     }
 
+    if (staff.isVerify && staff.isVerify === false)
+      return res.status(400).json({ error: "Tài khoản chưa xác thực" });
+
+    if (staff.isActive === false)
+      return res.status(400).json({ error: "Tài khoản bị khoá" });
+
     if (id === user._id.toString()) {
       return res.status(400).json({
         error: "Không thể thay đổi vai trò của chính mình",
@@ -130,8 +136,9 @@ export const updateStaffRole = async (req, res) => {
       const subject = "Cập nhật vai trò người dùng";
       const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #f5222d;">Tài khoản của bạn đã được cập nhật vai trò</h2>
+            <h2 style="color: #61f522ff;">Tài khoản của bạn đã được cập nhật vai trò</h2>
             <p>Xin chào <strong>${staff.fullName || staff.email}</strong>,</p>
+            <p>Chào mừng bạn gia nhập đội ngũ Binova.</p>
             <p>Tài khoản của bạn đã được cập nhật với vai trò ${
               roleMapping[role]
             }</p>
@@ -143,7 +150,6 @@ export const updateStaffRole = async (req, res) => {
                   `
                 : ""
             }
-
             <p>Nếu bạn có thắc mắc hoặc cần hỗ trợ, vui lòng liên hệ với chúng tôi để được giải đáp.</p>
             <div style="text-align: right; margin-top: 40px;">
               <p>Trân trọng,</p>
