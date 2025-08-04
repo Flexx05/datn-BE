@@ -30,6 +30,7 @@ import { startDeleteConversationJob } from "./cron/deleteConversation.js";
 import QuickChatRouter from "./routers/quickChat.router.js";
 import walletRouter from "./routers/wallet.router.js";
 import returnRequestRouter from "./routers/returnRequest.router.js";
+import { startDeleteAccountNotVerify } from "./cron/deleteAccountNotVerify.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -44,8 +45,8 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 app.use(cookieParser());
 
 mongoose
@@ -59,6 +60,7 @@ mongoose
     startVoucherStatusJob(); // Cron voucher
     startConversationStatusCheckJob(); // Cron check conversation status
     startDeleteConversationJob(); // Cron delete conversation
+    startDeleteAccountNotVerify(); // Cron delete account not verify
   })
   .catch((err) => {
     console.error("MongoDB connection failed:", err.message);
