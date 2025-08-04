@@ -67,7 +67,11 @@ export const createOrder = async (req, res) => {
     // Start transaction
     session.startTransaction();
 
-    if (paymentMethod === "COD" || paymentMethod === "VNPAY") {
+    if (
+      paymentMethod === "COD" ||
+      paymentMethod === "VNPAY" ||
+      paymentMethod === "VI"
+    ) {
       const variationIds = items.map((i) => i.variationId);
       const products = await Product.find({
         "variation._id": { $in: variationIds },
