@@ -23,6 +23,121 @@ const PAYMENT_STATUS_MAP = {
   2: "Hoàn tiền",
   3: "Đã hủy",
 };
+const PAYMENT_METHOD_MAP = {
+  "COD": "Thanh toán khi nhận hàng",
+  "VNPAY": "Thanh toán qua VNPAY",
+  "VI": "Thanh toán qua ví Binova",
+};
+
+
+const createEmailTemplate = (order, recipientInfo) => {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
+      <div style="text-align: center; padding-bottom: 20px;">
+        <h1 style="color: #4CAF50; margin: 0;">Binova</h1>
+        <h2 style="color: #333; font-size: 24px; margin: 10px 0;">Đặt hàng thành công! 🎉</h2>
+      </div>
+      
+      <p style="color: #333; font-size: 16px;">Xin chào <strong>${
+        recipientInfo.name || "Quý khách"
+      }</strong>,</p>
+      <p style="color: #666;">Cảm ơn bạn đã đặt hàng tại Binova. Đơn hàng <strong>${
+        order.orderCode
+      }</strong> của bạn đã được tiếp nhận.</p>
+      <p style="color: #666;">Bạn có thể theo dõi đơn hàng tại http://localhost:5173/order/code</p>
+      
+      <h3 style="color: #333; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;">📦 Thông tin đơn hàng</h3>
+      <table style="width: 100%; color: #333; font-size: 14px;">
+        <tr><td style="padding: 5px 0;"><strong>Mã đơn hàng:</strong></td><td>${
+          order.orderCode
+        }</td></tr>
+        <tr><td style="padding: 5px 0;"><strong>Trạng thái:</strong></td><td>${
+          ORDER_STATUS_MAP[order.status]
+        }</td></tr>
+        <tr><td style="padding: 5px 0;"><strong>Phương thức thanh toán:</strong></td><td>${
+          PAYMENT_METHOD_MAP[order.paymentMethod]
+        }</td></tr>
+        <tr><td style="padding: 5px 0;"><strong>Trạng thái thanh toán:</strong></td><td>${
+          PAYMENT_STATUS_MAP[order.paymentStatus]
+        }</td></tr>
+        <tr><td style="padding: 5px 0;"><strong>Ngày giao dự kiến:</strong></td><td>${new Date(
+          order.expectedDeliveryDate
+        ).toLocaleDateString("vi-VN")}</td></tr>
+      </table>
+
+      <h3 style="color: #333; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px; margin-top: 20px;">📍 Địa chỉ giao hàng</h3>
+      <p style="color: #666;">${order.shippingAddress}</p>
+
+      <h3 style="color: #333; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px; margin-top: 20px;">🛒 Chi tiết sản phẩm</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <thead>
+          <tr style="background: #f0f0f0;">
+            <th style="text-align: left; padding: 10px; color: #333;">Sản phẩm</th>
+            <th style="text-align: center; padding: 10px; color: #333;">Số lượng</th>
+            <th style="text-align: right; padding: 10px; color: #333;">Đơn giá</th>
+            <th style="text-align: right; padding: 10px; color: #333;">Tổng</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${order.items
+            .map(
+              (item) => `
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${
+                item.productName
+              }</td>
+              <td style="text-align: center; padding: 10px; border-bottom: 1px solid #e0e0e0;">${
+                item.quantity
+              }</td>
+              <td style="text-align: right; padding: 10px; border-bottom: 1px solid #e0e0e0;">${item.priceAtOrder.toLocaleString(
+                "vi-VN"
+              )} VNĐ</td>
+              <td style="text-align: right; padding: 10px; border-bottom: 1px solid #e0e0e0;">${item.totalPrice.toLocaleString(
+                "vi-VN"
+              )} VNĐ</td>
+            </tr>
+          `
+            )
+            .join("")}
+        </tbody>
+      </table>
+
+      <h3 style="color: #333; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;">💰 Tóm tắt thanh toán</h3>
+      <table style="width: 100%; color: #333; font-size: 14px;">
+        <tr><td style="padding: 5px 0;">Tạm tính:</td><td style="text-align: right;">${order.subtotal.toLocaleString(
+          "vi-VN"
+        )} VNĐ</td></tr>
+        <tr><td style="padding: 5px 0;">Phí vận chuyển:</td><td style="text-align: right;">${order.shippingFee.toLocaleString(
+          "vi-VN"
+        )} VNĐ</td></tr>
+        <tr><td style="padding: 5px 0;">Giảm giá:</td><td style="text-align: right;">${order.discountAmount.toLocaleString(
+          "vi-VN"
+        )} VNĐ</td></tr>
+        <tr><td style="padding: 5px 0; font-weight: bold;">Tổng cộng:</td><td style="text-align: right; color: #4CAF50; font-weight: bold;">${order.totalAmount.toLocaleString(
+          "vi-VN"
+        )} VNĐ</td></tr>
+      </table>
+
+      <div style="margin-top: 20px; text-align: center; color: #666;">
+        <p>Cảm ơn bạn đã mua sắm tại <strong>Binova</strong>!</p>
+        <p>Nếu có thắc mắc, vui lòng liên hệ qua email <a href="mailto:binovaweb73@gmail.com" style="color: #4CAF50;">binovaweb73@gmail.com</a></p>
+        <p style="margin-top: 20px;">
+          <a href="http://localhost:5173/guest-cancel?orderCode=${
+            order.orderCode
+          }&email=${recipientInfo.email}" 
+             style="display: inline-block; padding: 10px 20px; background-color: #ff4444; color: white; text-decoration: none; border-radius: 5px;">
+            Hủy đơn hàng
+          </a>
+        </p>
+      </div>
+
+      <div style="text-align: right; margin-top: 20px; color: #666;">
+        <p>Trân trọng,</p>
+        <p><strong>Đội ngũ Binova</strong></p>
+      </div>
+    </div>
+  `;
+};
 
 export const createOrder = async (req, res) => {
   const session = await mongoose.startSession();
@@ -40,6 +155,7 @@ export const createOrder = async (req, res) => {
       subtotal: clientSubtotal,
       discountAmount: clientDiscountAmount,
       totalAmount: clientTotalAmount,
+      paymentStatus: clientPaymentStatus,
     } = req.body;
 
     // Basic validation
@@ -123,7 +239,7 @@ export const createOrder = async (req, res) => {
           );
         }
 
-        // 3. Tính giá
+        // Calculate price
         let price = variation.regularPrice;
         if (variation.salePrice && variation.salePrice > 0) {
           price = variation.salePrice;
@@ -179,10 +295,8 @@ export const createOrder = async (req, res) => {
 
       for (const voucherCode of uniqueVoucherCodes) {
         const voucher = vouchers.find((v) => v.code.toString() === voucherCode);
-        // console.log(voucher);
-
         if (!voucher) {
-          throw new Error(`Voucher code ${voucher} không tồn tại`);
+          throw new Error(`Voucher code ${voucherCode} không tồn tại`);
         }
 
         const now = new Date();
@@ -288,6 +402,7 @@ export const createOrder = async (req, res) => {
           .padStart(4, "0");
         return `DH${year}${month}${day}-${random}`;
       };
+
       // Create order
       const order = new Order({
         userId: userId || undefined,
@@ -302,7 +417,7 @@ export const createOrder = async (req, res) => {
         totalAmount,
         status: 0,
         review: 0,
-        paymentStatus: 0,
+        paymentStatus: clientPaymentStatus,
         paymentMethod,
         expectedDeliveryDate,
       });
@@ -348,8 +463,8 @@ export const createOrder = async (req, res) => {
           const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
-              user: "binovaweb73@gmail.com",
-              pass: "kcjf jurr rjva hqfu",
+              user: process.env.EMAIL_USER || "binovaweb73@gmail.com",
+              pass: process.env.EMAIL_PASS || "kcjf jurr rjva hqfu",
             },
           });
 
@@ -357,100 +472,15 @@ export const createOrder = async (req, res) => {
             from: '"Binova" <binovaweb73@gmail.com>',
             to: recipientInfo.email,
             subject: `Xác nhận đơn hàng ${orderSave.orderCode}`,
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                <h2 style="color: #4CAF50; text-align: center">🎉 Đặt hàng thành công!</h2>
-                <p>Xin chào <strong>${
-                  orderSave.recipientInfo.name || "Quý khách"
-                }</strong>,</p>
-                <p>Chúng tôi đã nhận được đơn hàng <strong>${
-                  orderSave.orderCode
-                }</strong> của bạn.</p>
-                
-                <h3>📦 Thông tin đơn hàng:</h3>
-                <ul>
-                    <li><strong>Mã đơn hàng:</strong> ${
-                      orderSave.orderCode
-                    }</li>
-                    <li><strong>Trạng thái:</strong> ${
-                      ORDER_STATUS_MAP[orderSave.status]
-                    }</li>
-                    <li><strong>Phương thức thanh toán:</strong> ${
-                      orderSave.paymentMethod
-                    }</li>
-                    <li><strong>Trạng thái thanh toán:</strong> ${
-                      PAYMENT_STATUS_MAP[orderSave.paymentStatus]
-                    }</li>
-                    <li><strong>Ngày giao dự kiến:</strong> ${new Date(
-                      orderSave.expectedDeliveryDate
-                    ).toLocaleDateString("vi-VN")}</li>
-                </ul>
-
-                <h3>📍 Địa chỉ giao hàng:</h3>
-                <p>${orderSave.shippingAddress}</p>
-
-                <h3>🛒 Sản phẩm:</h3>
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                    <tr style="background: #f0f0f0;">
-                        <th style="text-align: left; padding: 8px;">Tên sản phẩm</th>
-                        <th style="text-align: center; padding: 8px;">SL</th>
-                        <th style="text-align: right; padding: 8px;">Đơn giá</th>
-                        <th style="text-align: right; padding: 8px;">Tổng</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    ${orderSave.items
-                      .map(
-                        (item) => `
-                        <tr>
-                        <td style="padding: 8px;">${item.productName}</td>
-                        <td style="text-align: center;">${item.quantity}</td>
-                        <td style="text-align: right;">${item.priceAtOrder.toLocaleString(
-                          "vi-VN"
-                        )} VNĐ</td>
-                        <td style="text-align: right;">${item.totalPrice.toLocaleString(
-                          "vi-VN"
-                        )} VNĐ</td>
-                        </tr>
-                    `
-                      )
-                      .join("")}
-                    </tbody>
-                </table>
-
-                <h3>💰 Tóm tắt thanh toán:</h3>
-                <ul>
-                    <li><strong>Tạm tính:</strong> ${orderSave.subtotal.toLocaleString(
-                      "vi-VN"
-                    )} VNĐ</li>
-                    <li><strong>Phí vận chuyển:</strong> ${orderSave.shippingFee.toLocaleString(
-                      "vi-VN"
-                    )} VNĐ</li>
-                    <li><strong>Giảm giá:</strong> ${orderSave.discountAmount.toLocaleString(
-                      "vi-VN"
-                    )} VNĐ</li>
-                    <li><strong>Tổng cộng:</strong> <span style="color: #4CAF50; font-size: 16px;">${orderSave.totalAmount.toLocaleString(
-                      "vi-VN"
-                    )} VNĐ</span></li>
-                </ul>
-
-                <p style="margin-top: 20px;">Cảm ơn bạn đã mua sắm tại <strong>Binova</strong>! Nếu có bất kỳ thắc mắc nào, hãy phản hồi email này để được hỗ trợ.</p>
-                <div style="display: flex; margin-left: 68%;">
-                    <div style="text-align: center;">
-                        <p>Trân trọng</p>
-                        <i><strong>Đội ngũ Binova</strong></i>
-                    </div>
-                </div>
-                <p>Nếu bạn muốn hủy đơn hàng, hãy bấm vào liên kết sau:</p>
-                <p><a href="http://localhost:5173/guest-cancel?orderCode=${
-                  orderSave.orderCode
-                }&email=${recipientInfo.email}">Hủy đơn hàng</a></p>
-              </div>
-            `,
+            html: createEmailTemplate(orderSave, recipientInfo),
           });
         } catch (emailError) {
-          console.error("Email error:", emailError);
+          console.error(
+            "Failed to send confirmation email:",
+            emailError.message
+          );
+          // Note: Not throwing error here to avoid failing the order creation
+          // Email failure shouldn't prevent order from being processed
         }
 
         // Notify admin
@@ -604,6 +634,60 @@ export const getOrderByUserId = async (req, res) => {
   }
 };
 
+const nodemailer = require("nodemailer");
+
+const createStatusUpdateEmailTemplate = (order, statusMap, messageMap) => {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
+      <div style="text-align: center; padding-bottom: 20px;">
+        <h1 style="color: #4CAF50; margin: 0;">Binova</h1>
+        <h2 style="color: #333; font-size: 24px; margin: 10px 0;">Cập nhật trạng thái đơn hàng</h2>
+      </div>
+      
+      <p style="color: #333; font-size: 16px;">Xin chào <strong>${
+        order.recipientInfo.name || "Quý khách"
+      }</strong>,</p>
+      <p style="color: #666;">${messageMap[order.status]}</p>
+      
+      <div style="background-color: #ffffff; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #e0e0e0;">
+        <h3 style="margin-top: 0; color: #333; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;">Thông tin đơn hàng</h3>
+        <table style="width: 100%; color: #333; font-size: 14px;">
+          <tr><td style="padding: 5px 0;"><strong>Mã đơn hàng:</strong></td><td>${
+            order.orderCode
+          }</td></tr>
+          <tr><td style="padding: 5px 0;"><strong>Trạng thái:</strong></td><td>${
+            statusMap[order.status]
+          }</td></tr>
+          <tr><td style="padding: 5px 0;"><strong>Trạng thái thanh toán:</strong></td><td>${
+            PAYMENT_STATUS_MAP[order.paymentStatus]
+          }</td></tr>
+          ${
+            order.deliveryDate
+              ? `<tr><td style="padding: 5px 0;"><strong>Ngày giao:</strong></td><td>${new Date(
+                  order.deliveryDate
+                ).toLocaleDateString("vi-VN")}</td></tr>`
+              : ""
+          }
+          ${
+            order.cancelReason
+              ? `<tr><td style="padding: 5px 0;"><strong>Lý do hủy:</strong></td><td>${order.cancelReason}</td></tr>`
+              : ""
+          }
+        </table>
+      </div>
+
+      <div style="text-align: center; margin-top: 20px; color: #666;">
+        <p>Nếu có thắc mắc, vui lòng liên hệ qua email <a href="mailto:binovaweb73@gmail.com" style="color: #4CAF50;">binovaweb73@gmail.com</a></p>
+      </div>
+
+      <div style="text-align: right; margin-top: 20px; color: #666;">
+        <p>Trân trọng,</p>
+        <p><strong>Đội ngũ Binova</strong></p>
+      </div>
+    </div>
+  `;
+};
+
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -750,6 +834,16 @@ export const updateOrderStatus = async (req, res) => {
     console.log("Order updated status:", order);
 
     // Mapping cho email
+    const statusMap = {
+      0: "Chờ xác nhận",
+      1: "Đã xác nhận",
+      2: "Đang giao hàng",
+      3: "Đã giao hàng",
+      4: "Hoàn thành",
+      5: "Đã hủy",
+      6: "Hoàn hàng",
+    };
+
     const subjectMap = {
       0: `Đơn hàng ${order.orderCode} đang chờ xác nhận`,
       1: `Đơn hàng ${order.orderCode} đã được xác nhận`,
@@ -782,8 +876,8 @@ export const updateOrderStatus = async (req, res) => {
       const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
-          user: "binovaweb73@gmail.com",
-          pass: "kcjf jurr rjva hqfu",
+          user: process.env.EMAIL_USER || "binovaweb73@gmail.com",
+          pass: process.env.EMAIL_PASS || "kcjf jurr rjva hqfu",
         },
       });
 
@@ -791,54 +885,12 @@ export const updateOrderStatus = async (req, res) => {
         from: '"Binova" <binovaweb73@gmail.com>',
         to: order.recipientInfo.email,
         subject: subjectMap[order.status],
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-            <h2 style="color: #4CAF50;">Cập nhật đơn hàng ${
-              order.orderCode
-            }</h2>
-            <p>Xin chào <strong>${
-              order.recipientInfo.name || "Quý khách"
-            }</strong>,</p>
-            <p>${messageMap[order.status]}</p>
-            
-            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
-              <h3 style="margin-top: 0; color: #333;">Thông tin đơn hàng:</h3>
-              <p><strong>Mã đơn hàng:</strong> ${order.orderCode}</p>
-              <p><strong>Trạng thái:</strong> ${order.status}</p>
-              <p><strong>Trạng thái thanh toán:</strong> ${
-                order.paymentStatus
-              }</p>
-              ${
-                order.deliveryDate
-                  ? `<p><strong>Ngày giao dự kiến:</strong> ${new Date(
-                      order.deliveryDate
-                    ).toLocaleDateString("vi-VN")}</p>`
-                  : ""
-              }
-            </div>
-
-            <p style="margin-top: 30px;">Nếu bạn có bất kỳ câu hỏi nào, hãy phản hồi email này để được hỗ trợ.</p>
-            <div style="text-align: right; margin-top: 40px;">
-              <p>Trân trọng,</p>
-              <i><strong>Đội ngũ Binova</strong></i>
-            </div>
-          </div>
-        `,
+        html: createStatusUpdateEmailTemplate(order, statusMap, messageMap),
       });
     } catch (emailError) {
-      console.error("Lỗi gửi email:", emailError);
-      // Không return lỗi ở đây vì đơn hàng đã được cập nhật thành công
+      console.error("Failed to send status update email:", emailError.message);
+      // Note: Not throwing error here to avoid failing the status update
     }
-
-    const statusMap = {
-      0: "Chờ xác nhận",
-      1: "Đã xác nhận",
-      2: "Đang giao hàng",
-      3: "Đã giao hàng",
-      4: "Hoàn thành",
-      5: "Đã hủy",
-      6: "Hoàn hàng",
-    };
 
     try {
       const user = await authModel.findById(userId);

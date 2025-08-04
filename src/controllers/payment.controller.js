@@ -145,7 +145,7 @@ export const vnpayCallback = async (req, res) => {
       // Cập nhật trạng thái đơn hàng
       const updatedOrder = await orderModel.findByIdAndUpdate(
         payment.orderId,
-        { paymentStatus: 1, status: 1, updatedAt: new Date() },
+        { paymentStatus: 1, status: 0, updatedAt: new Date() },
         { new: true }
       );
 
