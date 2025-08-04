@@ -344,6 +344,7 @@ export const syncCart = async (req, res) => {
     if (!req.user || !req.user._id) {
       return res.status(401).json({ message: "Bạn chưa đăng nhập" });
     }
+
     // Lấy giỏ hàng từ cookie
     let cookieCart = [];
     if (req.cookies.cart) {
@@ -353,26 +354,31 @@ export const syncCart = async (req, res) => {
         cookieCart = [];
       }
     }
+
+    // Nếu không có cookie cart, không cần đồng bộ
     if (!cookieCart.length) {
-      return res.status(200).json({ message: "Không có dữ liệu cần đồng bộ" });
+      const dbCart = await Cart.findOne({ userId: req.user._id });
+      return res.status(200).json({
+        message: "Không có dữ liệu cần đồng bộ",
+        cart: dbCart ? dbCart.items : [],
+      });
     }
+
     // Lấy giỏ hàng từ DB
     let dbCart = await Cart.findOne({ userId: req.user._id });
     if (!dbCart) {
       dbCart = new Cart({ userId: req.user._id, items: [] });
     }
 
-    // Danh sách sản phẩm bị bỏ qua khi đồng bộ
     const skippedItems = [];
 
     // Merge từng sản phẩm từ cookie vào DB
     for (const cookieItem of cookieCart) {
-      // Kiểm tra sản phẩm và biến thể có còn tồn tại không
       const product = await Product.findById(cookieItem.productId);
       if (!product || !product.isActive) {
         skippedItems.push({
           ...cookieItem,
-          reason: "Sản phẩm không tồn tại"
+          reason: "Sản phẩm không tồn tại",
         });
         continue;
       }
@@ -381,32 +387,29 @@ export const syncCart = async (req, res) => {
       if (!variant || !variant.isActive) {
         skippedItems.push({
           ...cookieItem,
-          reason: "Biến thể không tồn tại"
+          reason: "Biến thể không tồn tại",
         });
         continue;
       }
       if (variant.stock <= 0) {
         skippedItems.push({
           ...cookieItem,
-          reason: "Sản phẩm đã hết hàng"
+          reason: "Sản phẩm đã hết hàng",
         });
         continue;
       }
 
-      // Kiểm tra đã có trong DB chưa
       const index = dbCart.items.findIndex(item => 
         item.productId.toString() === cookieItem.productId && 
         item.variantId.toString() === cookieItem.variantId
       );
-      
-      // Nếu đã có thì cộng dồn số lượng, chưa có thì thêm mới
+
       if (index !== -1) {
-        // Kiểm tra xem sản phẩm đồng bộ có vượt quá tồn kho không. Nếu vượt thì bỏ qua
         const newQuantity = dbCart.items[index].quantity + cookieItem.quantity;
         if (variant.stock < newQuantity) {
           skippedItems.push({
             ...cookieItem,
-            reason: "Tổng số lượng vượt quá tồn kho khi đồng bộ"
+            reason: "Tổng số lượng vượt quá tồn kho khi đồng bộ",
           });
           continue;
         }
@@ -428,7 +431,7 @@ export const syncCart = async (req, res) => {
     return res.status(200).json({
       message: "Đồng bộ giỏ hàng thành công",
       cart: dbCart.items,
-      skippedItems // trả về danh sách sản phẩm không đồng bộ được
+      skippedItems,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
