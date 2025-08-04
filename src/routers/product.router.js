@@ -10,43 +10,28 @@ import {
   updateProductStatus,
   updateVariaionStatus,
 } from "../controllers/product.controller";
-import { isAdminOrStaff, verifyToken } from "../middlewares/checkAuth";
+import { isAdmin, isAdminOrStaff, verifyToken } from "../middlewares/checkAuth";
 
 const router = Router();
 
 router.get("/product", getAllProduct);
 router.get("/product/id/:id", getProductById);
 router.get("/product/slug/:slug", getProductBySlug);
-router.delete(
-  "/product/delete/:id",
-  verifyToken,
-  isAdminOrStaff,
-  deleteProduct
-);
+router.delete("/product/delete/:id", verifyToken, isAdmin, deleteProduct);
 router.patch(
   "/product/edit/status/:id",
   verifyToken,
-  isAdminOrStaff,
+  isAdmin,
   updateProductStatus
 );
-router.patch(
-  "/variation/edit/:id",
-  verifyToken,
-  isAdminOrStaff,
-  updateVariaionStatus
-);
+router.patch("/variation/edit/:id", verifyToken, isAdmin, updateVariaionStatus);
 router.post(
   "/product/generate-variations",
   verifyToken,
-  isAdminOrStaff,
+  isAdmin,
   generateVariations
 );
-router.post(
-  "/product/add",
-  verifyToken,
-  isAdminOrStaff,
-  createProductWithVariations
-);
+router.post("/product/add", verifyToken, isAdmin, createProductWithVariations);
 router.patch("/product/edit/:id", verifyToken, isAdminOrStaff, updateProduct);
 
 export default router;
