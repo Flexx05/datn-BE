@@ -69,6 +69,10 @@ const voucherSchema = new Schema(
       default: false,
     },
     monthIssued: { type: String, default: null },
+    isAuto: {
+      type: Boolean,
+      default: false, // mặc định là voucher thủ công
+    },
   },
   {
     timestamps: true,

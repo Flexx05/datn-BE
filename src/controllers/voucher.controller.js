@@ -217,6 +217,13 @@ export const updateVoucher = async (req, res) => {
       });
     }
 
+    // ❌ Không cho sửa nếu là voucher tự động
+    if (currentVoucher.isAuto) {
+      return res.status(403).json({
+        message: "Không thể chỉnh sửa voucher được tạo tự động.",
+      });
+    }
+
     if (
       currentVoucher.voucherStatus === "active" &&
       req.body.startDate &&
@@ -297,6 +304,13 @@ export const deleteVoucher = async (req, res) => {
     if (!voucher) {
       return res.status(404).json({
         message: "Voucher không tồn tại, vui lòng kiểm tra lại.",
+      });
+    }
+
+    // ❌ Nếu là voucher tự động và chưa hết hạn thì không cho xóa
+    if (voucher.isAuto && voucher.voucherStatus !== "expired") {
+      return res.status(403).json({
+        message: "Chỉ có thể xóa voucher tự động khi đã hết hạn.",
       });
     }
 

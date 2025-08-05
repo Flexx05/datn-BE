@@ -80,6 +80,7 @@ export const createVoucherRank = async (users, rank, monthKey) => {
       endDate: endDate,
       voucherStatus: "active",
       monthIssued: monthKey,
+      isAuto: true, // Đánh dấu là voucher tự động
     });
 
     await voucher.save();
@@ -159,6 +160,7 @@ export const createVoucherMonthly = async (rank, monthKey) => {
     startDate,
     endDate,
     voucherStatus: "active",
+    isAuto: true, // Đánh dấu là voucher tự động
     monthIssued: monthKey,
   });
 
