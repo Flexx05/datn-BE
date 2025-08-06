@@ -15,6 +15,7 @@ export const getAllUsers = async (req, res) => {
       _sort = "createdAt",
       _order,
     } = req.query;
+
     const query = { role: "user" };
 
     if (isActive !== undefined) {
@@ -28,16 +29,22 @@ export const getAllUsers = async (req, res) => {
         { phone: { $regex: search, $options: "i" } },
       ];
     }
-    const options = {
-      page: parseInt(_page, 10),
-      limit: parseInt(_limit, 10),
-      sort: { [_sort]: _order === "desc" ? -1 : 1 },
-    };
+
+    const options = {};
+
+    if (_limit === "off") {
+      options.pagination = false;
+    } else {
+      options.page = parseInt(_page, 10);
+      options.limit = parseInt(_limit, 10);
+      options.sort = { [_sort]: _order === "desc" ? -1 : 1 };
+    }
 
     const users = await authModel.paginate(query, options);
 
+    const docs = users.docs || users; // khi pagination: false thì trả về mảng users
     const countOrderNotSuccess = await Promise.all(
-      users.docs.map(async (user) => {
+      docs.map(async (user) => {
         const count = await Order.countDocuments({
           userId: user._id,
           status: { $nin: [4, 5] },
@@ -46,7 +53,11 @@ export const getAllUsers = async (req, res) => {
       })
     );
 
-    return res.status(200).json({ ...users, docs: countOrderNotSuccess });
+    if (options.pagination === false) {
+      return res.status(200).json({ docs: countOrderNotSuccess });
+    } else {
+      return res.status(200).json({ ...users, docs: countOrderNotSuccess });
+    }
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -55,6 +66,7 @@ export const getAllUsers = async (req, res) => {
     });
   }
 };
+
 
 export const getUserById = async (req, res) => {
   try {

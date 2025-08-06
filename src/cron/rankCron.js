@@ -94,23 +94,42 @@ const sendRankWarning = async (user) => {
 const sendMonthlyVouchers = async () => {
   try {
     const monthKey = dayjs().format("YYYY-MM");
+    const users = await authModel.find({ isActive: true, role: "user" });
 
-    // Chỉ tạo 1 voucher cho mỗi rank (0 = Bronze, 1 = Silver, 2 = Gold, 3 = Diamond)
-    for (const rank of [0, 1, 2, 3]) {
-      try {
-        await createVoucherMonthly(rank, monthKey);
-      } catch (err) {
-        console.error(`Lỗi tạo voucher cho rank ${rank}:`, err);
+    // Gom user theo rank
+    const usersByRank = {
+      0: [],
+      1: [],
+      2: [],
+      3: [],
+    };
+
+    for (const user of users) {
+      if (user.rank == null) continue;
+      if (usersByRank[user.rank]) {
+        usersByRank[user.rank].push(user);
       }
     }
 
-    console.log(`🎁 Đã phát voucher theo hạng cho tháng ${monthKey}`);
+    // Tạo voucher theo từng rank
+    for (const rank of [0, 1, 2, 3]) {
+      const rankUsers = usersByRank[rank];
+      if (rankUsers.length > 0) {
+        try {
+          await createVoucherMonthly(rankUsers, rank, monthKey);
+        } catch (err) {
+          console.error(`Lỗi tạo voucher tháng cho rank ${rank}:`, err);
+        }
+      }
+    }
+
+    console.log(`🎁 Đã phát voucher riêng theo hạng cho tháng ${monthKey}`);
   } catch (error) {
     console.error("Lỗi trong sendMonthlyVouchers:", error);
   }
 };
 
-
+// Job định kỳ để gửi cảnh báo tụt hạng
 export const startRankJob = () => {
   cron.schedule(
     "0 0 * * *", // chạy 0h mỗi ngày

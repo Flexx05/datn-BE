@@ -31,6 +31,12 @@ export const createVoucher = async (req, res) => {
     const startDate = new Date(createData.startDate);
     const endDate = new Date(createData.endDate);
 
+    if (startDate >= endDate) {
+      return res.status(400).json({
+        message: "Ngày bắt đầu phải trước ngày kết thúc.",
+      });
+    }
+
     if (now > endDate) {
       createData.voucherStatus = "expired";
     } else if (now >= startDate) {
@@ -262,6 +268,12 @@ export const updateVoucher = async (req, res) => {
       updateData.startDate || currentVoucher.startDate
     );
     const endDate = new Date(updateData.endDate || currentVoucher.endDate);
+
+    if (startDate >= endDate) {
+      return res.status(400).json({
+        message: "Ngày bắt đầu phải trước ngày kết thúc.",
+      });
+    }
 
     // Cập nhật trạng thái dựa trên thời gian hiện tại
     if (now > endDate) {

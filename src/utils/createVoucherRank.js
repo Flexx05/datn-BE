@@ -17,12 +17,12 @@ function getRankName(rank) {
   }
 }
 
-  const codePrefix = {
-    0: "BRONZE",
-    1: "SILVER",
-    2: "GOLD",
-    3: "DIAMOND",
-  };
+const codePrefix = {
+  0: "BRONZE",
+  1: "SILVER",
+  2: "GOLD",
+  3: "DIAMOND",
+};
 
 export const createVoucherRank = async (users, rank, monthKey) => {
   if (!Array.isArray(users) || users.length === 0) return;
@@ -44,7 +44,7 @@ export const createVoucherRank = async (users, rank, monthKey) => {
   const createdVouchers = [];
 
   for (const user of users) {
-    if (user?.isActive === false) continue;
+    if (!user || user.isActive === false || user.role !== "user") continue;
 
     // Kiểm tra voucher rank-up của hạng này đã tồn tại chưa (cho user này)
     const existed = await Voucher.findOne({
@@ -96,9 +96,9 @@ export const createVoucherRank = async (users, rank, monthKey) => {
   return createdVouchers;
 };
 
+export const createVoucherMonthly = async (users, rank, monthKey) => {
+  if (!Array.isArray(users) || users.length === 0) return;
 
-
-export const createVoucherMonthly = async (rank, monthKey) => {
   const monthlyRankConfig = {
     0: {
       voucherType: "shipping",
@@ -131,42 +131,76 @@ export const createVoucherMonthly = async (rank, monthKey) => {
   };
 
   const config = monthlyRankConfig[rank];
-  if (!config) {
-    return null;
-  }
+  if (!config) return;
 
   const startDate = dayjs(`${monthKey}-01`).startOf("day").toDate();
   const endDate = dayjs(`${monthKey}-01`).add(6, "day").endOf("day").toDate();
 
   const code = `RANK-MONTHLY-${codePrefix[rank]}-${monthKey.replace("-", "")}`;
 
-  // Kiểm tra voucher đã tồn tại chưa
-  const existed = await Voucher.findOne({ code, monthIssued: monthKey });
-  if (existed) {
+  // Tìm hoặc tạo voucher
+  let voucher = await Voucher.findOne({ code, monthIssued: monthKey });
+  if (voucher) {
     console.log(`✅ Voucher ${code} đã tồn tại, không tạo lại.`);
-    return existed;
+    return voucher;
   }
 
-  // Tạo mới nếu chưa có
-  const voucher = new Voucher({
-    voucherType: config.voucherType,
-    code,
-    description: `Ưu đãi tháng cho hạng ${getRankName(rank)}`,
-    discountType: config.discountType,
-    discountValue: config.discountValue,
-    maxDiscount: config.maxDiscount,
-    minOrderValues: config.minOrderValues,
-    quantity: 999999,
-    startDate,
-    endDate,
-    voucherStatus: "active",
-    isAuto: true, // Đánh dấu là voucher tự động
-    monthIssued: monthKey,
-  });
+  if (!voucher) {
+    voucher = new Voucher({
+      voucherType: config.voucherType,
+      code,
+      description: `Ưu đãi tháng cho hạng ${getRankName(rank)}`,
+      discountType: config.discountType,
+      discountValue: config.discountValue,
+      maxDiscount: config.maxDiscount,
+      minOrderValues: config.minOrderValues,
+      quantity: 0, // tạm thời để 0, sẽ cập nhật sau
+      startDate,
+      endDate,
+      voucherStatus: "active",
+      isAuto: true,
+      monthIssued: monthKey,
+      userIds: [],
+    });
 
-  await voucher.save();
+    await voucher.save();
+    console.log(
+      `🎁 Đã tạo voucher tháng cho hạng ${getRankName(rank)}: ${voucher.code}`
+    );
+  }
+
+  let count = 0;
+
+  for (const user of users) {
+    if (!user || user.isActive === false || user.role !== "user") continue;
+
+    const alreadyInList = await Voucher.exists({
+      _id: voucher._id,
+      userIds: user._id,
+    });
+
+    if (!alreadyInList) {
+      await Voucher.updateOne(
+        { _id: voucher._id },
+        { $addToSet: { userIds: user._id } }
+      );
+      count++;
+    }
+  }
+
+  // Sau khi gán xong, cập nhật lại quantity
+  const updatedVoucher = await Voucher.findById(voucher._id).select("userIds");
+  const updatedQuantity = updatedVoucher.userIds.length;
+
+  await Voucher.updateOne(
+    { _id: voucher._id },
+    { $set: { quantity: updatedQuantity } }
+  );
+
   console.log(
-    `🎁 Đã tạo voucher cho hạng ${getRankName(rank)}: ${voucher.code}`
+    `✅ Đã gán voucher tháng ${code} cho ${count} user hạng ${getRankName(
+      rank
+    )} | Tổng: ${updatedQuantity}`
   );
   return voucher;
 };
