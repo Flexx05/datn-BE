@@ -428,13 +428,18 @@ export const getCommentsForClient = async (req, res) => {
     })
     .sort({ createdAt: -1 })
     .populate({
-      path: "userId productId",
-      select: "fullName email name"
+      path: "userId",
+      select: "fullName avatar"
+    })
+    .populate({
+      path: "productId",
+      select: "name"
     });
     
     if (comments.length === 0) {
       return res.status(404).json({ message: "Không có bình luận nào cho sản phẩm này." });
     }
+
     return res.status(200).json({
       averageRating: product.averageRating || 0,
       totalComments: comments.length,
