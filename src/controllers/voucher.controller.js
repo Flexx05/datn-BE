@@ -319,13 +319,6 @@ export const deleteVoucher = async (req, res) => {
       });
     }
 
-    // ❌ Nếu là voucher tự động và chưa hết hạn thì không cho xóa
-    if (voucher.isAuto && voucher.voucherStatus !== "expired") {
-      return res.status(403).json({
-        message: "Chỉ có thể xóa voucher tự động khi đã hết hạn.",
-      });
-    }
-
     if (!voucher.isDeleted) {
       // Xóa mềm
       voucher.isDeleted = true;
