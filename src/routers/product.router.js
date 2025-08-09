@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createProductWithVariations,
   deleteProduct,
+  exportProductToExcel,
   generateVariations,
   getAllProduct,
   getProductById,
@@ -33,5 +34,6 @@ router.post(
 );
 router.post("/product/add", verifyToken, isAdmin, createProductWithVariations);
 router.patch("/product/edit/:id", verifyToken, isAdminOrStaff, updateProduct);
+router.get("/product/export", verifyToken, isAdmin, exportProductToExcel);
 
 export default router;

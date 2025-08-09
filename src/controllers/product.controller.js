@@ -5,6 +5,8 @@ import { productSchema } from "../validations/product.validation";
 import { generateSlug } from "../utils/createSlug";
 import brandModel from "../models/brand.model";
 import categoryModel from "../models/category.model";
+import ExcelJs from "exceljs";
+import axios from "axios";
 
 export const getAllProduct = async (req, res) => {
   try {
@@ -543,5 +545,144 @@ export const updateVariaionStatus = async (req, res) => {
   } catch (error) {
     console.error("Lỗi cập nhật trạng thái biến thể:", error);
     return res.status(500).json({ error: "Lỗi server" });
+  }
+};
+
+export const exportProductToExcel = async (req, res) => {
+  try {
+    const { isActive, inStock, categoryId, brandId } = req.query;
+
+    const query = {};
+    if (isActive !== undefined) query.isActive = isActive === "true";
+    if (inStock !== undefined) query.inStock = inStock === "true";
+    if (categoryId) query.categoryId = categoryId;
+    if (brandId) query.brandId = brandId;
+
+    const products = await productModel.find(query).lean();
+
+    const workbook = new ExcelJs.Workbook();
+
+    // ==================== SHEET 1: SẢN PHẨM ====================
+    const sheetProducts = workbook.addWorksheet("Sản phẩm");
+
+    sheetProducts.columns = [
+      { header: "Mã SP", key: "id", width: 25 },
+      { header: "Tên sản phẩm", key: "name", width: 50 },
+      { header: "Slug", key: "slug", width: 40 },
+      { header: "Thương hiệu", key: "brandName", width: 30 },
+      { header: "Danh mục", key: "categoryName", width: 30 },
+      { header: "Mô tả", key: "description", width: 80 },
+      { header: "Đánh giá TB", key: "averageRating", width: 15 },
+      { header: "Số đánh giá", key: "reviewCount", width: 15 },
+      { header: "Ngày tạo", key: "createdAt", width: 20 },
+      { header: "Ngày cập nhật", key: "updatedAt", width: 20 },
+      { header: "Trạng thái", key: "isActive", width: 15 },
+      { header: "Còn hàng", key: "inStock", width: 15 },
+      { header: "Đã bán", key: "selled", width: 15 },
+    ];
+
+    products.forEach((p) => {
+      sheetProducts.addRow({
+        id: p._id.toString(),
+        name: p.name,
+        slug: p.slug,
+        brandName: p.brandName,
+        categoryName: p.categoryName,
+        description: p.description,
+        averageRating: p.averageRating,
+        reviewCount: p.reviewCount,
+        createdAt: new Date(p.createdAt).toLocaleString("vi-VN"),
+        updatedAt: new Date(p.updatedAt).toLocaleString("vi-VN"),
+        isActive: p.isActive ? "Hoạt động" : "Ngừng bán",
+        inStock: p.inStock ? "Còn hàng" : "Hết hàng",
+        selled: p.selled || 0,
+      });
+    });
+
+    // ==================== SHEET 2: BIẾN THỂ SẢN PHẨM ====================
+    const sheetVariants = workbook.addWorksheet("Biến thể Sản phẩm");
+
+    sheetVariants.columns = [
+      { header: "ID SP gốc", key: "productId", width: 25 },
+      { header: "Tên sản phẩm", key: "productName", width: 50 },
+      { header: "Kích thước", key: "size", width: 15 },
+      { header: "Màu sắc", key: "color", width: 15 },
+      { header: "Giá gốc", key: "regularPrice", width: 15 },
+      { header: "Giá KM", key: "salePrice", width: 15 },
+      { header: "Tồn kho", key: "stock", width: 10 },
+      { header: "Hình ảnh", key: "image", width: 15, height: 80 },
+      { header: "Trạng thái", key: "isActive", width: 15 },
+      { header: "Ngày tạo", key: "createdAt", width: 20 },
+      { header: "Ngày cập nhật", key: "updatedAt", width: 20 },
+    ];
+
+    for (let rowIndex = 0; rowIndex < products.length; rowIndex++) {
+      const p = products[rowIndex];
+
+      for (let vIndex = 0; vIndex < p.variation.length; vIndex++) {
+        const v = p.variation[vIndex];
+        const sizeAttr = v.attributes.find(
+          (a) => a.attributeName === "Kích Thước"
+        );
+        const colorAttr = v.attributes.find(
+          (a) => a.attributeName === "Màu sắc"
+        );
+
+        const row = sheetVariants.addRow({
+          productId: p._id.toString(),
+          productName: p.name,
+          size: sizeAttr?.values.join(", ") || "",
+          color: colorAttr?.values.join(", ") || "",
+          regularPrice: v.regularPrice,
+          salePrice: v.salePrice || "",
+          stock: v.stock,
+          image: "", // sẽ chèn ảnh sau
+          isActive: v.isActive ? "Hoạt động" : "Ngừng bán",
+          createdAt: new Date(v.createdAt).toLocaleString("vi-VN"),
+          updatedAt: new Date(v.updatedAt).toLocaleString("vi-VN"),
+        });
+
+        // Nếu có ảnh từ Cloudinary → tải về & chèn
+        if (v.image) {
+          try {
+            const imgUrl = `${v.image}?w=80&h=80&c=fill`; // resize ảnh
+            const imgRes = await axios.get(imgUrl, {
+              responseType: "arraybuffer",
+            });
+            const imgBuffer = Buffer.from(imgRes.data, "binary");
+
+            const imgId = workbook.addImage({
+              buffer: imgBuffer,
+              extension: "jpeg",
+            });
+
+            // Xác định vị trí cột ảnh (cột 8 - index bắt đầu từ 0)
+            const cellRowIndex = row.number - 1; // ExcelJS dùng index bắt đầu từ 0
+            sheetVariants.addImage(imgId, {
+              tl: { col: 7, row: cellRowIndex },
+              ext: { width: 80, height: 80 },
+            });
+          } catch (err) {
+            console.warn(`Không tải được ảnh: ${v.image}`);
+          }
+        }
+      }
+    }
+
+    // ==================== TRẢ FILE VỀ CLIENT ====================
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=products-${new Date().toISOString()}.xlsx`
+    );
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error("Lỗi khi xuất dữ liệu sản phẩm", error);
+    res.status(500).json({ error: "Lỗi server" });
   }
 };
