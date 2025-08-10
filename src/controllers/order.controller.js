@@ -771,7 +771,7 @@ export const updateOrderStatus = async (req, res) => {
       3: [4, 6],
       4: [],
       5: [],
-      6: [],
+      6: [3],
     };
 
     // Kiểm tra và cập nhật trạng thái đơn hàng
@@ -831,7 +831,7 @@ export const updateOrderStatus = async (req, res) => {
       cancelReason: order.cancelReason,
     };
     await Order.findByIdAndUpdate(id, updateData, { new: true });
-    console.log("Order updated status:", order);
+    // console.log("Order updated status:", order);
 
     // Mapping cho email
     const statusMap = {
@@ -894,35 +894,75 @@ export const updateOrderStatus = async (req, res) => {
 
     try {
       const user = await authModel.findById(userId);
-      if (!user)
+      if (!user) {
         return res.status(404).json({ error: "Không tìm thấy người dùng" });
-      if (user.role === "user") {
-        await nontifyAdmin(
-          1,
-          "Cập nhật trạng thái đơn hàng",
-          `Đơn hàng ${order.orderCode} đã được cập nhật trạng thái: ${
-            statusMap[order.status]
-          }`,
-          order._id,
-          null
+      }
+
+      const io = getSocketInstance();
+      if (!io) {
+        console.error("Socket.IO instance not initialized");
+        return res
+          .status(500)
+          .json({ error: "Hệ thống chưa sẵn sàng để gửi thông báo" });
+      }
+
+      const message = `Đơn hàng ${
+        order.orderCode
+      } đã được cập nhật trạng thái: ${statusMap[order.status]}`;
+
+      // Payload chung cho sự kiện
+      const payload = {
+        message,
+        order: {
+          _id: order._id,
+          orderCode: order.orderCode,
+          status: order.status,
+          paymentStatus: order.paymentStatus,
+          cancelReason: order.cancelReason,
+        },
+      };
+
+      // Gửi đến user sở hữu đơn hàng
+      console.log(typeof order.userId);
+      
+      
+      if (order.userId) {
+        const userIdString = order.userId.toString(); // Chuyển ObjectId thành chuỗi
+        io.to(userIdString).emit("order-status-changed", payload);
+        console.log(
+          `Sent notification to user ${userIdString} for order ${order.orderCode}`
         );
       } else {
-        const io = getSocketInstance();
-        const message = `Đơn hàng ${
-          order.orderCode
-        } đã được cập nhật trạng thái: ${statusMap[order.status]}`;
+        console.warn(`Missing userId for order ${order.orderCode}`);
+      }
 
-        if (order.userId) {
-          io.to(order.userId.toString()).emit("order-status-changed", {
+      // Gửi đến tất cả admin
+      io.to("admin").emit("order-status-changed", payload);
+      console.log(
+        `Sent notification to admin-room for order ${order.orderCode}`
+      );
+
+      // Nếu user (khách hàng) cập nhật, gửi notify admin
+      if (user.role === "user") {
+        try {
+          await nontifyAdmin(
+            1,
+            "Cập nhật trạng thái đơn hàng",
             message,
-          });
+            order._id,
+            null
+          );
+        } catch (notifyError) {
+          console.error("Error in nontifyAdmin:", notifyError);
         }
       }
-    } catch (error) {
-      console.log("Lỗi gửi thống báo cho người dùng: ", error);
+
       return res
-        .status(500)
-        .json({ error: "Lỗi gửi thông báo cho người dùng" });
+        .status(200)
+        .json({ message: "Cập nhật trạng thái đơn hàng thành công" });
+    } catch (error) {
+      console.error("Lỗi gửi thông báo:", error);
+      return res.status(500).json({ error: "Lỗi gửi thông báo" });
     }
 
     return res.status(200).json({
