@@ -286,7 +286,7 @@ export const payOrderWithWallet = async (req, res) => {
       const order = await Order.findOne({
         _id: orderId,
         userId,
-        paymentStatus: 0, // Chưa thanh toán
+        paymentStatus: 1,
       }).session(session);
 
       if (!order) {
