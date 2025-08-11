@@ -37,6 +37,12 @@ export const createVoucher = async (req, res) => {
       });
     }
 
+    if (startDate < now) {
+      return res.status(400).json({
+        message: "Ngày bắt đầu không được ở quá khứ.",
+      });
+    }
+
     if (now > endDate) {
       createData.voucherStatus = "expired";
     } else if (now >= startDate) {
@@ -254,7 +260,7 @@ export const updateVoucher = async (req, res) => {
       if (req.body.quantity && req.body.quantity < currentVoucher.quantity) {
         return res.status(400).json({
           message:
-            "Không thể giảm số lượng voucher khi dùng chung đang hoạt động.",
+            "Không thể giảm số lượng voucher công khai khi đang hoạt động.",
         });
       }
     }
