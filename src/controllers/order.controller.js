@@ -819,8 +819,8 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     // Cập nhật ngày giao hàng
-    if (deliveryDate) {
-      order.deliveryDate = new Date(deliveryDate);
+    if (status === 4) {
+      order.deliveryDate = new Date(); // Set to current timestamp when status is 4
     }
     order.cancelReason = cancelReason || reason || null;
 
@@ -829,6 +829,7 @@ export const updateOrderStatus = async (req, res) => {
       status: order.status,
       paymentStatus: order.paymentStatus,
       cancelReason: order.cancelReason,
+      deliveryDate: order.deliveryDate,
     };
     await Order.findByIdAndUpdate(id, updateData, { new: true });
     // console.log("Order updated status:", order);
@@ -924,8 +925,7 @@ export const updateOrderStatus = async (req, res) => {
 
       // Gửi đến user sở hữu đơn hàng
       console.log(typeof order.userId);
-      
-      
+
       if (order.userId) {
         const userIdString = order.userId.toString(); // Chuyển ObjectId thành chuỗi
         io.to(userIdString).emit("order-status-changed", payload);
@@ -957,25 +957,14 @@ export const updateOrderStatus = async (req, res) => {
         }
       }
 
-      return res
-        .status(200)
-        .json({ message: "Cập nhật trạng thái đơn hàng thành công" });
+      return res.status(200).json({
+        order,
+        message: "Cập nhật trạng thái đơn hàng thành công",
+      });
     } catch (error) {
       console.error("Lỗi gửi thông báo:", error);
       return res.status(500).json({ error: "Lỗi gửi thông báo" });
     }
-
-    return res.status(200).json({
-      message: "Cập nhật trạng thái thành công",
-      order: {
-        id: order._id,
-        orderCode: order.orderCode,
-        status: order.status,
-        paymentStatus: order.paymentStatus,
-        deliveryDate: order.deliveryDate,
-        cancelReason: order.cancelReason,
-      },
-    });
   } catch (error) {
     console.error("Lỗi cập nhật đơn hàng:", error);
     return res.status(500).json({
