@@ -118,3 +118,42 @@ export const isAdminOrStaff = (req, res, next) => {
     });
   }
 };
+
+export const verifyTokenByEmail = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        message: "Vui lòng đăng nhập để tiếp tục",
+      });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    if (!decoded.email) {
+      return res.status(401).json({
+        message: "Token không hợp lệ",
+      });
+    }
+
+    req.email = decoded.email;
+    next();
+  } catch (error) {
+    console.error("Auth Error:", error);
+    if (error instanceof jwt.TokenExpiredError) {
+      return res.status(401).json({
+        message: "Token đã hết hạn",
+      });
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      return res.status(401).json({
+        message: "Token không hợp lệ",
+      });
+    }
+    return res.status(500).json({
+      message: "Lỗi xác thực",
+      error: error.message,
+    });
+  }
+};

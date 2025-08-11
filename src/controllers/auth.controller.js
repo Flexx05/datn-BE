@@ -321,9 +321,16 @@ export const verifyResetOtp = async (req, res) => {
     user.resetPasswordVerified = true;
     await user.save();
 
+    const token = jwt.sign(
+      { email }, 
+      process.env.JWT_SECRET_KEY || "binova",
+      { expiresIn: "15m" }
+    );
+
     return res.status(200).json({
       success: true,
       message: "Xác thực OTP thành công",
+      token
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
