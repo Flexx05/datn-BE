@@ -31,6 +31,7 @@ import QuickChatRouter from "./routers/quickChat.router.js";
 import walletRouter from "./routers/wallet.router.js";
 import returnRequestRouter from "./routers/returnRequest.router.js";
 import { startDeleteAccountNotVerify } from "./cron/deleteAccountNotVerify.js";
+import { startChangeOrderStatusJob } from "./cron/changeOrderStatus.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -61,6 +62,7 @@ mongoose
     startConversationStatusCheckJob(); // Cron check conversation status
     startDeleteConversationJob(); // Cron delete conversation
     startDeleteAccountNotVerify(); // Cron delete account not verify
+    startChangeOrderStatusJob(); // Cron change order status
   })
   .catch((err) => {
     console.error("MongoDB connection failed:", err.message);
