@@ -6,8 +6,8 @@ import authModel from "../models/auth.model";
 
 export const getAllConversations = async (req, res) => {
   try {
-    const { chatType, status } = req.query;
-    const query = { status: { $ne: "closed" } };
+    const { chatType, status, assignedTo, search } = req.query;
+    const query = {};
 
     if (chatType !== undefined) {
       const chatTypeNumber = Number(chatType);
@@ -20,9 +20,21 @@ export const getAllConversations = async (req, res) => {
       }
     }
 
+    if (search) {
+      query.search = {
+        "participants.userId.fullName": { $regex: search, $options: "i" },
+      };
+    }
+
+    if (assignedTo && assignedTo !== undefined) {
+      if (assignedTo !== "all") {
+        query.assignedTo = assignedTo;
+      }
+    }
+
     if (status !== undefined) {
       if (status === "all") {
-        query.status = { $in: ["active", "waiting", "closed"] };
+        query.status = { $in: ["active", "waiting"] };
       } else query.status = status;
     }
 
@@ -34,7 +46,7 @@ export const getAllConversations = async (req, res) => {
       })
       .populate({
         path: "assignedTo",
-        select: "fullName",
+        select: "fullName email",
       });
 
     return res.status(200).json(conversations);
@@ -53,10 +65,14 @@ export const getConversationById = async (req, res) => {
       })
       .populate({
         path: "assignedTo",
-        select: "fullName",
+        select: "fullName email",
+      })
+      .populate({
+        path: "statusLogs.updateBy",
+        select: "fullName email",
       });
     if (!conversation) {
-      return res.status(404).json({ error: "Conversation not found" });
+      return res.status(404).json({ error: "Đoạn chat không tồn tại" });
     }
     return res.status(200).json(conversation);
   } catch (error) {
@@ -82,7 +98,7 @@ export const sendMessage = async (req, res) => {
 
       conversation = await Conversation.findById(conversationId);
       if (!conversation)
-        return res.status(404).json({ error: "Conversation not found" });
+        return res.status(404).json({ error: "Đoạn chat không tồn tại" });
     }
 
     // ? Nếu không có thì tìm kiếm theo người dùng và trạng thái khác "closed"
@@ -120,6 +136,9 @@ export const sendMessage = async (req, res) => {
         .status(400)
         .json({ error: "Id đoạn chat là bắt buộc đối với staff/admin" });
 
+    if (conversation.status === "closed")
+      return res.status(400).json({ error: "Đoạn chat đã đóng" });
+
     // ? Cập nhật trạng thái và lưu log nếu cần
     if (conversation.status !== "active") {
       isStatusChangedToActive = true;
@@ -148,13 +167,13 @@ export const sendMessage = async (req, res) => {
     if (newMessage.senderRole !== "user" && customerInfo.isActive === false) {
       return res
         .status(400)
-        .json({ message: "Không thể gửi tin nhắn cho tài khoản bị khóa" });
+        .json({ error: "Không thể gửi tin nhắn cho tài khoản bị khóa" });
     }
 
     if (newMessage.senderRole === "staff") {
       if (
         conversation.assignedTo === null ||
-        conversation.assignedTo !== senderId
+        conversation.assignedTo.toString() !== senderId.toString()
       ) {
         return res
           .status(400)
@@ -218,15 +237,17 @@ export const sendMessage = async (req, res) => {
       content: savedMessage.content,
       createdAt: savedMessage.createdAt,
     });
-    const customer = conversation.participants.find(
-      (participant) => participant.role === "user"
+    const customer = await authModel.findById(
+      conversation.participants[0].userId
     );
+
     if (user.role === "user") {
       await nontifyAdmin(
         3,
         "Có tin nhắn mới",
         `Khách hàng ${customer.fullName} đã gửi tin nhắn mới`,
-        conversation._id
+        conversation._id,
+        null
       );
     }
 
@@ -240,7 +261,7 @@ export const sendMessage = async (req, res) => {
     });
   } catch (error) {
     console.error("Send Message Error:", error);
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -252,20 +273,13 @@ export const getMessagesFromClient = async (req, res) => {
       participants: { $elemMatch: { userId: user._id } },
     }).sort({ lastUpdated: -1 });
     let isNewConversation = false;
-    if (!conversation) {
+    if (!conversation || conversation.status === "closed") {
       isNewConversation = true;
       conversation = await Conversation.create({
         participants: [
           {
             userId: user._id,
             joinedAt: new Date(),
-          },
-        ],
-        statusLogs: [
-          {
-            status: "active",
-            updateBy: user._id,
-            updatedAt: new Date(),
           },
         ],
         status: "waiting",
@@ -301,15 +315,26 @@ export const closedConversation = async (req, res) => {
     const user = req.user;
     const conversation = await Conversation.findById(id);
     if (!conversation)
-      return res.status(404).json({ error: "Conversation not found" });
-    conversation.status = "closed";
-    conversation.updateBy = user._id;
-    conversation.lastUpdated = new Date();
-    conversation.statusLogs.push({
-      status: "closed",
-      updateBy: user._id,
-      updatedAt: new Date(),
-    });
+      return res.status(404).json({ error: "Đoạn chat không tồn tại" });
+    const lastMessage = conversation.messages[conversation.messages.length - 1];
+    if (
+      lastMessage.senderRole === "user" ||
+      lastMessage.senderRole === "system"
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Không thể đóng khi chưa trả lời khách hàng" });
+    }
+    if (conversation.status !== "closed") {
+      conversation.status = "closed";
+      conversation.updateBy = user._id;
+      conversation.lastUpdated = new Date();
+      conversation.statusLogs.push({
+        status: "closed",
+        updateBy: user._id,
+        updatedAt: new Date(),
+      });
+    }
     await conversation.save();
     return res.status(200).json(conversation);
   } catch (error) {
@@ -325,7 +350,7 @@ export const changeChatType = async (req, res) => {
       chatType,
     });
     if (!conversation)
-      return res.status(404).json({ error: "Conversation not found" });
+      return res.status(404).json({ error: "Đoạn chat không tồn tại" });
     return res.status(200).json(conversation);
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -339,11 +364,11 @@ export const assignToConversation = async (req, res) => {
     const conversation = await Conversation.findById(id);
 
     if (!conversation)
-      return res.status(404).json({ error: "Conversation not found" });
+      return res.status(404).json({ error: "Đoạn chat không tồn tại" });
     if (conversation.assignedTo !== null) {
       return res.status(400).json({ error: "Đoạn chat này đã được đăng ký" });
     }
-    if (conversation.status !== "closed") {
+    if (conversation.status === "closed") {
       return res.status(400).json({ error: "Đoạn chat đã kết thúc" });
     }
     conversation.assignedTo = user._id;
@@ -360,7 +385,7 @@ export const unAssignToConversation = async (req, res) => {
     const user = req.user;
     const conversation = await Conversation.findById(id);
     if (!conversation)
-      return res.status(404).json({ error: "Conversation not found" });
+      return res.status(404).json({ error: "Đoạn chat không tồn tại" });
     if (conversation.assignedTo === null) {
       return res.status(400).json({ error: "Đoạn chat này chưa được đăng ký" });
     }
@@ -386,7 +411,7 @@ export const unAssignToConversation = async (req, res) => {
           customerInfo?.fullName || "Không xác định"
         } đã bị hủy đăng ký bởi Quản trị viên.`,
         conversation._id,
-        conversation.assignedTo.toString()
+        conversation.assignedTo
       );
     }
 
@@ -403,17 +428,24 @@ export const assignConversationToStaff = async (req, res) => {
     const { id } = req.params;
     const { staffId } = req.body;
     const conversation = await Conversation.findById(id);
+    if (!conversation)
+      return res.status(404).json({ error: "Đoạn chat không tồn tại" });
     if (conversation.assignedTo !== null) {
       return res.status(400).json({ error: "Đoạn chat này đã được đăng ký" });
     }
-    if (!conversation)
-      return res.status(404).json({ error: "Conversation not found" });
+    if (conversation.status === "closed") {
+      return res.status(400).json({ error: "Đoạn chat đã kết thúc" });
+    }
+
+    const customerInfo = await authModel.findById(
+      conversation.participants[0].userId
+    );
 
     await nontifyAdmin(
       5,
       "Đăng ký",
       `Đoạn chat với khách hàng ${
-        conversation.participants[0].fullName || "Không xác định"
+        customerInfo?.fullName || "Không xác định"
       } đăng ký bởi Quản trị viên.`,
       conversation._id,
       staffId

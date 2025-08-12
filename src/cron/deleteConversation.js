@@ -2,23 +2,21 @@ import cron from "node-cron";
 import Conversation from "../models/conversation.model";
 
 export const startDeleteConversationJob = () => {
-  cron.schedule("* * * * *", async () => {
+  cron.schedule("0 0 * * *", async () => {
     const now = new Date();
-    const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     try {
-      const conversation = await Conversation.find({
+      const closedConversation = await Conversation.find({
         status: "closed",
-        messages: { $size: 1 },
-        "messages.senderRole": "system",
-        lastUpdated: { $lte: twoDaysAgo },
+        lastUpdated: { $lte: thirtyDaysAgo },
       });
 
-      for (const conv of conversation) {
+      for (const conv of closedConversation) {
         await Conversation.findByIdAndDelete(conv._id);
       }
-      if (conversation.length > 0)
-        console.log(`[CRON] Xóa đoạn chat ${conversation.length} rác`);
+      if (closedConversation.length > 0)
+        console.log(`[CRON] Xóa ${closedConversation.length} đoạn chat`);
     } catch (error) {
       console.error("[CRON] Lỗi cron khi xóa đoạn chat", error.message);
     }

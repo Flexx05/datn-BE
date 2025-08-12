@@ -136,6 +136,45 @@ export const getReturnRequestByOrderId = async (req, res) => {
   }
 };
 
+export const getReturnRequestByOrderCode = async (req, res) => {
+  try {
+    const { orderCode } = req.params;
+    // const userId = req.user._id.toString(); 
+
+    // Tìm đơn hàng theo orderCode
+    const order = await Order.findOne({ orderCode });
+
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    // Tìm yêu cầu hoàn hàng liên quan đến đơn hàng đó
+    const returnRequest = await ReturnRequest.findOne({ orderId: order._id })
+      .populate("orderId", "orderCode totalAmount")
+      .select("-__v");
+
+    if (!returnRequest) {
+      return res
+        .status(404)
+        .json({ message: "Yêu cầu hoàn hàng không tồn tại" });
+    }
+
+    // Kiểm tra quyền truy cập
+    // if (order.userId.toString() !== userId && req.user.role !== "admin") {
+    //   return res.status(403).json({ message: "Không có quyền truy cập" });
+    // }
+
+    return res.status(200).json({
+      message: "Lấy thông tin yêu cầu hoàn hàng thành công",
+      data: returnRequest,
+    });
+  } catch (error) {
+    console.error("Get Return Request By OrderCode Error:", error);
+    return res.status(400).json({ message: error.message });
+  }
+};
+
+
 // Lấy danh sách yêu cầu hoàn hàng
 export const getReturnRequests = async (req, res) => {
   try {

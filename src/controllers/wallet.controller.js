@@ -273,3 +273,91 @@ export const cancelOrderRefund = async (req, res) => {
   }
 };
 
+export const payOrderWithWallet = async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    const userId = req.user._id.toString(); // Lấy userId từ JWT token
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // 1. Kiểm tra đơn hàng
+      const order = await Order.findOne({
+        _id: orderId,
+        userId,
+        paymentStatus: 1,
+      }).session(session);
+
+      if (!order) {
+        throw new Error("Đơn hàng không hợp lệ hoặc đã được thanh toán");
+      }
+
+      // 2. Kiểm tra ví của người dùng
+      const wallet = await Wallet.findOne({
+        userId,
+        status: 0, // Ví active
+      }).session(session);
+
+      if (!wallet) {
+        throw new Error("Ví không tồn tại hoặc bị khóa");
+      }
+
+      // 3. Kiểm tra số dư ví
+      if (wallet.balance < order.totalAmount) {
+        throw new Error("Số dư ví không đủ để thanh toán đơn hàng");
+      }
+
+      // 4. Tạo giao dịch thanh toán
+      const transaction = {
+        orderId,
+        type: 1, // Thanh toán
+        amount: order.totalAmount,
+        status: 1, // Thành công
+        description: `Thanh toán đơn hàng #${order.orderCode}`,
+      };
+
+      // 5. Cập nhật ví và thêm giao dịch
+      await Wallet.updateOne(
+        { _id: wallet._id },
+        {
+          $inc: { balance: -order.totalAmount }, // Trừ số tiền từ ví
+          $push: { transactions: transaction },
+        },
+        { session }
+      );
+
+      // 6. Cập nhật trạng thái đơn hàng
+      await Order.updateOne(
+        { _id: orderId },
+        {
+          paymentStatus: 1, // Đã thanh toán
+          transactionId: transaction._id,
+        },
+        { session }
+      );
+
+      await session.commitTransaction();
+
+      return res.status(200).json({
+        message: "Thanh toán đơn hàng thành công",
+        data: {
+          orderId,
+          newBalance: wallet.balance - order.totalAmount,
+          transaction,
+        },
+      });
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+  } catch (error) {
+    console.error("Pay Order With Wallet Error:", error);
+    return res.status(400).json({
+      message: error.message,
+    });
+  }
+};
+

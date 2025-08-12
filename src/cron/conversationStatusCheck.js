@@ -6,6 +6,7 @@ export const startConversationStatusCheckJob = () => {
   cron.schedule("* * * * *", async () => {
     const now = new Date();
     const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     try {
       const conversationActive = await Conversation.find({
@@ -13,9 +14,30 @@ export const startConversationStatusCheckJob = () => {
         lastUpdated: { $lte: thirtyMinutesAgo },
       });
 
+      const waitingConversationsRaw = await Conversation.aggregate([
+        {
+          $match: {
+            status: "waiting",
+            lastUpdated: { $lte: oneDayAgo },
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            lastMessage: { $arrayElemAt: ["$messages", -1] },
+          },
+        },
+        {
+          $match: {
+            "lastMessage.senderRole": { $ne: "user" },
+          },
+        },
+      ]);
+
+      const waitingIds = waitingConversationsRaw.map((conv) => conv._id);
+
       const conversationWaiting = await Conversation.find({
-        status: "waiting",
-        lastUpdated: { $lte: thirtyMinutesAgo },
+        _id: { $in: waitingIds },
       });
 
       // Cập nhật active => waiting

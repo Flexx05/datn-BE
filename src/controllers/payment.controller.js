@@ -30,11 +30,11 @@ export const createVnpayPayment = async (req, res) => {
     }
 
     // Kiểm tra đơn hàng thuộc về người dùng hiện tại
-    if (order.userId.toString() !== userId.toString()) {
-      return res.status(403).json({
-        message: "Bạn không có quyền thanh toán đơn hàng này",
-      });
-    }
+    // if (order.userId.toString() !== userId.toString()) {
+    //   return res.status(403).json({
+    //     message: "Bạn không có quyền thanh toán đơn hàng này",
+    //   });
+    // }
 
     // Kiểm tra trạng thái thanh toán
     if (order.paymentStatus !== 0) {
@@ -145,7 +145,7 @@ export const vnpayCallback = async (req, res) => {
       // Cập nhật trạng thái đơn hàng
       const updatedOrder = await orderModel.findByIdAndUpdate(
         payment.orderId,
-        { paymentStatus: 1, status: 1, updatedAt: new Date() },
+        { paymentStatus: 1, status: 0, updatedAt: new Date() },
         { new: true }
       );
 
@@ -153,12 +153,12 @@ export const vnpayCallback = async (req, res) => {
       const orderCode = updatedOrder?.orderCode || payment.orderId;
 
       // Redirect về trang xác nhận đơn hàng trên frontend
-      return res.redirect(302, `http://localhost:5173/user/order`);
+      return res.redirect(302, `http://localhost:5173/order/${orderCode}`);
     } else {
       // Thanh toán thất bại, chuyển hướng về trang thất bại (nếu có)
       return res.redirect(
         302,
-        `http://localhost:5173/order/failed`
+        `http://localhost:5173/order/code`
       );
     }
   } catch (error) {
@@ -189,11 +189,11 @@ export const getPaymentStatus = async (req, res) => {
     }
 
     // Kiểm tra quyền truy cập đơn hàng
-    if (order.userId.toString() !== userId.toString()) {
-      return res.status(403).json({
-        message: "Bạn không có quyền truy cập đơn hàng này",
-      });
-    }
+    // if (order.userId.toString() !== userId.toString()) {
+    //   return res.status(403).json({
+    //     message: "Bạn không có quyền truy cập đơn hàng này",
+    //   });
+    // }
 
     // Tìm thông tin thanh toán
     const payment = await paymentModel.findOne({ orderId });

@@ -15,7 +15,7 @@ export const createCategory = async (req, res) => {
 
     if (error) {
       const errors = error.details.map((err) => err.message);
-      return res.status(400).json({ message: errors });
+      return res.status(400).json({ error: errors });
     }
     const { name, parentId } = value;
     if (parentId === "684b9ab14a1d82d1e454b374") {
@@ -25,7 +25,7 @@ export const createCategory = async (req, res) => {
     }
     const existingCategory = await categoryModel.findOne({ name });
     if (existingCategory) {
-      return res.status(400).json({ message: "Tên danh mục đã tồn tại" });
+      return res.status(400).json({ error: "Tên danh mục đã tồn tại" });
     }
     const cate = await categoryModel.find();
     const newCategory = await categoryModel.create({
@@ -151,7 +151,7 @@ export const getAllCategories = async (req, res) => {
     );
 
     if (options.pagination === false) {
-      return res.status(200).json({docs: resultDocs});
+      return res.status(200).json({ docs: resultDocs });
     } else {
       return res.status(200).json({ ...categories, docs: resultDocs });
     }
@@ -167,10 +167,10 @@ export const getCategoryById = async (req, res) => {
       match: { isActive: true },
     });
     if (!category)
-      return res.status(404).json({ message: "Danh mục không tồn tại" });
+      return res.status(404).json({ error: "Danh mục không tồn tại" });
     return res.status(200).json(category);
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    return res.status(400).json({ error: error.message });
   }
 };
 
@@ -186,7 +186,7 @@ export const showCategorySlug = async (req, res) => {
     }
     return res
       .status(200)
-      .json({ message: "Get category successfully", category });
+      .json({ error: "Get category successfully", category });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -201,7 +201,7 @@ export const updateCategory = async (req, res) => {
     });
     if (error) {
       const errors = error.details.map((err) => err.message);
-      return res.status(400).json({ message: errors });
+      return res.status(400).json({ error: errors });
     }
 
     const { name, parentId } = value;
@@ -215,7 +215,7 @@ export const updateCategory = async (req, res) => {
       _id: { $ne: id },
     });
     if (existingCategory) {
-      return res.status(400).json({ message: "Tên danh mục đã tồn tại" });
+      return res.status(400).json({ error: "Tên danh mục đã tồn tại" });
     }
     // Cập nhật category với slug mới
     const listCate = await categoryModel.find();
@@ -237,7 +237,7 @@ export const updateCategory = async (req, res) => {
     }
     return res
       .status(200)
-      .json({ message: "Category updated successfully", category });
+      .json({ error: "Category updated successfully", category });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -253,7 +253,7 @@ export const deleteCategory = async (req, res) => {
     if (category.isActive === false) {
       await categoryModel.findByIdAndDelete(id);
       await categoryModel.deleteMany({ parentId: id });
-      return res.status(200).json({ message: "Category deleted successfully" });
+      return res.status(200).json({ error: "Category deleted successfully" });
     }
     if (category.isActive === true) {
       // Xóa mềm: chuyển isActive = false cho category và các subCategories
@@ -274,7 +274,7 @@ export const deleteCategory = async (req, res) => {
       if (category.slug === unCategorized.slug)
         return res
           .status(400)
-          .json({ message: "Không thể xóa danh mục không xác định" });
+          .json({ error: "Không thể xóa danh mục không xác định" });
       const subCategories = await categoryModel.find({ parentId: id });
       const subCategoryIds = subCategories.map((sub) => sub._id);
       const affectedCategoryIds = [category._id, ...subCategoryIds];
