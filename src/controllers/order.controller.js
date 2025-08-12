@@ -6,6 +6,7 @@ import Product from "../models/product.model.js";
 import Voucher from "../models/voucher.model.js";
 import { nontifyAdmin } from "./nontification.controller.js";
 import { getSocketInstance } from "../socket.js";
+import { handleRankUpdate } from "./rank.controller.js";
 
 const ORDER_STATUS_MAP = {
   0: "Chờ xác nhận",
@@ -424,7 +425,6 @@ export const createOrder = async (req, res) => {
 
       // Save order
       const orderSave = await order.save({ session });
-
       if (orderSave) {
         // Update voucher usage
         if (orderSave.voucherCode?.length) {
@@ -524,7 +524,9 @@ export const getAllOrders = async (req, res) => {
     const sortOption = {};
     sortOption[_sort] = _order.toLowerCase() === "asc" ? 1 : -1;
 
-    const orders = await Order.find().sort(sortOption);
+    const orders = await Order.find()
+      .populate("userId", "fullName email avatar rank")
+      .sort(sortOption);
 
     if (!orders || orders.length === 0) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
@@ -833,6 +835,17 @@ export const updateOrderStatus = async (req, res) => {
     };
     await Order.findByIdAndUpdate(id, updateData, { new: true });
     // console.log("Order updated status:", order);
+
+    if (order.status === 4 && order.paymentStatus === 1) {
+      try {
+        await handleRankUpdate(order.userId);
+        console.log(
+          `🎯 Rank của user ${order.userId} đã được cập nhật sau khi hoàn tất đơn.`
+        );
+      } catch (err) {
+        console.error("Lỗi khi cập nhật rank:", err.message);
+      }
+    }
 
     // Mapping cho email
     const statusMap = {

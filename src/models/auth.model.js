@@ -48,7 +48,15 @@ const authSchema = new Schema(
     walletId: {
       type: Schema.Types.ObjectId,
       ref: "Wallet",
-      default: null
+      default: null,
+    },
+    rank: {
+      type: Number,
+      default: null, // 0: Đồng, 1: Bạc, 2: Vàng, 3: Kim cương
+    },
+    rankUpdatedAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   {
