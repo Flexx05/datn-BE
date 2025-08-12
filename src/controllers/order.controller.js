@@ -24,11 +24,10 @@ const PAYMENT_STATUS_MAP = {
   3: "Đã hủy",
 };
 const PAYMENT_METHOD_MAP = {
-  "COD": "Thanh toán khi nhận hàng",
-  "VNPAY": "Thanh toán qua VNPAY",
-  "VI": "Thanh toán qua ví Binova",
+  COD: "Thanh toán khi nhận hàng",
+  VNPAY: "Thanh toán qua VNPAY",
+  VI: "Thanh toán qua ví Binova",
 };
-
 
 const createEmailTemplate = (order, recipientInfo) => {
   return `
@@ -482,6 +481,9 @@ export const createOrder = async (req, res) => {
           // Note: Not throwing error here to avoid failing the order creation
           // Email failure shouldn't prevent order from being processed
         }
+
+        const io = getSocketInstance();
+        io.to("admin").emit("order-status-changed", { order: orderSave });
 
         // Notify admin
         try {
