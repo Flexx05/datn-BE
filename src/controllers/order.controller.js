@@ -693,15 +693,10 @@ const createStatusUpdateEmailTemplate = (order, statusMap, messageMap) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      status,
-      paymentStatus,
-      deliveryDate,
-      reason,
-      cancelReason,
-      userId,
-      review,
-    } = req.body;
+    const { status, paymentStatus, reason, cancelReason, userId, review } =
+      req.body;
+
+    let deliveryDate = "";
 
     // Kiểm tra các trường được phép cập nhật
     const allowedFields = [
@@ -821,8 +816,8 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     // Cập nhật ngày giao hàng
-    if (status === 4) {
-      order.deliveryDate = new Date(); // Set to current timestamp when status is 4
+    if (status === 3) {
+      deliveryDate = new Date();
     }
     order.cancelReason = cancelReason || reason || null;
 
@@ -831,7 +826,7 @@ export const updateOrderStatus = async (req, res) => {
       status: order.status,
       paymentStatus: order.paymentStatus,
       cancelReason: order.cancelReason,
-      deliveryDate: order.deliveryDate,
+      deliveryDate,
     };
     await Order.findByIdAndUpdate(id, updateData, { new: true });
     // console.log("Order updated status:", order);
