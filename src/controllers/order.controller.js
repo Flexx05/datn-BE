@@ -290,8 +290,6 @@ export const createOrder = async (req, res) => {
       
       if (orderSave) {
         // Update voucher usage
-        // Cập nhập lại rank khi hoàn tất đơn hàng
-         await handleRankUpdate(orderSave.userId);
         if (orderSave.voucherCode?.length) {
           await Voucher.updateMany(
             { code: { $in: orderSave.voucherCode } },
@@ -688,6 +686,17 @@ export const updateOrderStatus = async (req, res) => {
     };
     await Order.findByIdAndUpdate(id, updateData, { new: true });
     console.log("Order updated status:", order);
+
+    if (order.status === 4 && order.paymentStatus === 1) {
+      try {
+        await handleRankUpdate(order.userId);
+        console.log(
+          `🎯 Rank của user ${order.userId} đã được cập nhật sau khi hoàn tất đơn.`
+        );
+      } catch (err) {
+        console.error("Lỗi khi cập nhật rank:", err.message);
+      }
+    }
 
     // Mapping cho email
     const subjectMap = {

@@ -209,6 +209,15 @@ export const updateVoucher = async (req, res) => {
         errors: error.details.map((e) => e.message),
       });
     }
+
+    const exists = await Voucher.findOne({
+      code: req.body.code,
+      _id: { $ne: req.params.id }, // Loại bỏ voucher đang sửa
+    });
+    if (exists) {
+      return res.status(400).json({ message: "Mã giảm giá đã tồn tại" });
+    }
+
     // Lấy thông tin voucher hiện tại
     const currentVoucher = await Voucher.findById(req.params.id);
     if (!currentVoucher) {
