@@ -18,13 +18,13 @@ import voucherRouter from "./routers/voucher.router";
 import { createServer } from "http";
 import { setupSocket } from "./socket";
 import nontificationRouter from "./routers/nontification.router";
-import statisticsRouter from "./routers/statistics.router";
 import { startVoucherStatusJob } from "./cron/voucherStatusCron.js";
 import nontificationRouter from "./routers/nontification.router";
 import walletRouter from "./routers/wallet.router.js";
 import returnRequestRouter from "./routers/returnRequest.router.js";
 import conversationRouter from "./routers/conversation.router";
-import orderStatisticsRouter from "./routers/order-statistics.router.js";
+import rankRouter from "./routers/rank.router.js";
+import { startRankJob } from "./cron/rankCron.js";
 import { startConversationStatusCheckJob } from "./cron/conversationStatusCheck.js";
 import { startDeleteConversationJob } from "./cron/deleteConversation.js";
 import QuickChatRouter from "./routers/quickChat.router.js";
@@ -58,6 +58,9 @@ mongoose
   .then(() => {
     console.log("Connected to MongoDB");
 
+    // 👉 Khởi động cron job cập nhật trạng thái voucher
+    startVoucherStatusJob();
+    startRankJob();
     // Start cron jobs
     startVoucherStatusJob(); // Cron voucher
     startConversationStatusCheckJob(); // Cron check conversation status
@@ -84,11 +87,10 @@ app.use("/api", staffRrouter);
 app.use("/api", paymentRouter);
 app.use("/api", orderRouter);
 app.use("/api", nontificationRouter);
-app.use("/api", statisticsRouter);
 app.use("/api", walletRouter);
 app.use("/api", returnRequestRouter);
 app.use("/api", conversationRouter);
-app.use("/api", orderStatisticsRouter);
+app.use("/api", rankRouter);
 app.use("/api", QuickChatRouter);
 app.use("/api", walletRouter);
 app.use("/api", returnRequestRouter);
