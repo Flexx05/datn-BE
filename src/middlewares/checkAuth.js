@@ -118,3 +118,27 @@ export const isAdminOrStaff = (req, res, next) => {
     });
   }
 };
+
+// Token dành cho api getUserVouchers
+export const optionalVerifyToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+
+      if (decoded?.id) {
+        const user = await authModel.findById(decoded.id).select("-password");
+        if (user) {
+          req.user = user; // Gán user nếu token hợp lệ
+        }
+      }
+    }
+
+    next(); // Luôn cho đi tiếp
+  } catch (error) {
+    // Bỏ qua lỗi token, tiếp tục như chưa đăng nhập
+    next();
+  }
+};

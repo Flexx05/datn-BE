@@ -2,6 +2,12 @@ import nodemailer from "nodemailer";
 
 export const sendMail = async ({ to, subject, html }) => {
   try {
+      if (!to) {
+        console.error("❌ Không có người nhận (to) trong sendMail");
+        return;
+      }
+
+      console.log("📨 Đang gửi email tới:", to);
     const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {

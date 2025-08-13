@@ -6,6 +6,7 @@ import Product from "../models/product.model.js";
 import Voucher from "../models/voucher.model.js";
 import { nontifyAdmin } from "./nontification.controller.js";
 import { getSocketInstance } from "../socket.js";
+import { handleRankUpdate } from "./rank.controller.js";
 
 const ORDER_STATUS_MAP = {
   0: "Chờ xác nhận",
@@ -24,11 +25,10 @@ const PAYMENT_STATUS_MAP = {
   3: "Đã hủy",
 };
 const PAYMENT_METHOD_MAP = {
-  "COD": "Thanh toán khi nhận hàng",
-  "VNPAY": "Thanh toán qua VNPAY",
-  "VI": "Thanh toán qua ví Binova",
+  COD: "Thanh toán khi nhận hàng",
+  VNPAY: "Thanh toán qua VNPAY",
+  VI: "Thanh toán qua ví Binova",
 };
-
 
 const createEmailTemplate = (order, recipientInfo) => {
   return `
@@ -424,7 +424,6 @@ export const createOrder = async (req, res) => {
 
       // Save order
       const orderSave = await order.save({ session });
-
       if (orderSave) {
         // Update voucher usage
         if (orderSave.voucherCode?.length) {
@@ -483,6 +482,9 @@ export const createOrder = async (req, res) => {
           // Email failure shouldn't prevent order from being processed
         }
 
+        const io = getSocketInstance();
+        io.to("admin").emit("order-status-changed", { order: orderSave });
+
         // Notify admin
         try {
           await nontifyAdmin(
@@ -524,7 +526,9 @@ export const getAllOrders = async (req, res) => {
     const sortOption = {};
     sortOption[_sort] = _order.toLowerCase() === "asc" ? 1 : -1;
 
-    const orders = await Order.find().sort(sortOption);
+    const orders = await Order.find()
+      .populate("userId", "fullName email avatar rank")
+      .sort(sortOption);
 
     if (!orders || orders.length === 0) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
@@ -691,15 +695,10 @@ const createStatusUpdateEmailTemplate = (order, statusMap, messageMap) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      status,
-      paymentStatus,
-      deliveryDate,
-      reason,
-      cancelReason,
-      userId,
-      review,
-    } = req.body;
+    const { status, paymentStatus, reason, cancelReason, userId, review } =
+      req.body;
+
+    let deliveryDate = "";
 
     // Kiểm tra các trường được phép cập nhật
     const allowedFields = [
@@ -819,8 +818,8 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     // Cập nhật ngày giao hàng
-    if (status === 4) {
-      order.deliveryDate = new Date(); // Set to current timestamp when status is 4
+    if (status === 3) {
+      deliveryDate = new Date();
     }
     order.cancelReason = cancelReason || reason || null;
 
@@ -829,10 +828,21 @@ export const updateOrderStatus = async (req, res) => {
       status: order.status,
       paymentStatus: order.paymentStatus,
       cancelReason: order.cancelReason,
-      deliveryDate: order.deliveryDate,
+      deliveryDate,
     };
     await Order.findByIdAndUpdate(id, updateData, { new: true });
     // console.log("Order updated status:", order);
+
+    if (order.status === 4 && order.paymentStatus === 1) {
+      try {
+        await handleRankUpdate(order.userId);
+        console.log(
+          `🎯 Rank của user ${order.userId} đã được cập nhật sau khi hoàn tất đơn.`
+        );
+      } catch (err) {
+        console.error("Lỗi khi cập nhật rank:", err.message);
+      }
+    }
 
     // Mapping cho email
     const statusMap = {

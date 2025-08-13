@@ -34,15 +34,21 @@ export const startVoucherStatusJob = () => {
         },
         { $set: { voucherStatus: "expired" } }
       );
-      
+
       const io = getSocketInstance();
       if (io) {
-        io.emit("voucherStatusUpdated", { time: now }); // Có thể gửi thêm dữ liệu chi tiết nếu muốn
+        io.emit("voucherStatusUpdated", { time: now });
       }
-      console.log(`[${now.toLocaleString()}] ✅ Cron cập nhật trạng thái: 
-        ${updatedActive.modifiedCount} active, 
-        ${updatedExpiredByDate.modifiedCount} expired (hết hạn), 
-        ${updatedExpiredByQuantity.modifiedCount} expired (hết lượt)`);
+      if (
+        updatedActive.modifiedCount > 0 ||
+        updatedExpiredByDate.modifiedCount > 0 ||
+        updatedExpiredByQuantity.modifiedCount > 0
+      ) {
+        console.log(`[${now.toLocaleString()}] ✅ Cron cập nhật trạng thái: 
+    ${updatedActive.modifiedCount} active, 
+    ${updatedExpiredByDate.modifiedCount} expired (hết hạn), 
+    ${updatedExpiredByQuantity.modifiedCount} expired (hết lượt)`);
+      }
     } catch (error) {
       console.error("❌ Cron lỗi:", error.message);
     }
