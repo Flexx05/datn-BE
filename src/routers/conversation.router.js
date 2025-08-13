@@ -8,6 +8,7 @@ import {
   getConversationById,
   getMessagesFromClient,
   sendMessage,
+  sendMessageFromOrder,
   unAssignToConversation,
 } from "../controllers/conversation.controller";
 import {
@@ -58,4 +59,10 @@ router.patch(
   isAdmin,
   assignConversationToStaff
 );
+router.post(
+  "/send-message/:orderId",
+  verifyToken,
+  isAdminOrStaff,
+  sendMessageFromOrder
+); // Gửi tin nhắn từ đơn hàng
 export default router;

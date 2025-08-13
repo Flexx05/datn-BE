@@ -3,6 +3,8 @@ import Conversation from "../models/conversation.model";
 import { getSocketInstance } from "../socket";
 import { nontifyAdmin } from "./nontification.controller";
 import authModel from "../models/auth.model";
+import Order from "../models/order.model";
+import { sendMail } from "../utils/sendMail";
 
 export const getAllConversations = async (req, res) => {
   try {
@@ -453,6 +455,148 @@ export const assignConversationToStaff = async (req, res) => {
     conversation.assignedTo = staffId;
     await conversation.save();
     return res.status(200).json(conversation);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const sendMessageFromOrder = async (req, res) => {
+  try {
+    const { content = "", files = [] } = req.body;
+    const { orderId } = req.params;
+    const user = req.user;
+    const io = getSocketInstance();
+    if (!orderId) {
+      return res.status(400).json({ error: "OrderId là bắt buộc" });
+    }
+    // Lấy order và kiểm tra userId
+    const order = await Order.findOne({
+      _id: orderId,
+      status: { $in: [4, 6] },
+    });
+    if (!order || !order.userId) {
+      return res.status(404).json({
+        error: "Không tìm thấy đơn hàng hoặc userId trong đơn hàng",
+      });
+    }
+    let conversation;
+
+    conversation = await Conversation.findOne({
+      participants: { $elemMatch: { userId: order.userId } },
+      status: { $ne: "closed" },
+      chatType: 2,
+    });
+
+    // Nếu chưa có thì tạo mới
+    if (!conversation) {
+      conversation = await Conversation.create({
+        participants: [{ userId: order.userId, joinedAt: new Date() }],
+        messages: [],
+        chatType: 2,
+        status: "active",
+        statusLogs: [
+          { status: "active", updateBy: user._id, updatedAt: new Date() },
+        ],
+        lastUpdated: new Date(),
+      });
+    }
+    // Nếu là staff thì tự động thêm vào assignedTo
+    if (user.role === "staff") {
+      conversation.assignedTo = user._id;
+    }
+
+    // Kiểm tra xem người dùng đã tham gia cuộc trò chuyện chưa
+    // Nếu chưa thì thêm người dùng vào participants
+    const exists = conversation.participants.some(
+      (p) => p.userId.toString() === user._id.toString()
+    );
+    if (!exists) {
+      conversation.participants.push({
+        userId: user._id,
+        joinedAt: new Date(),
+      });
+    }
+
+    // Thêm tin nhắn
+    const newMessage = {
+      senderId: user._id,
+      senderRole: user.role,
+      content,
+      files,
+      readBy: [user._id],
+    };
+    conversation.messages.push(newMessage);
+    conversation.lastUpdated = new Date();
+    conversation.updatedBy = user._id;
+    await conversation.save();
+    // Gửi mail cho người dùng
+    await sendMail({
+      to: order.recipientInfo.email,
+      subject: `Tin nhắn mới từ Binova về đơn hàng #${order?.orderCode}`,
+      html: `<html lang="vi">
+            <body style="margin:0;padding:0;background-color:#f4f6f8;font-family:Arial,Helvetica,sans-serif;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;">
+                <tr>
+                  <td align="center" style="padding:24px 12px;">
+                    <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);border-collapse:collapse;">
+                      <!-- Header -->
+                      <tr>
+                        <td style="padding:20px 24px;background-color:#0d47a1;color:#ffffff;">
+                          <h1 style="margin:0;font-size:18px;font-weight:600;color:#ffffff;">Binova</h1>
+                        </td>
+                      </tr>
+                      <!-- Body -->
+                      <tr>
+                        <td style="padding:24px;">
+                          <p style="margin:0 0 16px 0;color:#333333;font-size:15px;">
+                            Kính gửi Quý khách <strong>${order.recipientInfo.name}</strong>,
+                          </p>
+                          <p style="margin:0 0 16px 0;color:#333333;font-size:15px;line-height:1.5;">
+                           Chúng tôi đã gửi cho bạn tin nhắn mới liên quan đến đơn hàng <strong>#${order?.orderCode}</strong>
+                            từ Binova. Dưới đây là nội dung tin nhắn: ${content}
+                          </p>
+                          <p style="margin:0 0 16px 0;color:#333333;font-size:15px;line-height:1.5;">
+                            Chúng tôi rất mong sẽ nhận được phản hồi sớm nhất từ quý khách để chúng tôi có thể hỗ trợ tốt nhất.
+                          </p>
+                          <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 0 20px 0;border-collapse:collapse;">
+                            <tr>
+                              <td style="vertical-align:top;padding-right:12px;">
+                                <strong style="display:block;color:#333333;font-size:14px;">Email:</strong>
+                                <a href="mailto:binovaweb73@gmail.com" style="color:#0d47a1;text-decoration:none;font-size:14px;">binovaweb73@gmail.com</a>
+                              </td>
+                            </tr>
+                          </table>
+                          <p style="margin:0 0 6px 0;color:#333333;font-size:15px;">
+                            Chúng tôi chân thành cảm ơn Quý khách đã tin tưởng và lựa chọn <strong>Binova</strong>.
+                          </p>
+                          <p style="margin:18px 0 0 0;color:#333333;font-size:15px;">Trân trọng,</p>
+                          <p style="margin:6px 0 0 0;color:#333333;font-size:14px;">
+                            Bộ phận Chăm sóc Khách hàng — <span style="color:#333333;">Binova</span><br>
+                          </p>
+                        </td>
+                      </tr>
+                      <!-- Footer -->
+                      <tr>
+                        <td style="padding:16px 24px;background-color:#fafbfd;color:#888888;font-size:12px;text-align:center;">
+                          © <span>2025</span> Binova. Bảo lưu mọi quyền.
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+          </html>`,
+    });
+    io.to(conversation._id.toString()).emit("new-message", {
+      conversation: conversation._id,
+      message: newMessage,
+    });
+    return res.status(200).json({
+      message: "Gửi tin nhắn thành công",
+      conversation: conversation._id,
+      data: newMessage,
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
