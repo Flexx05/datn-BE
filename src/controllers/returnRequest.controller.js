@@ -6,7 +6,7 @@ import { paymentModel as Payment } from "../models/payment.model.js";
 
 // Tạo yêu cầu hoàn hàng mới
 export const createReturnRequest = async (req, res) => {
-  const { orderId, reason, products, refundAmount, notes } = req.body;
+  const { orderId, reason, images, products, refundAmount, notes } = req.body;
   const userId = req.user._id.toString(); // Lấy userId từ JWT token
 
   // Validate input
@@ -28,15 +28,20 @@ export const createReturnRequest = async (req, res) => {
       );
     }
 
-    if (order.paymentStatus !== 1 || order.status !== 3) {
+    if (
+      order.paymentStatus !== 1 ||
+      (order.status !== 3 && order.status !== 4)
+    ) {
       throw new Error("Đơn hàng chưa được thanh toán hoặc chưa giao");
     }
 
     // Kiểm tra tổng số tiền hoàn lại
-    const calculatedRefund = products.reduce(
-      (sum, p) => sum + p.quantity * p.price,
-      0
-    );
+    const discount = order?.discountAmount || 0;
+
+    const total = products.reduce((sum, p) => sum + p.quantity * p.price, 0);
+
+    const calculatedRefund = total - discount;
+
     if (calculatedRefund !== refundAmount) {
       throw new Error("Số tiền hoàn lại không khớp với danh sách sản phẩm");
     }
@@ -51,6 +56,7 @@ export const createReturnRequest = async (req, res) => {
         {
           orderId,
           reason,
+          images,
           status: 0,
           products,
           refundAmount,
@@ -81,7 +87,10 @@ export const getReturnRequestById = async (req, res) => {
     const userId = req.user._id.toString(); // Lấy userId từ JWT token
 
     const returnRequest = await ReturnRequest.findById(id)
-      .populate("orderId", "orderCode totalAmount")
+      .populate(
+        "orderId",
+        "orderCode totalAmount recipientInfo shippingAddress"
+      )
       .select("-__v");
 
     if (!returnRequest) {
@@ -111,7 +120,10 @@ export const getReturnRequestByOrderId = async (req, res) => {
     const userId = req.user._id.toString(); // Lấy userId từ JWT token
 
     const returnRequest = await ReturnRequest.findOne({ orderId })
-      .populate("orderId", "orderCode totalAmount")
+      .populate(
+        "orderId",
+        "orderCode totalAmount recipientInfo shippingAddress"
+      )
       .select("-__v");
 
     if (!returnRequest) {
