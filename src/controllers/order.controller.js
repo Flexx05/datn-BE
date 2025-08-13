@@ -769,7 +769,7 @@ export const updateOrderStatus = async (req, res) => {
       1: [2, 5],
       2: [3],
       3: [4, 6],
-      4: [],
+      4: [6],
       5: [],
       6: [3],
     };
