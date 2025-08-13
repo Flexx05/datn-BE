@@ -10,7 +10,7 @@ export const startChangeOrderStatusJob = () => {
       const deliveriedOrders = await Order.find({
         status: { $eq: 3 }, // Trạng thái đã giao hàng
         paymentStatus: { $eq: 1 }, // Trạng thái đã thanh toán
-        deliveryDate: { $lte: oneHourAgo },
+        deliveryDate: { $lte: oneDayAgo },
       });
       // Cập nhật trạng thái đơn hàng đã giao
       for (const order of deliveriedOrders) {
