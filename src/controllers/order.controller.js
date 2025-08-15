@@ -1296,3 +1296,46 @@ export const updateOrderTotal = async (req, res) => {
     await session.endSession();
   }
 };
+
+export const LookUpOrder = async (req, res) => {
+  try {
+    const email = req.email;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email không hợp lệ" });
+    }
+
+    const orders = await Order.find({ "recipientInfo.email": email, $or: [{ userId: { $exists: false } }, { userId: null }] }).populate({
+      path: "items.productId",
+      select: "name variation",
+    });
+
+    if (!orders || orders.length === 0) {
+      return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
+    }
+
+    const processedOrders = orders.map(order => {
+      const processedItems = order.items.map(item => {
+        const product = item.productId;
+
+        const matchedVariation = product?.variation?.find(
+          v => v._id.toString() === item.variationId.toString()
+        );
+
+        return {
+          ...item.toObject(),
+          variantAttributes: matchedVariation ? matchedVariation.attributes : [],
+        };
+      });
+
+      const orderObject = order.toObject();
+      orderObject.items = processedItems;
+
+      return orderObject;
+    });
+
+    return res.status(200).json(processedOrders);
+  } catch (error) {
+    return res.status(400).json({ error: "Đã xảy ra lỗi khi tìm đơn hàng" });
+  }
+};

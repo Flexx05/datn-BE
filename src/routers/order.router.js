@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { isAdmin, isAdmin, isAdminOrStaff, verifyToken } from "../middlewares/checkAuth.js";
+import { isAdmin, isAdmin, isAdminOrStaff, verifyToken, verifyTokenByEmail } from "../middlewares/checkAuth.js";
 import {
   createOrder,
   getAllOrders,
@@ -10,6 +10,7 @@ import {
   cancelOrder,
   updateOrderTotal,
   getOrderByCode,
+  LookUpOrder,
 } from "../controllers/order.controller.js";
 
 const router = Router();
@@ -19,6 +20,7 @@ router.get("/order", verifyToken, isAdminOrStaff,getAllOrders);
 router.get("/order/user/id/:id", verifyToken, getOrderByUserId); 
 router.get("/order/id/:id", getOrderById); 
 router.get("/orders/code/:code", getOrderByCode);
+router.get("/order/lookup", verifyTokenByEmail, LookUpOrder);
 router.patch("/order/status/:id", verifyToken,updateOrderStatus);
 router.patch("/order/payment-status/:id", updatePaymentStatus);
 router.patch("/order/cancel/:id", cancelOrder);
