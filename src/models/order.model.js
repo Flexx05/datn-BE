@@ -47,6 +47,69 @@ const orderItemSchema = new Schema(
   { _id: true }
 );
 
+const orderStatusHistorySchema = new Schema(
+  {
+    status: {
+      type: Number,
+      enum: [0, 1, 2, 3, 4, 5, 6],
+      // 0: Cho xac nhan
+      // 1: Da xac nhan
+      // 2: Dang giao hang
+      // 3: Da giao hang
+      // 4: Hoan thanh
+      // 5: Da huy
+      // 6: Hoan hang
+      required: true,
+    },
+    updatedByUser: {
+      type: Schema.Types.ObjectId,
+      ref: "Auth",
+      default: null
+    },
+    updatedByType: {
+      type: String,
+      enum: ["user", "guest"],
+      required: true
+    },
+    note: {
+      type: String,
+      default: null,
+    }
+  }, { 
+    timestamps: { createdAt: 'changedAt', updatedAt: false }
+  }
+);
+
+const paymentStatusHistorySchema = new Schema(
+  {
+    paymentStatus: {
+      type: Number,
+      enum: [0, 1, 2, 3],
+      // 0: Chua thanh toan
+      // 1: Da thanh toan
+      // 2: Hoan tien
+      // 3: Da huy
+      required: true,
+    },
+    updatedByUser: {
+      type: Schema.Types.ObjectId,
+      ref: "Auth",
+      default: null
+    },
+    updatedByType: {
+      type: String,
+      enum: ["user", "guest"],
+      required: true
+    },
+    note: {
+      type: String,
+      default: null,
+    },
+  }, { 
+    timestamps: { createdAt: 'changedAt', updatedAt: false }
+  }
+);
+
 const orderSchema = new mongoose.Schema(
   {
     userId: {
@@ -103,7 +166,7 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: Number,
-      enum: [0, 1, 2, 3, 4, 5],
+      enum: [0, 1, 2, 3, 4, 5, 6],
       // 0: Cho xac nhan
       // 1: Da xac nhan
       // 2: Dang giao hang
@@ -123,6 +186,17 @@ const orderSchema = new mongoose.Schema(
       // 3: Da huy
       default: 0,
     },
+
+    statusHistory: {
+      type: [orderStatusHistorySchema],
+      default: [],
+    },
+
+    paymentStatusHistory: {
+      type: [paymentStatusHistorySchema],
+      default: [],
+    },
+
     paymentMethod: {
       type: String,
       required: true,
