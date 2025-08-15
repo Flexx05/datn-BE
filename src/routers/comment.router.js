@@ -19,6 +19,6 @@ router.patch("/comments/reply/:id", verifyToken, isAdmin, replyToComment);
 
 // Routes cho client
 router.post("/comments/add", verifyToken, addComment);
-router.get("/comments/:id", verifyToken, getCommentsForClient);
+router.get("/comments/:id", getCommentsForClient);
 
 export default router;
