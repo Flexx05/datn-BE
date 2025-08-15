@@ -11,7 +11,7 @@ import { Types } from "mongoose";
 export const createVnpayPayment = async (req, res) => {
   try {
     const { orderId, bankCode } = req.body;
-    const userId = req.user._id;
+    // const userId = req.user._id;
 
     console.log("Creating VNPAY payment for order:", orderId);
 
@@ -78,7 +78,7 @@ export const createVnpayPayment = async (req, res) => {
     // Tạo bản ghi thanh toán mới
     const newPayment = new paymentModel({
       orderId: order._id,
-      userId,
+      // userId,
       paymentMethod: "VNPAY",
       status: 0,
       amount: order.totalAmount,

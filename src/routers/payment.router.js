@@ -12,7 +12,7 @@ import { verifyToken } from "../middlewares/checkAuth.js";
 const router = express.Router(); 
 
 // Routes cho người dùng
-router.post("/payment/vnpay/create", verifyToken, createVnpayPayment);
+router.post("/payment/vnpay/create", createVnpayPayment);
 router.get("/payment/vnpay/callback", vnpayCallback);
 router.get("/payment/status/:orderId", verifyToken, getPaymentStatus);
 router.get("/payment/history", verifyToken, getUserPaymentHistory);
