@@ -835,10 +835,24 @@ export const updateOrderStatus = async (req, res) => {
 
     if (order.status === 4 && order.paymentStatus === 1) {
       try {
+        // Cập nhật rank của user
         await handleRankUpdate(order.userId);
-        console.log(
-          `🎯 Rank của user ${order.userId} đã được cập nhật sau khi hoàn tất đơn.`
-        );
+        
+        // Cập nhật số lượng đã bán của các sản phẩm trong đơn hàng
+        for (const item of order.items) {
+          try {
+            // Tìm và cập nhật số lượng đã bán của sản phẩm
+            await Product.updateOne(
+              { _id: item.productId },
+              { $inc: { selled: item.quantity } }
+            );
+          } catch (err) {
+            console.error(
+              `Lỗi khi cập nhật số lượng đã bán cho sản phẩm ${item.productId}:`,
+              err.message
+            );
+          }
+        }
       } catch (err) {
         console.error("Lỗi khi cập nhật rank:", err.message);
       }
