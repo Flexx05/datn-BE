@@ -73,9 +73,6 @@ const orderStatusHistorySchema = new Schema(
     },
     note: {
       type: String,
-      required: function() {
-        return [5, 6].includes(this.status);
-      },
       default: null,
     }
   }, { 
