@@ -61,11 +61,11 @@ const orderStatusHistorySchema = new Schema(
       // 6: Hoan hang
       required: true,
     },
-    updatedByUser: {
-      type: Schema.Types.ObjectId,
-      ref: "Auth",
-      default: null
-    },
+    // updatedByUser: {
+    //   type: Schema.Types.ObjectId,
+    //   ref: "Auth",
+    //   default: null
+    // },
     updatedByType: {
       type: String,
       enum: ["user", "guest"],
@@ -91,11 +91,11 @@ const paymentStatusHistorySchema = new Schema(
       // 3: Da huy
       required: true,
     },
-    updatedByUser: {
-      type: Schema.Types.ObjectId,
-      ref: "Auth",
-      default: null
-    },
+    // updatedByUser: {
+    //   type: Schema.Types.ObjectId,
+    //   ref: "Auth",
+    //   default: null
+    // },
     updatedByType: {
       type: String,
       enum: ["user", "guest"],
