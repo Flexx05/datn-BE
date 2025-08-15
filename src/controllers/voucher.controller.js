@@ -1,15 +1,16 @@
-import Voucher from "../models/voucher.model.js"
+import Voucher from "../models/voucher.model.js";
 import {
   createVoucherSchema,
-  updateVoucherSchema
+  updateVoucherSchema,
 } from "../validations/voucher.validation.js";
-
 
 //Thêm mới voucher
 export const createVoucher = async (req, res) => {
   try {
     // Validate với Joi
-    const { error } = createVoucherSchema.validate(req.body, { abortEarly: false });
+    const { error } = createVoucherSchema.validate(req.body, {
+      abortEarly: false,
+    });
     if (error) {
       return res.status(400).json({
         message: "Dữ liệu không hợp lệ",
@@ -30,6 +31,18 @@ export const createVoucher = async (req, res) => {
     const startDate = new Date(createData.startDate);
     const endDate = new Date(createData.endDate);
 
+    if (startDate >= endDate) {
+      return res.status(400).json({
+        message: "Ngày bắt đầu phải trước ngày kết thúc.",
+      });
+    }
+
+    if (startDate < now) {
+      return res.status(400).json({
+        message: "Ngày bắt đầu không được ở quá khứ.",
+      });
+    }
+
     if (now > endDate) {
       createData.voucherStatus = "expired";
     } else if (now >= startDate) {
@@ -43,13 +56,24 @@ export const createVoucher = async (req, res) => {
       delete createData.maxDiscount;
     }
 
+    // Xử lý dùng riêng/dùng chung và quantity
+    if (Array.isArray(createData.userIds) && createData.userIds.length > 0) {
+      // Dùng riêng: quantity = số user, không cho nhập quantity từ client
+      createData.quantity = createData.userIds.length;
+    } else {
+      // Dùng chung: quantity lấy từ client, userIds là []
+      createData.userIds = [];
+      // quantity đã validate ở Joi
+    }
+
     // Tạo voucher mới
-    const newVoucher = await Voucher.create(createData);
+    const newVoucher = await Voucher.create({
+      ...createData,
+    });
     return res.status(200).json({
       message: "Tạo voucher thành công",
       data: newVoucher,
     });
-
   } catch (error) {
     return res.status(400).json({
       message: "Tạo voucher thất bại",
@@ -58,28 +82,35 @@ export const createVoucher = async (req, res) => {
   }
 };
 
-
 //Lấy tất cả voucher
 export const getAllVoucher = async (req, res) => {
   try {
-    const { _page=1, _limit= 10, _sort="createdAt", _order, code, status, voucherType, isDeleted } = req.query;
+    const {
+      _page = 1,
+      _limit = 10,
+      _sort = "createdAt",
+      _order,
+      code,
+      status,
+      voucherType,
+      isDeleted,
+    } = req.query;
     let query = {};
-    
 
     // Nếu truyền ?isDeleted=true
-    if (isDeleted === 'true') {
+    if (isDeleted === "true") {
       query.isDeleted = true;
     }
     // Nếu truyền ?isDeleted=false
-    else if (isDeleted === 'false') {
+    else if (isDeleted === "false") {
       query.isDeleted = false;
     }
     // Nếu là all → không thêm gì → sẽ lấy hết tất cả
     // Nếu không truyền gì → mặc định là false
-    else if (!isDeleted || isDeleted === '') {
+    else if (!isDeleted || isDeleted === "") {
       query.isDeleted = false;
     }
- 
+
     // Tìm kiếm theo code nếu có
     if (code) {
       query.code = { $regex: code, $options: "i" };
@@ -89,13 +120,14 @@ export const getAllVoucher = async (req, res) => {
       const allowedStatuses = ["active", "inactive", "expired"];
       if (!allowedStatuses.includes(status)) {
         return res.status(400).json({
-          message: "Trạng thái không hợp lệ. Chỉ chấp nhận: active, inactive, expired",
+          message:
+            "Trạng thái không hợp lệ. Chỉ chấp nhận: active, inactive, expired",
         });
       }
       query.voucherStatus = status;
     }
     //Tìm kiếm voucherType nếu có
-    if(voucherType){
+    if (voucherType) {
       query.voucherType = { $regex: voucherType, $options: "i" };
     }
 
@@ -106,14 +138,14 @@ export const getAllVoucher = async (req, res) => {
     };
 
     const listVouchers = await Voucher.paginate(query, options);
-    res.status(200).json(listVouchers)
+    res.status(200).json(listVouchers);
   } catch (error) {
     res.status(500).json({
       message: "Lỗi khi lấy danh sách voucher",
       error: error.message,
     });
   }
-}
+};
 
 export const getVoucherByCode = async (req, res) => {
   try {
@@ -143,7 +175,6 @@ export const getVoucherByCode = async (req, res) => {
   }
 };
 
-
 // Lấy chi tiết voucher theo ID
 export const getByIdVoucher = async (req, res) => {
   try {
@@ -169,13 +200,24 @@ export const getByIdVoucher = async (req, res) => {
 export const updateVoucher = async (req, res) => {
   try {
     // Validate dữ liệu đầu vào
-    const { error } = updateVoucherSchema.validate(req.body, { abortEarly: false });
+    const { error } = updateVoucherSchema.validate(req.body, {
+      abortEarly: false,
+    });
     if (error) {
       return res.status(400).json({
         message: "Dữ liệu không hợp lệ",
         errors: error.details.map((e) => e.message),
       });
     }
+
+    const exists = await Voucher.findOne({
+      code: req.body.code,
+      _id: { $ne: req.params.id }, // Loại bỏ voucher đang sửa
+    });
+    if (exists) {
+      return res.status(400).json({ message: "Mã giảm giá đã tồn tại" });
+    }
+
     // Lấy thông tin voucher hiện tại
     const currentVoucher = await Voucher.findById(req.params.id);
     if (!currentVoucher) {
@@ -196,35 +238,57 @@ export const updateVoucher = async (req, res) => {
       });
     }
 
+    // ❌ Không cho sửa nếu là voucher tự động
+    if (currentVoucher.isAuto) {
+      return res.status(403).json({
+        message: "Không thể chỉnh sửa voucher được tạo tự động.",
+      });
+    }
 
     if (
       currentVoucher.voucherStatus === "active" &&
       req.body.startDate &&
-      new Date(req.body.startDate).getTime() !== new Date(currentVoucher.startDate).getTime()
+      new Date(req.body.startDate).getTime() !==
+        new Date(currentVoucher.startDate).getTime()
     ) {
       return res.status(400).json({
         message: "Không thể thay đổi ngày bắt đầu khi voucher đang hoạt động.",
       });
     }
-    
 
+    const wasPrivate =
+      Array.isArray(currentVoucher.userIds) &&
+      currentVoucher.userIds.length > 0;
+    const isNowShared = !req.body.userIds || req.body.userIds.length === 0;
 
-    if (currentVoucher.voucherStatus === "active") {
+    if (
+      currentVoucher.voucherStatus === "active" &&
+      isNowShared &&
+      !wasPrivate // chỉ chặn nếu vốn đã là shared
+    ) {
       if (req.body.quantity && req.body.quantity < currentVoucher.quantity) {
         return res.status(400).json({
-          message: "Không thể giảm số lượng voucher khi đang hoạt động.",
+          message:
+            "Không thể giảm số lượng voucher công khai khi đang hoạt động.",
         });
       }
     }
-    
-    
+
     // Chuẩn bị dữ liệu cập nhật
     const updateData = { ...req.body };
     const now = new Date();
 
     // Tự động cập nhật trạng thái dựa trên ngày
-    const startDate = new Date(updateData.startDate || currentVoucher.startDate);
+    const startDate = new Date(
+      updateData.startDate || currentVoucher.startDate
+    );
     const endDate = new Date(updateData.endDate || currentVoucher.endDate);
+
+    if (startDate >= endDate) {
+      return res.status(400).json({
+        message: "Ngày bắt đầu phải trước ngày kết thúc.",
+      });
+    }
 
     // Cập nhật trạng thái dựa trên thời gian hiện tại
     if (now > endDate) {
@@ -233,6 +297,12 @@ export const updateVoucher = async (req, res) => {
       updateData.voucherStatus = "active";
     } else if (now < endDate) {
       updateData.voucherStatus = "inactive";
+    }
+
+    if (Array.isArray(updateData.userIds) && updateData.userIds.length > 0) {
+      updateData.quantity = updateData.userIds.length;
+    } else {
+      updateData.userIds = [];
     }
 
     // Cập nhật voucher
@@ -286,7 +356,6 @@ export const deleteVoucher = async (req, res) => {
   }
 };
 
-
 // Khôi phục voucher từ thùng rác
 export const restoreVoucher = async (req, res) => {
   try {
@@ -311,7 +380,6 @@ export const restoreVoucher = async (req, res) => {
     return res.status(200).json({
       message: "Khôi phục voucher thành công.",
     });
-
   } catch (error) {
     return res.status(500).json({
       message: "Đã xảy ra lỗi. Vui lòng thử lại sau.",
@@ -320,8 +388,63 @@ export const restoreVoucher = async (req, res) => {
   }
 };
 
+// Lấy danh sách voucher của người dùng
+export const getUserVouchers = async (req, res) => {
+  try {
+    const { q } = req.query;
+    const userId = req.user?._id || null;
 
+    const visibilityCondition = userId
+      ? [{ userIds: { $size: 0 } }, { userIds: { $in: [userId] } }]
+      : [{ userIds: { $size: 0 } }];
 
+    const baseQuery = {
+      isDeleted: false,
+      voucherStatus: "active",
+      $or: visibilityCondition,
+    };
 
+    if (q?.trim()) {
+      const keyword = q.trim();
+      baseQuery.$and = [
+        {
+          $or: [
+            { code: { $regex: keyword, $options: "i" } },
+            { description: { $regex: keyword, $options: "i" } },
+          ],
+        },
+      ];
+    }
 
+    const vouchers = await Voucher.find(baseQuery).sort({ endDate: 1 });
 
+    const result = vouchers.map((voucher) => ({
+      _id: voucher._id,
+      code: voucher.code,
+      userIds: voucher.userIds,
+      description: voucher.description,
+      discountType: voucher.discountType,
+      discountValue: voucher.discountValue,
+      maxDiscount: voucher.maxDiscount || null,
+      minOrderValues: voucher.minOrderValues,
+      startDate: voucher.startDate,
+      endDate: voucher.endDate,
+      voucherType: voucher.voucherType,
+      quantity: voucher.quantity,
+      used: voucher.used,
+      status: voucher.voucherStatus,
+    }));
+
+    return res.status(200).json({
+      message: userId
+        ? "Danh sách voucher khi đã đăng nhập"
+        : "Danh sách voucher khi chưa đăng nhập",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Lỗi khi lấy danh sách voucher",
+      error: error.message,
+    });
+  }
+};

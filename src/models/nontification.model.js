@@ -9,7 +9,7 @@ const notificationSchema = new Schema(
       /**
        * 0: order
        * 1: order-status
-       * 2: comment
+       * 2: review
        * 3: chat
        * 4: system
        * 5: forStaff

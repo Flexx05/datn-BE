@@ -13,9 +13,12 @@ const voucherSchema = new Schema(
       required: [true, "Mã giảm giá là bắt buộc"],
       unique: true,
     },
-    link: {
-      type: String,
-    },
+    userIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Auth",
+      },
+    ],
     description: {
       type: String,
       required: [true, "Mô tả giảm giá là bắt buộc"],
@@ -64,6 +67,11 @@ const voucherSchema = new Schema(
     isDeleted: {
       type: Boolean,
       default: false,
+    },
+    monthIssued: { type: String, default: null },
+    isAuto: {
+      type: Boolean,
+      default: false, // mặc định là voucher thủ công
     },
   },
   {
