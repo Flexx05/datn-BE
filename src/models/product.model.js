@@ -35,7 +35,7 @@ const variationSchema = new Schema(
     },
     salePrice: {
       type: Number,
-      default: 0,
+      default: null,
     },
     stock: {
       type: Number,
