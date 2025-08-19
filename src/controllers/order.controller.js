@@ -788,7 +788,7 @@ export const updateOrderStatus = async (req, res) => {
       3: [4, 6],
       4: [6],
       5: [],
-      6: [3],
+      6: [3, 4],
     };
 
     // Kiểm tra và cập nhật trạng thái đơn hàng
