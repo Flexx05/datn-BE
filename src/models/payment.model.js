@@ -7,11 +7,12 @@ const paymentSchema = new Schema(
       ref: "Order",
       required: true,
     },
-    userId: {
-      type: Schema.Types.ObjectId,
-      ref: "Auth",
-      required: true,
-    },
+    // userId: {
+    //   type: Schema.Types.ObjectId,
+    //   ref: "Auth",
+    //   required: true,
+    //   default: "null"
+    // },
     paymentMethod: {
       type: String,
       required: true,
