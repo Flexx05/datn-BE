@@ -192,11 +192,11 @@ export const generateVariations = async (req, res) => {
         attributeName: i.attributeName,
         values: [i.value],
       })),
-      regularPrice: 0,
-      salePrice: 0,
+      regularPrice: null,
+      salePrice: null,
       stock: 0,
       image: "",
-      isActive: false, // mặc định vì stock = 0
+      isActive: true,
     }));
 
     return res.status(200).json({ variation });

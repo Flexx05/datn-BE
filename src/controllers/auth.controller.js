@@ -9,7 +9,6 @@ import {
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
-  resetPasswordSchema,
   verifyOtpSchema,
 } from "../validations/auth.validation";
 
@@ -227,13 +226,20 @@ export const loginGoogle = async (req, res) => {
 
     const payload = ticket.getPayload();
 
-    const { email, name } = payload;
+    const { email, name, picture } = payload;
 
     // Kiểm tra xem người dùng đã tồn tại chưa
     let user = await authModel.findOne({ email });
     if (!user) {
       // Nếu chưa tồn tại, tạo người dùng mới
-      user = await authModel.create({ email, name, password: null });
+      user = await authModel.create({
+        email,
+        fullName: name,
+        password: null,
+        isActive: true,
+        isVerify: true,
+        avatar: picture,
+      });
     }
     const accessToken = jwt.sign(
       { id: user.id },
@@ -321,9 +327,14 @@ export const verifyResetOtp = async (req, res) => {
     user.resetPasswordVerified = true;
     await user.save();
 
+    const token = jwt.sign({ email }, process.env.JWT_SECRET_KEY || "binova", {
+      expiresIn: "15m",
+    });
+
     return res.status(200).json({
       success: true,
       message: "Xác thực OTP thành công",
+      token,
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

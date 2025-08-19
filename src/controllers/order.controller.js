@@ -25,11 +25,10 @@ const PAYMENT_STATUS_MAP = {
   3: "Đã hủy",
 };
 const PAYMENT_METHOD_MAP = {
-  "COD": "Thanh toán khi nhận hàng",
-  "VNPAY": "Thanh toán qua VNPAY",
-  "VI": "Thanh toán qua ví Binova",
+  COD: "Thanh toán khi nhận hàng",
+  VNPAY: "Thanh toán qua VNPAY",
+  VI: "Thanh toán qua ví Binova",
 };
-
 
 const createEmailTemplate = (order, recipientInfo) => {
   return `
@@ -483,6 +482,9 @@ export const createOrder = async (req, res) => {
           // Email failure shouldn't prevent order from being processed
         }
 
+        const io = getSocketInstance();
+        io.to("admin").emit("order-status-changed", { order: orderSave });
+
         // Notify admin
         try {
           await nontifyAdmin(
@@ -693,15 +695,10 @@ const createStatusUpdateEmailTemplate = (order, statusMap, messageMap) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      status,
-      paymentStatus,
-      deliveryDate,
-      reason,
-      cancelReason,
-      userId,
-      review,
-    } = req.body;
+    const { status, paymentStatus, reason, cancelReason, userId, review } =
+      req.body;
+
+    let deliveryDate = "";
 
     // Kiểm tra các trường được phép cập nhật
     const allowedFields = [
@@ -771,7 +768,7 @@ export const updateOrderStatus = async (req, res) => {
       1: [2, 5],
       2: [3],
       3: [4, 6],
-      4: [],
+      4: [6],
       5: [],
       6: [3],
     };
@@ -821,8 +818,8 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     // Cập nhật ngày giao hàng
-    if (status === 4) {
-      order.deliveryDate = new Date(); // Set to current timestamp when status is 4
+    if (status === 3) {
+      deliveryDate = new Date();
     }
     order.cancelReason = cancelReason || reason || null;
 
@@ -831,17 +828,31 @@ export const updateOrderStatus = async (req, res) => {
       status: order.status,
       paymentStatus: order.paymentStatus,
       cancelReason: order.cancelReason,
-      deliveryDate: order.deliveryDate,
+      deliveryDate,
     };
     await Order.findByIdAndUpdate(id, updateData, { new: true });
     // console.log("Order updated status:", order);
 
     if (order.status === 4 && order.paymentStatus === 1) {
       try {
+        // Cập nhật rank của user
         await handleRankUpdate(order.userId);
-        console.log(
-          `🎯 Rank của user ${order.userId} đã được cập nhật sau khi hoàn tất đơn.`
-        );
+        
+        // Cập nhật số lượng đã bán của các sản phẩm trong đơn hàng
+        for (const item of order.items) {
+          try {
+            // Tìm và cập nhật số lượng đã bán của sản phẩm
+            await Product.updateOne(
+              { _id: item.productId },
+              { $inc: { selled: item.quantity } }
+            );
+          } catch (err) {
+            console.error(
+              `Lỗi khi cập nhật số lượng đã bán cho sản phẩm ${item.productId}:`,
+              err.message
+            );
+          }
+        }
       } catch (err) {
         console.error("Lỗi khi cập nhật rank:", err.message);
       }
@@ -1283,5 +1294,48 @@ export const updateOrderTotal = async (req, res) => {
     });
   } finally {
     await session.endSession();
+  }
+};
+
+export const LookUpOrder = async (req, res) => {
+  try {
+    const email = req.email;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email không hợp lệ" });
+    }
+
+    const orders = await Order.find({ "recipientInfo.email": email, $or: [{ userId: { $exists: false } }, { userId: null }] }).populate({
+      path: "items.productId",
+      select: "name variation",
+    });
+
+    if (!orders || orders.length === 0) {
+      return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
+    }
+
+    const processedOrders = orders.map(order => {
+      const processedItems = order.items.map(item => {
+        const product = item.productId;
+
+        const matchedVariation = product?.variation?.find(
+          v => v._id.toString() === item.variationId.toString()
+        );
+
+        return {
+          ...item.toObject(),
+          variantAttributes: matchedVariation ? matchedVariation.attributes : [],
+        };
+      });
+
+      const orderObject = order.toObject();
+      orderObject.items = processedItems;
+
+      return orderObject;
+    });
+
+    return res.status(200).json(processedOrders);
+  } catch (error) {
+    return res.status(400).json({ error: "Đã xảy ra lỗi khi tìm đơn hàng" });
   }
 };

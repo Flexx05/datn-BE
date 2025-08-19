@@ -43,21 +43,10 @@ export const getAllUsers = async (req, res) => {
 
     const users = await authModel.paginate(query, options);
 
-    const docs = users.docs || users; // khi pagination: false thì trả về mảng users
-    const countOrderNotSuccess = await Promise.all(
-      docs.map(async (user) => {
-        const count = await Order.countDocuments({
-          userId: user._id,
-          status: { $nin: [4, 5] },
-        });
-        return { ...user.toObject(), countOrderNotSuccess: count };
-      })
-    );
-
     if (options.pagination === false) {
-      return res.status(200).json({ docs: countOrderNotSuccess });
+      return res.status(200).json({ docs: users });
     } else {
-      return res.status(200).json({ ...users, docs: countOrderNotSuccess });
+      return res.status(200).json(users);
     }
   } catch (error) {
     return res.status(500).json({
@@ -67,7 +56,6 @@ export const getAllUsers = async (req, res) => {
     });
   }
 };
-
 
 export const getUserById = async (req, res) => {
   try {
@@ -106,18 +94,6 @@ export const updateUserStatus = async (req, res) => {
     if (user.role !== "user" && user._id.toString() === id) {
       return res.status(400).json({
         error: "Không thể cập nhật trạng thái cho chính mình.",
-      });
-    }
-
-    const countOrderNotSuccess = await Order.countDocuments({
-      userId: id,
-      status: { $nin: [4, 5] },
-    });
-
-    if (countOrderNotSuccess > 0 && isActive === true) {
-      return res.status(400).json({
-        error:
-          "Không thể cập nhật trạng thái người dùng, người dùng có đơn hàng chưa thanh toán",
       });
     }
 

@@ -4,17 +4,18 @@ import { sendMail } from "../utils/sendMail";
 export const startChangeOrderStatusJob = () => {
   cron.schedule("*/30 * * * *", async () => {
     const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 2 * 60 * 1000);
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     try {
       const deliveriedOrders = await Order.find({
-        satus: { $eq: 3 }, // Trạng thái đã giao hàng
+        status: { $eq: 3 }, // Trạng thái đã giao hàng
         paymentStatus: { $eq: 1 }, // Trạng thái đã thanh toán
-        deliveryDate: { $lte: oneHourAgo },
+        deliveryDate: { $lte: oneDayAgo },
       });
       // Cập nhật trạng thái đơn hàng đã giao
       for (const order of deliveriedOrders) {
         order.status = 4; // Cập nhật trạng thái thành "Đã hoàn thành"
+        order.completedBy = "system"; // Đánh dấu là hệ thống hoàn thành
         await order.save();
         // Gửi email thông báo
         await sendMail({

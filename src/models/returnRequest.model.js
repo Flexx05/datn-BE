@@ -12,6 +12,10 @@ const returnRequestSchema = new Schema(
       type: String,
       required: true,
     },
+    images:{
+      type: [String],
+      required: true
+    },
     // Trạng thái yêu cầu hoàn hàng
     status: {
       type: Number,
