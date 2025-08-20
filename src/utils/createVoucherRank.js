@@ -50,6 +50,7 @@ export const createVoucherRank = async (users, rank, monthKey) => {
     const existed = await Voucher.findOne({
       userIds: user._id,
       code: { $regex: `^RANKUP-${codePrefix[rank]}-`, $options: "i" },
+      isAuto: true,
     });
 
     if (existed) {
@@ -171,75 +172,92 @@ export const createVoucherMonthly = async (users, rank, monthKey) => {
   if (!configs || configs.length === 0) return;
 
   const allVouchers = [];
+  const MAX_USERS = 10000; // mỗi voucher tối đa 10.000 user
 
   for (const cfg of configs) {
     const startDate = dayjs(`${monthKey}-01`).startOf("day").toDate();
     const endDate = dayjs(`${monthKey}-01`).add(6, "day").endOf("day").toDate();
-    const code = `RANK-MONTHLY-${
-      codePrefix[rank]
-    }-${cfg.voucherType.toUpperCase()}-${monthKey.replace("-", "")}`;
 
-    let voucher = await Voucher.findOne({ code, monthIssued: monthKey });
-    if (voucher) {
-      console.log(`✅ Voucher ${code} đã tồn tại, không tạo lại.`);
-      allVouchers.push(voucher); // vẫn thêm vào danh sách trả về
-      continue;
+    // Chia users thành nhiều chunks
+    let chunks = [];
+    for (let i = 0; i < users.length; i += MAX_USERS) {
+      chunks.push(users.slice(i, i + MAX_USERS));
     }
 
-    if (!voucher) {
-      voucher = new Voucher({
-        voucherType: cfg.voucherType,
-        code,
-        description: `Ưu đãi tháng cho hạng ${getRankName(rank)} (${
-          cfg.voucherType === "shipping" ? "Freeship" : "Giảm giá"
-        })`,
-        discountType: cfg.discountType,
-        discountValue: cfg.discountValue,
-        maxDiscount: cfg.maxDiscount,
-        minOrderValues: cfg.minOrderValues,
-        quantity: 0,
-        startDate,
-        endDate,
-        voucherStatus: "active",
-        isAuto: true,
-        monthIssued: monthKey,
-        userIds: [],
-      });
-      await voucher.save();
-    }
+    const totalParts = chunks.length; // tổng số part
+    let part = 1;
+    for (const chunk of chunks) {
+      if (!chunk || chunk.length === 0) continue;
 
-    let count = 0;
-    for (const user of users) {
-      if (!user || user.isActive === false || user.role !== "user") continue;
-      const alreadyInList = await Voucher.exists({
-        _id: voucher._id,
-        userIds: user._id,
-      });
-      if (!alreadyInList) {
-        await Voucher.updateOne(
-          { _id: voucher._id },
-          { $addToSet: { userIds: user._id } }
-        );
-        count++;
+      // chỉ thêm P{part} nếu có nhiều part
+      let code = `RANK-MONTHLY-${
+        codePrefix[rank]
+      }-${cfg.voucherType.toUpperCase()}-${monthKey.replace("-", "")}`;
+      if (totalParts > 1) {
+        code += `-P${part}`;
       }
+
+      // Kiểm tra voucher này đã tồn tại chưa
+      let voucher = await Voucher.findOne({ code, monthIssued: monthKey, isAuto: true });
+      if (!voucher) {
+        voucher = new Voucher({
+          voucherType: cfg.voucherType,
+          code,
+          description: `Ưu đãi tháng cho hạng ${getRankName(rank)} (${
+            cfg.voucherType === "shipping" ? "Freeship" : "Giảm giá"
+          })${totalParts > 1 ? ` - Part ${part}` : ""}`,
+          discountType: cfg.discountType,
+          discountValue: cfg.discountValue,
+          maxDiscount: cfg.maxDiscount,
+          minOrderValues: cfg.minOrderValues,
+          quantity: 0,
+          startDate,
+          endDate,
+          voucherStatus: "active",
+          isAuto: true,
+          monthIssued: monthKey,
+          userIds: [],
+        });
+        await voucher.save();
+      } else {
+        console.log(`✅ Voucher ${code} đã tồn tại, không tạo lại.`);
+        allVouchers.push(voucher); // vẫn thêm vào danh sách trả về
+        continue;
+      }
+
+      let count = 0;
+      for (const user of chunk) {
+        if (!user || user.isActive === false || user.role !== "user") continue;
+        const alreadyInList = await Voucher.exists({
+          _id: voucher._id,
+          userIds: user._id,
+        });
+        if (!alreadyInList) {
+          await Voucher.updateOne(
+            { _id: voucher._id },
+            { $addToSet: { userIds: user._id } }
+          );
+          count++;
+        }
+      }
+
+      const updatedVoucher = await Voucher.findById(voucher._id).select(
+        "userIds"
+      );
+      await Voucher.updateOne(
+        { _id: voucher._id },
+        { $set: { quantity: updatedVoucher.userIds.length } }
+      );
+
+      console.log(
+        `✅ Voucher ${code}${
+          part > 1 ? ` (Part ${part})` : ""
+        } phát cho ${count} user | Tổng: ${updatedVoucher.userIds.length}`
+      );
+
+      allVouchers.push(voucher);
+      part++;
     }
-
-    const updatedVoucher = await Voucher.findById(voucher._id).select(
-      "userIds"
-    );
-
-    await Voucher.updateOne(
-      { _id: voucher._id },
-      { $set: { quantity: updatedVoucher.userIds.length } }
-    );
-
-    console.log(
-      `✅ Đã gán voucher tháng ${code} cho ${count} user hạng ${getRankName(
-        rank
-      )} | Tổng: ${updatedVoucher.userIds.length}`
-    );
-
-    allVouchers.push(voucher);
   }
 
   return allVouchers;
