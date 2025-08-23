@@ -98,7 +98,7 @@ export const handleRankUpdate = async (userId) => {
               )}</p>
             </div>
             <div style="text-align:center; margin-top: 24px;">
-              <a href="http://localhost:5174/products" style="display:inline-block; background-color:#4CAF50; color:white; padding:12px 24px; border-radius:4px; text-decoration:none;">Sử dụng ngay</a>
+              <a href="http://localhost:5173/products" style="display:inline-block; background-color:#4CAF50; color:white; padding:12px 24px; border-radius:4px; text-decoration:none;">Sử dụng ngay</a>
             </div>
           `
               : ""
@@ -121,7 +121,7 @@ export const handleRankUpdate = async (userId) => {
           )}</strong> vì chưa đạt đủ mức chi tiêu cần thiết trong vòng 90 ngày qua.</p>
           <p>Hãy quay lại và tiếp tục mua sắm để nhanh chóng lấy lại hạng của mình và tận hưởng những ưu đãi hấp dẫn dành riêng cho bạn!</p>
           <div style="text-align:center; margin-top: 24px;">
-            <a href="http://localhost:5174/products" style="display:inline-block; background-color:#ff9800; color:white; padding:12px 24px; border-radius:4px; text-decoration:none;">Lấy lại hạng ngay</a>
+            <a href="http://localhost:5173/products" style="display:inline-block; background-color:#ff9800; color:white; padding:12px 24px; border-radius:4px; text-decoration:none;">Lấy lại hạng ngay</a>
           </div>
           <p style="margin-top: 24px;">Nếu bạn có bất kỳ câu hỏi nào, đừng ngần ngại liên hệ với chúng tôi.</p>
           <p style="margin-top: 32px;">Trân trọng,<br/><strong>Binova Shop</strong><br/><i>Chăm sóc khách hàng</i></p>

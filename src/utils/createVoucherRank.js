@@ -30,7 +30,7 @@ export const createVoucherRank = async (users, rank, monthKey) => {
   const rankConfig = {
     0: { discountValue: 5, maxDiscount: 100000, minOrderValues: 1200000 },
     1: { discountValue: 7, maxDiscount: 200000, minOrderValues: 1500000 },
-    2: { discountValue: 10, maxDiscount: 300000, minOrderValues: 1800000 },
+    2: { discountValue: 10, maxDiscount: 300000, minOrderValues: 2000000 },
     3: { discountValue: 15, maxDiscount: 500000, minOrderValues: 2500000 },
   };
 
@@ -107,8 +107,8 @@ export const createVoucherMonthly = async (users, rank, monthKey) => {
           voucherType: "shipping",
           discountType: "percent",
           discountValue: 100,
-          maxDiscount: 50000,
-          minOrderValues: 1000000,
+          maxDiscount: 30000,
+          minOrderValues: 0,
         },
       ],
     },
@@ -143,7 +143,7 @@ export const createVoucherMonthly = async (users, rank, monthKey) => {
           voucherType: "shipping",
           discountType: "percent",
           discountValue: 100,
-          maxDiscount: 30000,
+          maxDiscount: 40000,
           minOrderValues: 1500000,
         },
       ],
@@ -198,7 +198,11 @@ export const createVoucherMonthly = async (users, rank, monthKey) => {
       }
 
       // Kiểm tra voucher này đã tồn tại chưa
-      let voucher = await Voucher.findOne({ code, monthIssued: monthKey, isAuto: true });
+      let voucher = await Voucher.findOne({
+        code,
+        monthIssued: monthKey,
+        isAuto: true,
+      });
       if (!voucher) {
         voucher = new Voucher({
           voucherType: cfg.voucherType,

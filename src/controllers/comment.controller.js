@@ -358,7 +358,6 @@ export const replyToComment = async (req, res) => {
     const { id } = req.params;
     const { error, value } = replyToCommentValidation.validate(req.body, {
       abortEarly: false,
-      convert: false,
     });
     if (error) {
       const errors = error.details.map((err) => err.message);
