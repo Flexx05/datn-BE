@@ -300,13 +300,13 @@ export const createProductWithVariations = async (req, res) => {
       listProduct?.map((p) => p.slug)
     );
 
-    // 4. Xử lý biến thể: set isActive theo stock
+    // 4. Xử lý biến thể: KHÔNG set isActive theo stock nữa
     const updatedVariations = variation.map((v) => ({
       ...v,
-      isActive: v.stock > 0,
+      // Giữ nguyên isActive theo dữ liệu truyền vào, không tự động set theo stock
     }));
 
-    // 5. Nếu tất cả biến thể đều stock = 0 → ẩn sản phẩm chính
+    // 5. KHÔNG kiểm tra tất cả biến thể đều stock = 0 để ẩn sản phẩm chính nữa
     const allOutOfStock = updatedVariations.every((v) => v.stock === 0);
 
     // 6. Tạo sản phẩm
@@ -432,10 +432,10 @@ export const updateProduct = async (req, res) => {
     // Xử lý biến thể: set isActive theo stock
     const updatedVariations = variation.map((v) => ({
       ...v,
-      isActive: v.stock > 0,
+      // Giữ nguyên isActive theo dữ liệu truyền vào, không tự động set theo stock
     }));
 
-    // Nếu tất cả biến thể đều stock = 0 → ẩn sản phẩm chính
+    // KHÔNG kiểm tra tất cả biến thể đều stock = 0 để ẩn sản phẩm chính nữa
     const allOutOfStock = updatedVariations.every((v) => v.stock === 0);
 
     // Cập nhật
@@ -452,7 +452,7 @@ export const updateProduct = async (req, res) => {
         description,
         attributes: productAttributes,
         variation: updatedVariations,
-        inStock: !allOutOfStock,
+        inStock: !allOutOfStock, // Cập nhật inStock theo tất cả biến thể
       },
       { new: true }
     );
@@ -517,11 +517,6 @@ export const updateVariaionStatus = async (req, res) => {
 
     if (!variation) {
       return res.status(404).json({ error: "Biến thể không tìm thấy" });
-    }
-
-    // Nếu hết hàng và đang tắt rồi thì không cho bật lại
-    if (variation.stock === 0 && variation.isActive === false) {
-      return res.status(400).json({ error: "Sản phẩm này đã hết hàng" });
     }
 
     // Toggle trạng thái của biến thể
