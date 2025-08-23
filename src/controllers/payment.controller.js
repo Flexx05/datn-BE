@@ -168,12 +168,12 @@ export const vnpayCallback = async (req, res) => {
       const orderCode = updatedOrder?.orderCode || payment.orderId;
 
       // Redirect về trang xác nhận đơn hàng trên frontend
-      return res.redirect(302, `http://localhost:5173/order/${orderCode}`);
+      return res.redirect(302, `http://localhost:5173/user/order`);
     } else {
       // Thanh toán thất bại, chuyển hướng về trang thất bại (nếu có)
       return res.redirect(
         302,
-        `http://localhost:5173/order/code`
+        `http://localhost:5173/`
       );
     }
   } catch (error) {
