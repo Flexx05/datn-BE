@@ -39,11 +39,26 @@ const createVoucherSchema = Joi.object({
       "number.max": "Giá trị giảm vượt quá giới hạn cho phép",
     }),
 
-  minOrderValues: Joi.number().min(0).max(100000000).required().messages({
-    "any.required": "Giá trị đơn hàng tối thiểu là bắt buộc",
-    "number.base": "Giá trị đơn hàng tối thiểu phải là số",
-    "number.max": "Giá trị đơn hàng tối thiểu không được vượt quá 100.000.000",
-  }),
+  minOrderValues: Joi.number()
+    .max(100000000)
+    .required()
+    .when("voucherType", {
+      is: "shipping",
+      then: Joi.number().min(0).messages({
+        "number.min": "Giá trị đơn hàng tối thiểu cho shipping phải >= 0",
+        "number.max":
+          "Giá trị đơn hàng tối thiểu không được vượt quá 100.000.000",
+        "any.required": "Giá trị đơn hàng tối thiểu là bắt buộc",
+        "number.base": "Giá trị đơn hàng tối thiểu phải là số",
+      }),
+      otherwise: Joi.number().min(1).messages({
+        "number.min": "Giá trị đơn hàng tối thiểu phải ít nhất là 1",
+        "number.max":
+          "Giá trị đơn hàng tối thiểu không được vượt quá 100.000.000",
+        "any.required": "Giá trị đơn hàng tối thiểu là bắt buộc",
+        "number.base": "Giá trị đơn hàng tối thiểu phải là số",
+      }),
+    }),
 
   maxDiscount: Joi.when("discountType", {
     is: "percent",
@@ -117,10 +132,24 @@ const updateVoucherSchema = Joi.object({
       "number.max": "Giá trị giảm vượt quá giới hạn cho phép",
     }),
 
-  minOrderValues: Joi.number().min(0).max(100000000).optional().messages({
-    "number.base": "Giá trị đơn hàng tối thiểu phải là số",
-    "number.max": "Giá trị đơn hàng tối thiểu không được vượt quá 100.000.000",
-  }),
+  minOrderValues: Joi.number()
+    .max(100000000)
+    .optional()
+    .when("voucherType", {
+      is: "shipping",
+      then: Joi.number().min(0).messages({
+        "number.min": "Giá trị đơn hàng tối thiểu cho shipping phải >= 0",
+        "number.max":
+          "Giá trị đơn hàng tối thiểu không được vượt quá 100.000.000",
+        "number.base": "Giá trị đơn hàng tối thiểu phải là số",
+      }),
+      otherwise: Joi.number().min(1).messages({
+        "number.min": "Giá trị đơn hàng tối thiểu phải ít nhất là 1",
+        "number.max":
+          "Giá trị đơn hàng tối thiểu không được vượt quá 100.000.000",
+        "number.base": "Giá trị đơn hàng tối thiểu phải là số",
+      }),
+    }),
 
   maxDiscount: Joi.when("discountType", {
     is: "percent",

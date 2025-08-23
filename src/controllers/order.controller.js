@@ -527,7 +527,7 @@ export const getAllOrders = async (req, res) => {
     sortOption[_sort] = _order.toLowerCase() === "asc" ? 1 : -1;
 
     const orders = await Order.find()
-      .populate("userId", "fullName email avatar rank")
+      .populate("userId", "fullName email avatar rank isActive role")
       .sort(sortOption);
 
     if (!orders || orders.length === 0) {
