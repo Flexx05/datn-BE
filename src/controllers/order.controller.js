@@ -1411,3 +1411,70 @@ export const LookUpOrder = async (req, res) => {
     return res.status(400).json({ error: "Đã xảy ra lỗi khi tìm đơn hàng" });
   }
 };
+
+export const updateStatusOrderItem = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const orderId = id;
+    const { items } = req.body; // danh sách nhiều item
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    for (const { itemId, returnQuantity } of items) {
+      const item = order.items.id(itemId);
+      if (!item) {
+        return res.status(404).json({ message: `Không tìm thấy sản phẩm ${itemId} trong đơn hàng` });
+      }
+      if (returnQuantity <= 0 || returnQuantity > item.quantity) {
+        return res.status(400).json({ message: `Số lượng hoàn không hợp lệ cho sản phẩm ${itemId}` });
+      }
+
+      item.returnStatus = true;
+      item.returnQuantity = returnQuantity;
+    }
+
+    await order.save();
+
+    return res.status(200).json({
+      message: "Tạo yêu cầu hoàn hàng thành công",
+      order,
+    });
+  } catch (error) {
+    console.error("Lỗi returnOrder:", error);
+    return res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
+
+export const updateReturnOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const orderId = id;
+
+    // 1. Lấy order từ DB
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    const refundAmount = order.items.reduce((sum, i) => {
+      return sum + (i.returnQuantity * i.priceAtOrder);
+    }, 0);
+
+    order.refundAmount = refundAmount;
+    order.totalAmount -= refundAmount;
+
+    await order.save();
+
+    return res.status(200).json({
+      message: "Cập nhật trạng thái hoàn hàng thành công",
+      order,
+    });
+  } catch (error) {
+    console.error("Lỗi returnOrder:", error);
+    return res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};

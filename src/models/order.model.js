@@ -43,6 +43,15 @@ const orderItemSchema = new Schema(
       required: true,
       min: 0,
     },
+    returnStatus: {
+      type: Boolean,
+      default: 0,
+    },
+    returnQuantity: {
+      type: Number,
+      default: 0,
+      min: 0,
+    }
   },
   { _id: true }
 );
@@ -157,6 +166,11 @@ const orderSchema = new mongoose.Schema(
     totalAmount: {
       type: Number,
       required: true,
+      min: 0,
+    },
+    refundAmount: {
+      type: Number,
+      default: 0,
       min: 0,
     },
     review:{
