@@ -485,12 +485,10 @@ export const updateProductStatus = async (req, res) => {
     // Cập nhật trạng thái sản phẩm
     product.isActive = isActive;
 
-    // Cập nhật trạng thái cho các biến thể có hàng
-    if (product.variation && product.variation.length > 0) {
+    // Cập nhật trạng thái cho các biến thể
+    if (product.variation) {
       product.variation.forEach((v) => {
-        if (v.stock > 0) {
-          v.isActive = isActive;
-        }
+        v.isActive = isActive;
       });
     }
 
