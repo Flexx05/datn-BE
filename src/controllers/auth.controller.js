@@ -11,6 +11,7 @@ import {
   registerSchema,
   verifyOtpSchema,
 } from "../validations/auth.validation";
+import Wallet from "../models/wallet.model";
 
 const sendEmail = async (email) => {
   await otpModel.findOneAndDelete({ email });
@@ -230,6 +231,8 @@ export const loginGoogle = async (req, res) => {
 
     // Kiểm tra xem người dùng đã tồn tại chưa
     let user = await authModel.findOne({ email });
+    
+    
     if (!user) {
       // Nếu chưa tồn tại, tạo người dùng mới
       user = await authModel.create({
@@ -240,6 +243,10 @@ export const loginGoogle = async (req, res) => {
         isVerify: true,
         avatar: picture,
       });
+    }
+    let wallet = await Wallet.findOne({ userId: user._id });
+    if(!wallet){
+      await Wallet.create({ userId: user._id });
     }
     const accessToken = jwt.sign(
       { id: user.id },
