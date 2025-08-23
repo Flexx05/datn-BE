@@ -32,7 +32,7 @@ router.get("/conversation/user", verifyToken, getMessagesFromClient); // API Hiá
 router.patch(
   "/conversation/closed/:id",
   verifyToken,
-  isAdminOrStaff,
+  isStaff,
   closedConversation
 );
 router.patch(
