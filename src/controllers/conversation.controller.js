@@ -210,19 +210,6 @@ export const sendMessage = async (req, res) => {
         readBy: [],
       };
       conversation.messages.push(systemMessage);
-    } else if (isNewConversation) {
-      const systemMessage = {
-        senderId: null,
-        senderRole: "system",
-        content: "Xin chào! Cảm ơn vì đã tin tưởng Binova. Bạn cần hỗ trợ gì?",
-        createdAt: new Date(),
-        readBy: [],
-      };
-      conversation.messages.push(systemMessage);
-      io.to(conversation._id.toString()).emit("new-message", {
-        conversation: conversation._id,
-        message: systemMessage,
-      });
     }
 
     await conversation.save();
@@ -230,15 +217,12 @@ export const sendMessage = async (req, res) => {
     const savedMessage =
       conversation.messages[conversation.messages.length - 1];
 
-    io.to(conversation?._id.toString()).emit("new-message", {
-      conversation: conversation._id,
-      message: newMessage,
-    });
-    io.to(conversation._id.toString()).emit("receive-message", {
-      senderId,
-      content: savedMessage.content,
-      createdAt: savedMessage.createdAt,
-    });
+    if (newMessage) {
+      io.to(conversation._id.toString()).emit("new-message", {
+        conversation: conversation._id,
+        message: newMessage,
+      });
+    }
     const customer = await authModel.findById(
       conversation.participants[0].userId
     );
@@ -298,12 +282,6 @@ export const getMessagesFromClient = async (req, res) => {
       };
       conversation.messages.push(systemMessage);
       await conversation.save();
-      const io = getSocketInstance();
-      io.to(conversation._id.toString()).emit("receive-message", {
-        senderId: null,
-        content: systemMessage.content,
-        createdAt: systemMessage.createdAt,
-      });
     }
     return res.status(200).json(conversation);
   } catch (error) {
