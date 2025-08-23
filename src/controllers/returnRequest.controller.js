@@ -10,9 +10,9 @@ export const createReturnRequest = async (req, res) => {
   const userId = req.user._id.toString(); // Lấy userId từ JWT token
 
   // Validate input
-    if (!orderId || !reason || !products || !refundAmount) {
-      return res.status(400).json({ message: "Thiếu các trường bắt buộc" });
-    }
+  if (!orderId || !reason || !products || !refundAmount) {
+    return res.status(400).json({ message: "Thiếu các trường bắt buộc" });
+  }
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -37,9 +37,7 @@ export const createReturnRequest = async (req, res) => {
 
     // Kiểm tra tổng số tiền hoàn lại
     const discount = order?.discountAmount || 0;
-
     const total = products.reduce((sum, p) => sum + p.quantity * p.price, 0);
-
     const calculatedRefund = total - discount;
 
     if (calculatedRefund !== refundAmount) {
@@ -99,12 +97,6 @@ export const getReturnRequestById = async (req, res) => {
         .json({ message: "Yêu cầu hoàn hàng không tồn tại" });
     }
 
-    // Kiểm tra quyền truy cập
-    const order = await Order.findById(returnRequest.orderId);
-    if (order.userId.toString() !== userId && req.user.role !== "admin") {
-      return res.status(403).json({ message: "Không có quyền truy cập" });
-    }
-
     return res.status(200).json({
       message: "Lấy thông tin yêu cầu hoàn hàng thành công",
       data: returnRequest,
@@ -114,6 +106,8 @@ export const getReturnRequestById = async (req, res) => {
     return res.status(400).json({ message: error.message });
   }
 };
+
+// Lấy yêu cầu hoàn hàng theo OrderId
 export const getReturnRequestByOrderId = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -134,7 +128,7 @@ export const getReturnRequestByOrderId = async (req, res) => {
 
     // Kiểm tra quyền truy cập
     const order = await Order.findById(returnRequest.orderId);
-    if (order.userId.toString() !== userId && req.user.role !== "admin") {
+    if (order.userId.toString() !== userId) {
       return res.status(403).json({ message: "Không có quyền truy cập" });
     }
 
@@ -143,15 +137,15 @@ export const getReturnRequestByOrderId = async (req, res) => {
       data: returnRequest,
     });
   } catch (error) {
-    console.error("Get Return Request By ID Error:", error);
+    console.error("Get Return Request By OrderId Error:", error);
     return res.status(400).json({ message: error.message });
   }
 };
 
+// Lấy yêu cầu hoàn hàng theo OrderCode
 export const getReturnRequestByOrderCode = async (req, res) => {
   try {
     const { orderCode } = req.params;
-    // const userId = req.user._id.toString(); 
 
     // Tìm đơn hàng theo orderCode
     const order = await Order.findOne({ orderCode });
@@ -171,11 +165,6 @@ export const getReturnRequestByOrderCode = async (req, res) => {
         .json({ message: "Yêu cầu hoàn hàng không tồn tại" });
     }
 
-    // Kiểm tra quyền truy cập
-    // if (order.userId.toString() !== userId && req.user.role !== "admin") {
-    //   return res.status(403).json({ message: "Không có quyền truy cập" });
-    // }
-
     return res.status(200).json({
       message: "Lấy thông tin yêu cầu hoàn hàng thành công",
       data: returnRequest,
@@ -185,7 +174,6 @@ export const getReturnRequestByOrderCode = async (req, res) => {
     return res.status(400).json({ message: error.message });
   }
 };
-
 
 // Lấy danh sách yêu cầu hoàn hàng
 export const getReturnRequests = async (req, res) => {
@@ -201,8 +189,7 @@ export const getReturnRequests = async (req, res) => {
     const userId = req.user._id.toString(); // Lấy userId từ JWT token
 
     // Tạo query
-    const query =
-      req.user.role === "admin" ? {} : { "customerInfo._id": userId };
+    const query = { "customerInfo._id": userId };
     if (search) {
       query.$or = [
         { reason: { $regex: search, $options: "i" } },
@@ -220,7 +207,7 @@ export const getReturnRequests = async (req, res) => {
       .sort({ [sortBy]: order === "desc" ? -1 : 1 })
       .skip(skip)
       .limit(parseInt(limit))
-      .populate("orderId", "orderCode totalAmount")
+      .populate("orderId", "orderCode totalAmount");
 
     const total = await ReturnRequest.countDocuments(query);
 
@@ -246,13 +233,9 @@ export const getReturnRequests = async (req, res) => {
 export const updateReturnRequestStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
-  const userId = req.user._id.toString(); // Lấy userId từ JWT token
 
   // Validate input
-  if (
-    !status ||
-    ![0, 1, 2, 3, 4].includes(status)
-  ) {
+  if (!status || ![0, 1, 2, 3, 4].includes(status)) {
     return res.status(400).json({ message: "Trạng thái không hợp lệ" });
   }
 
@@ -260,24 +243,14 @@ export const updateReturnRequestStatus = async (req, res) => {
   session.startTransaction();
 
   try {
-    // Kiểm tra quyền admin
-    if (req.user.role !== "admin") {
-      throw new Error("Chỉ admin mới có thể cập nhật trạng thái");
-    }
-
     // Kiểm tra yêu cầu hoàn hàng
     const returnRequest = await ReturnRequest.findById(id).session(session);
     if (!returnRequest) {
       throw new Error("Yêu cầu hoàn hàng không tồn tại");
     }
 
-    // Cập nhật trạng thái và processedBy
-    await ReturnRequest.updateOne(
-      { _id: id },
-      { status},
-      // { status, processedBy: userId },
-      { session }
-    );
+    // Cập nhật trạng thái
+    await ReturnRequest.updateOne({ _id: id }, { status }, { session });
 
     await session.commitTransaction();
     return res.status(200).json({
@@ -296,17 +269,11 @@ export const updateReturnRequestStatus = async (req, res) => {
 // Xử lý hoàn tiền cho yêu cầu hoàn hàng
 export const processRefundForReturnRequest = async (req, res) => {
   const { returnRequestId } = req.body;
-  const userId = req.user._id.toString(); // Lấy userId từ JWT token
 
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    // Kiểm tra quyền admin
-    if (req.user.role !== "admin") {
-      throw new Error("Chỉ admin mới có thể xử lý hoàn tiền");
-    }
-
     // Kiểm tra yêu cầu hoàn hàng
     const returnRequest = await ReturnRequest.findById(returnRequestId)
       .populate("orderId")

@@ -151,6 +151,11 @@ const updateVoucherSchema = Joi.object({
       }),
     }),
 
+  minOrderValues: Joi.number().min(0).max(100000000).optional().messages({
+    "number.base": "Giá trị đơn hàng tối thiểu phải là số",
+    "number.max": "Giá trị đơn hàng tối thiểu không được vượt quá 100.000.000",
+  }),
+
   maxDiscount: Joi.when("discountType", {
     is: "percent",
     then: Joi.number().min(1).max(10000000).optional().messages({

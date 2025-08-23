@@ -8,7 +8,7 @@ import {
   getReturnRequestByOrderId,
   getReturnRequestByOrderCode,
 } from "../controllers/returnRequest.controller.js";
-import { verifyToken, isAdmin } from "../middlewares/checkAuth.js";
+import { verifyToken, isAdmin, isAdminOrStaff } from "../middlewares/checkAuth.js";
 
 const router = express.Router();
 
@@ -24,9 +24,9 @@ router.get("/return-requests/order-code/:orderCode", getReturnRequestByOrderCode
 router.get("/return-requests", verifyToken, getReturnRequests);
 
 // Cập nhật trạng thái yêu cầu hoàn hàng
-router.patch("/return-requests/:id/status", verifyToken, isAdmin, updateReturnRequestStatus);
+router.patch("/return-requests/:id/status", verifyToken, isAdminOrStaff, updateReturnRequestStatus);
 
 // Xử lý hoàn tiền cho yêu cầu hoàn hàng
-router.post("/return-requests/:id/refund", verifyToken, isAdmin, processRefundForReturnRequest);
+router.post("/return-requests/:id/refund", verifyToken, isAdminOrStaff, processRefundForReturnRequest);
 
 export default router;

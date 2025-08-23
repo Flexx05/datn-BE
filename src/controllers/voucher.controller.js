@@ -315,7 +315,7 @@ export const updateVoucher = async (req, res) => {
     updateData.code = code;
     const now = new Date();
 
-    if (updateData.voucherType === "product") {
+     if (updateData.voucherType === "product") {
       if (
         updateData.discountType === "fixed" &&
         updateData.minOrderValues <= updateData.discountValue
@@ -335,6 +335,7 @@ export const updateVoucher = async (req, res) => {
         });
       }
     }
+
 
     // Tự động cập nhật trạng thái dựa trên ngày
     const startDate = new Date(
@@ -441,6 +442,7 @@ export const deleteVoucher = async (req, res) => {
     });
   }
 };
+
 
 // Khôi phục voucher từ thùng rác
 export const restoreVoucher = async (req, res) => {
