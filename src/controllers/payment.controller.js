@@ -12,7 +12,7 @@ import { getSocketInstance } from "../socket.js";
 export const createVnpayPayment = async (req, res) => {
   try {
     const { orderId, bankCode } = req.body;
-    const userId = req.user._id;
+    // const userId = req.user._id;
 
     console.log("Creating VNPAY payment for order:", orderId);
 
@@ -79,7 +79,7 @@ export const createVnpayPayment = async (req, res) => {
     // Tạo bản ghi thanh toán mới
     const newPayment = new paymentModel({
       orderId: order._id,
-      userId,
+      // userId,
       paymentMethod: "VNPAY",
       status: 0,
       amount: order.totalAmount,
@@ -146,7 +146,22 @@ export const vnpayCallback = async (req, res) => {
       // Cập nhật trạng thái đơn hàng
       const updatedOrder = await orderModel.findByIdAndUpdate(
         payment.orderId,
-        { paymentStatus: 1, status: 0, updatedAt: new Date() },
+        // { paymentStatus: 1, status: 0, updatedAt: new Date() },
+        {
+          $set: {
+            paymentStatus: 1,
+            status: 0,
+            updatedAt: new Date(),
+          },
+          $push: {
+            paymentStatusHistory: {
+              paymentStatus: 1,
+              updatedByUser: req.user?._id || null,
+              updatedByType: req.user ? "user" : "guest",
+              note: "Thanh toán thành công qua VNPAY",
+            },
+          },
+        },
         { new: true }
       );
       // Realtime cập nhật trạng thái thanh toán
@@ -386,11 +401,24 @@ export const refundPayment = async (req, res) => {
     // Cập nhật trạng thái đơn hàng
     await orderModel.findByIdAndUpdate(
       payment.orderId,
+      // {
+      //   paymentStatus: "refunded",
+      // },
       {
-        paymentStatus: "refunded",
+        $set: {
+          paymentStatus: 2,
+        },
+        $push: {
+          paymentStatusHistory: {
+            paymentStatus: 2,
+            updatedByUser: req.user?._id || null,
+            updatedByType: req.user ? "user" : "guest",
+            note: "Hoàn tiền thành công",
+          },
+        },
       },
       { new: true }
-    );
+    ); //////////////////////////////////////////
 
     // Ghi chú: Trong thực tế, bạn cần thực hiện các bước hoàn tiền thông qua API của VNPAY
     // Đây chỉ là cập nhật trạng thái trong hệ thống của bạn

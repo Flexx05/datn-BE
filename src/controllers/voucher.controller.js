@@ -3,6 +3,7 @@ import {
   createVoucherSchema,
   updateVoucherSchema,
 } from "../validations/voucher.validation.js";
+import dayjs from "dayjs";
 
 //Thêm mới voucher
 export const createVoucher = async (req, res) => {
@@ -19,13 +20,17 @@ export const createVoucher = async (req, res) => {
     }
 
     // Check trùng mã
-    const exists = await Voucher.findOne({ code: req.body.code });
+    const code = req.body.code?.toUpperCase().trim();
+    const exists = await Voucher.findOne({
+      code: { $regex: `^${code}$`, $options: "i" },
+    });
     if (exists) {
       return res.status(400).json({ message: "Mã giảm giá đã tồn tại" });
     }
 
     const now = new Date();
     const createData = { ...req.body };
+    createData.code = code;
 
     // Xử lý trạng thái
     const startDate = new Date(createData.startDate);
@@ -37,7 +42,7 @@ export const createVoucher = async (req, res) => {
       });
     }
 
-    if (startDate < now) {
+    if (dayjs(startDate).isBefore(dayjs(), "minute")) {
       return res.status(400).json({
         message: "Ngày bắt đầu không được ở quá khứ.",
       });
@@ -56,9 +61,36 @@ export const createVoucher = async (req, res) => {
       delete createData.maxDiscount;
     }
 
+    if (
+      createData.discountType === "fixed" &&
+      createData.minOrderValues <= createData.discountValue
+    ) {
+      return res.status(400).json({
+        message: "Giá trị đơn tối thiểu phải lớn hơn số tiền giảm.",
+      });
+    }
+    if (
+      createData.discountType === "percent" &&
+      createData.minOrderValues < createData.maxDiscount
+    ) {
+      return res.status(400).json({
+        message:
+          "Giá trị đơn tối thiểu phải lớn hơn hoặc bằng mức giảm tối đa.",
+      });
+    }
+
     // Xử lý dùng riêng/dùng chung và quantity
     if (Array.isArray(createData.userIds) && createData.userIds.length > 0) {
+      // ✅ Check trùng lặp trước
+      const uniqueUserIds = [...new Set(createData.userIds.map(String))];
+      if (uniqueUserIds.length < createData.userIds.length) {
+        return res.status(400).json({
+          message: "Danh sách userIds có chứa trùng lặp.",
+        });
+      }
+
       // Dùng riêng: quantity = số user, không cho nhập quantity từ client
+      createData.userIds = uniqueUserIds;
       createData.quantity = createData.userIds.length;
     } else {
       // Dùng chung: quantity lấy từ client, userIds là []
@@ -210,8 +242,9 @@ export const updateVoucher = async (req, res) => {
       });
     }
 
+    const code = req.body.code?.toUpperCase().trim();
     const exists = await Voucher.findOne({
-      code: req.body.code,
+      code: { $regex: `^${code}$`, $options: "i" },
       _id: { $ne: req.params.id }, // Loại bỏ voucher đang sửa
     });
     if (exists) {
@@ -276,7 +309,26 @@ export const updateVoucher = async (req, res) => {
 
     // Chuẩn bị dữ liệu cập nhật
     const updateData = { ...req.body };
+    updateData.code = code;
     const now = new Date();
+
+    if (
+      updateData.discountType === "fixed" &&
+      updateData.minOrderValues <= updateData.discountValue
+    ) {
+      return res.status(400).json({
+        message: "Giá trị đơn tối thiểu phải lớn hơn số tiền giảm.",
+      });
+    }
+    if (
+      updateData.discountType === "percent" &&
+      updateData.minOrderValues < updateData.maxDiscount
+    ) {
+      return res.status(400).json({
+        message:
+          "Giá trị đơn tối thiểu phải lớn hơn hoặc bằng mức giảm tối đa.",
+      });
+    }
 
     // Tự động cập nhật trạng thái dựa trên ngày
     const startDate = new Date(
@@ -299,9 +351,20 @@ export const updateVoucher = async (req, res) => {
       updateData.voucherStatus = "inactive";
     }
 
+    // ✅ Check trùng lặp userIds trước khi set quantity
     if (Array.isArray(updateData.userIds) && updateData.userIds.length > 0) {
+      const uniqueUserIds = [...new Set(updateData.userIds.map(String))];
+      if (uniqueUserIds.length < updateData.userIds.length) {
+        return res.status(400).json({
+          message: "Danh sách userIds có chứa trùng lặp.",
+        });
+      }
+
+      // Dùng riêng: quantity = số user
+      updateData.userIds = uniqueUserIds;
       updateData.quantity = updateData.userIds.length;
     } else {
+      // Dùng chung
       updateData.userIds = [];
     }
 
@@ -334,6 +397,23 @@ export const deleteVoucher = async (req, res) => {
       });
     }
 
+    // Nếu là voucher tự động → chỉ cho xoá mềm
+    if (voucher.isAuto) {
+      if (!voucher.isDeleted) {
+        voucher.isDeleted = true;
+        await voucher.save();
+        return res.status(200).json({
+          message: "Voucher tự động đã được chuyển vào thùng rác (xóa mềm).",
+        });
+      } else {
+        return res.status(400).json({
+          message:
+            "Voucher tự động chỉ có thể xóa mềm, không thể xóa vĩnh viễn.",
+        });
+      }
+    }
+
+    // Nếu là voucher thường thì cho xóa mềm và xóa vĩnh viễn
     if (!voucher.isDeleted) {
       // Xóa mềm
       voucher.isDeleted = true;
@@ -355,6 +435,7 @@ export const deleteVoucher = async (req, res) => {
     });
   }
 };
+
 
 // Khôi phục voucher từ thùng rác
 export const restoreVoucher = async (req, res) => {

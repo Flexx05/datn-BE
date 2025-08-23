@@ -139,6 +139,7 @@ const createEmailTemplate = (order, recipientInfo) => {
   `;
 };
 
+////// done
 export const createOrder = async (req, res) => {
   const session = await mongoose.startSession();
 
@@ -420,6 +421,22 @@ export const createOrder = async (req, res) => {
         paymentStatus: clientPaymentStatus,
         paymentMethod,
         expectedDeliveryDate,
+        statusHistory: [
+          {
+            status: 0,
+            updatedByUser: userId || null,
+            updatedByType: userId ? "user" : "guest",
+            note: null
+          }
+        ],
+        paymentStatusHistory: [
+          {
+            paymentStatus: clientPaymentStatus,
+            updatedByUser: userId || null,
+            updatedByType: userId ? "user" : "guest",
+            note: null
+          }
+        ]
       });
 
       // Save order
@@ -692,6 +709,7 @@ const createStatusUpdateEmailTemplate = (order, statusMap, messageMap) => {
   `;
 };
 
+///////// done
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -770,11 +788,11 @@ export const updateOrderStatus = async (req, res) => {
       3: [4, 6],
       4: [6],
       5: [],
-      6: [3],
+      6: [3, 4],
     };
 
     // Kiểm tra và cập nhật trạng thái đơn hàng
-    if (status && status !== order.status) {
+    if (status !== undefined && status !== order.status) {
       const allowedNextStatuses = validStatusTransitions[order.status];
 
       if (!allowedNextStatuses) {
@@ -789,10 +807,17 @@ export const updateOrderStatus = async (req, res) => {
         });
       }
       order.status = status;
+      if (!order.statusHistory) order.statusHistory = [];
+      order.statusHistory.push({
+        status,
+        updatedByUser: userId || null,
+        updatedByType: userId ? "user" : "guest",
+        note: cancelReason || reason || null
+      });
     }
 
     // Kiểm tra và cập nhật trạng thái thanh toán
-    if (paymentStatus && paymentStatus !== order.paymentStatus) {
+    if (paymentStatus !== undefined && paymentStatus !== order.paymentStatus) {
       const validPaymentTransitions = {
         0: [1, 3],
         1: [2, 3],
@@ -815,6 +840,13 @@ export const updateOrderStatus = async (req, res) => {
       }
 
       order.paymentStatus = paymentStatus;
+      if (!order.paymentStatusHistory) order.paymentStatusHistory = [];
+      order.paymentStatusHistory.push({
+        paymentStatus,
+        updatedByUser: userId || null,
+        updatedByType: userId ? "user" : "guest",
+        note: null
+      });
     }
 
     // Cập nhật ngày giao hàng
@@ -830,8 +862,9 @@ export const updateOrderStatus = async (req, res) => {
       cancelReason: order.cancelReason,
       deliveryDate,
     };
-    await Order.findByIdAndUpdate(id, updateData, { new: true });
+    // await Order.findByIdAndUpdate(id, updateData, { new: true });
     // console.log("Order updated status:", order);
+    await order.save();
 
     if (order.status === 4 && order.paymentStatus === 1) {
       try {
@@ -998,6 +1031,7 @@ export const updateOrderStatus = async (req, res) => {
   }
 };
 
+//////// done
 export const updatePaymentStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1060,6 +1094,14 @@ export const updatePaymentStatus = async (req, res) => {
       }
 
       order.paymentStatus = paymentStatus;
+      if (!order.paymentStatusHistory) order.paymentStatusHistory = [];
+      order.paymentStatusHistory.push({
+        paymentStatus,
+        // updatedAt: new Date(),
+        updatedByUser: req.body.userId || null,
+        updatedByType: req.body.userId ? "user" : "guest",
+        note: null
+      });
     }
 
     await order.save();
@@ -1119,6 +1161,7 @@ export const updatePaymentStatus = async (req, res) => {
   }
 };
 
+//////// done
 export const cancelOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1178,12 +1221,28 @@ export const cancelOrder = async (req, res) => {
 
     // 5. Cập nhật trạng thái, hoàn hàng và hoàn voucher
     // Đang làm cho đơn COD, nếu là đơn thanh toán online thì cần hoàn tiền về ví và cập nhật trạng thái thanh toán là "Da hoan tien"
-    if (order.paymentStatus === "Da thanh toan") {
+    if (order.paymentStatus === 1) {
       // TODO: gọi hàm hoàn tiền qua cổng thanh toán
-      order.paymentStatus = "Da hoan tien";
+      order.paymentStatus = 2;
+      if (!order.paymentStatusHistory) order.paymentStatusHistory = [];
+      order.paymentStatusHistory.push({
+        paymentStatus: 2,
+        // updatedAt: new Date(),
+        updatedByUser: userId || null,
+        updatedByType: userId ? "user" : "guest",
+        note: null,
+      });
     }
 
-    order.status = "Da huy";
+    order.status = "5";
+    if (!order.orderStatusHistory) order.orderStatusHistory = [];
+    order.orderStatusHistory.push({
+      status: 5,
+      // updatedAt: new Date(),
+      updatedByUser: userId || null,
+      updatedByType: userId ? "user" : "guest",
+      note: null
+    });
 
     for (const item of order.items) {
       await Product.updateOne(
@@ -1241,6 +1300,7 @@ export const cancelOrder = async (req, res) => {
   }
 };
 
+//////// done
 export const updateOrderTotal = async (req, res) => {
   const session = await mongoose.startSession();
   try {
@@ -1270,7 +1330,19 @@ export const updateOrderTotal = async (req, res) => {
     if (newTotalAmount === 0) {
       order.paymentStatus = 2;
     }
+    order.paymentStatusHistory.push({
+      paymentStatus: order.paymentStatus,
+      updatedByUser: req.user?._id || null,
+      updatedByType: req.user ? "user" : "guest",
+      note: null,
+    });
     order.status = 4;
+    order.statusHistory.push({
+      status: order.status,
+      updatedByUser: req.user?._id || null,
+      updatedByType: req.user ? "user" : "guest",
+      note: null,
+    });
     await order.save({ session });
 
     await session.commitTransaction();

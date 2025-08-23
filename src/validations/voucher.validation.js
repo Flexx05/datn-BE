@@ -10,7 +10,11 @@ const createVoucherSchema = Joi.object({
   code: Joi.string().required().messages({
     "any.required": "Mã giảm giá là bắt buộc",
   }),
-  userIds: Joi.array().items(Joi.string()).optional(),
+
+  userIds: Joi.array().items(Joi.string()).max(10000).optional().messages({
+    "array.unique": "Danh sách user không được chứa trùng lặp",
+    "array.max": "Danh sách userIds không được vượt quá 10.000",
+  }),
 
   description: Joi.string().required().messages({
     "any.required": "Mô tả giảm giá là bắt buộc",
@@ -21,28 +25,40 @@ const createVoucherSchema = Joi.object({
     "any.only": "Chỉ chấp nhận 'fixed' hoặc 'percent'",
   }),
 
-  discountValue: Joi.number().min(0).required().messages({
-    "any.required": "Giá trị giảm giá là bắt buộc",
-    "number.base": "Giá trị giảm phải là số",
-  }),
+  discountValue: Joi.number()
+    .min(0)
+    .required()
+    .when("discountType", {
+      is: "fixed",
+      then: Joi.number().max(10000000),
+      otherwise: Joi.number().max(100),
+    })
+    .messages({
+      "any.required": "Giá trị giảm giá là bắt buộc",
+      "number.base": "Giá trị giảm phải là số",
+      "number.max": "Giá trị giảm vượt quá giới hạn cho phép",
+    }),
 
-  minOrderValues: Joi.number().min(0).required().messages({
+  minOrderValues: Joi.number().min(0).max(100000000).required().messages({
     "any.required": "Giá trị đơn hàng tối thiểu là bắt buộc",
     "number.base": "Giá trị đơn hàng tối thiểu phải là số",
+    "number.max": "Giá trị đơn hàng tối thiểu không được vượt quá 100.000.000",
   }),
 
   maxDiscount: Joi.when("discountType", {
     is: "percent",
-    then: Joi.number().min(1).required().messages({
+    then: Joi.number().min(1).max(10000000).required().messages({
       "any.required": "Số tiền giảm tối đa là bắt buộc khi giảm theo phần trăm",
       "number.min": "Số tiền giảm tối đa phải lớn hơn hoặc bằng 1",
+      "number.max": "Số tiền giảm tối đa không được vượt quá 10.000.000",
     }),
-    otherwise: Joi.forbidden(), // Không được gửi nếu không cần
+    otherwise: Joi.forbidden(),
   }),
 
-  quantity: Joi.number().min(1).required().messages({
+  quantity: Joi.number().min(1).max(100000).required().messages({
     "any.required": "Số lượng voucher là bắt buộc",
     "number.min": "Số lượng phải ít nhất là 1",
+    "number.max": "Số lượng voucher không được vượt quá 100.000",
   }),
 
   used: Joi.number().min(0).optional(),
@@ -67,19 +83,75 @@ const createVoucherSchema = Joi.object({
 
 // Validate cập nhật voucher
 const updateVoucherSchema = Joi.object({
-  voucherType: Joi.string().valid("product", "shipping").optional(),
-  userIds: Joi.array().items(Joi.string()).optional(),
-  code: Joi.string().optional(),
-  description: Joi.string().optional(),
-  discountType: Joi.string().valid("fixed", "percent").optional(),
-  discountValue: Joi.number().min(0).optional(),
-  minOrderValues: Joi.number().min(0).optional(),
-  maxDiscount: Joi.number().min(0).optional(),
-  quantity: Joi.number().min(1).optional(),
-  used: Joi.number().optional(),
-  startDate: Joi.date().optional(),
-  endDate: Joi.date().greater(Joi.ref("startDate")).optional(),
-  voucherStatus: Joi.string().valid("active", "inactive", "expired").optional(),
+  voucherType: Joi.string().valid("product", "shipping").optional().messages({
+    "any.only": "Loại voucher chỉ có thể là 'product' hoặc 'shipping'",
+  }),
+
+  code: Joi.string().optional().messages({
+    "string.base": "Mã giảm giá phải là chuỗi",
+  }),
+
+  userIds: Joi.array().items(Joi.string()).max(10000).optional().messages({
+    "array.unique": "Danh sách user không được chứa trùng lặp",
+    "array.max": "Danh sách userIds không được vượt quá 10.000",
+  }),
+
+  description: Joi.string().optional().messages({
+    "string.base": "Mô tả giảm giá phải là chuỗi",
+  }),
+
+  discountType: Joi.string().valid("fixed", "percent").optional().messages({
+    "any.only": "Chỉ chấp nhận 'fixed' hoặc 'percent'",
+  }),
+
+  discountValue: Joi.number()
+    .min(0)
+    .optional()
+    .when("discountType", {
+      is: "fixed",
+      then: Joi.number().max(10000000),
+      otherwise: Joi.number().max(100),
+    })
+    .messages({
+      "number.base": "Giá trị giảm phải là số",
+      "number.max": "Giá trị giảm vượt quá giới hạn cho phép",
+    }),
+
+  minOrderValues: Joi.number().min(0).max(100000000).optional().messages({
+    "number.base": "Giá trị đơn hàng tối thiểu phải là số",
+    "number.max": "Giá trị đơn hàng tối thiểu không được vượt quá 100.000.000",
+  }),
+
+  maxDiscount: Joi.when("discountType", {
+    is: "percent",
+    then: Joi.number().min(1).max(10000000).optional().messages({
+      "number.min": "Số tiền giảm tối đa phải lớn hơn hoặc bằng 1",
+      "number.max": "Số tiền giảm tối đa không được vượt quá 10.000.000",
+    }),
+    otherwise: Joi.forbidden(),
+  }),
+
+  quantity: Joi.number().min(1).max(100000).optional().messages({
+    "number.min": "Số lượng phải ít nhất là 1",
+    "number.max": "Số lượng voucher không được vượt quá 100.000",
+  }),
+
+  used: Joi.number().min(0).optional(),
+
+  startDate: Joi.date().optional().messages({
+    "date.base": "Ngày bắt đầu không hợp lệ",
+  }),
+
+  endDate: Joi.date().greater(Joi.ref("startDate")).optional().messages({
+    "date.greater": "Ngày kết thúc phải sau ngày bắt đầu",
+  }),
+
+  voucherStatus: Joi.string()
+    .valid("active", "inactive", "expired")
+    .optional()
+    .messages({
+      "any.only": "Trạng thái chỉ có thể là: active, inactive hoặc expired",
+    }),
 });
 
 export { createVoucherSchema, updateVoucherSchema };
