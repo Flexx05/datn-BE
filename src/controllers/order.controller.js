@@ -120,7 +120,7 @@ const createEmailTemplate = (order, recipientInfo) => {
 
       <div style="margin-top: 20px; text-align: center; color: #666;">
         <p>Cảm ơn bạn đã mua sắm tại <strong>Binova</strong>!</p>
-        <p>Nếu có thắc mắc, vui lòng liên hệ qua email <a href="mailto:adminbinova@gmail.com" style="color: #4CAF50;">adminbinova@gmail.com</a></p>
+        <p>Nếu có thắc mắc, vui lòng liên hệ qua email <a href="mailto:binovaweb73@gmail.com" style="color: #4CAF50;">binovaweb73@gmail.com</a></p>
       </div>
 
       <div style="text-align: right; margin-top: 20px; color: #666;">
