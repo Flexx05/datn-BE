@@ -6,6 +6,7 @@ import {
 import paymentModel from "../models/payment.model.js";
 import orderModel from "../models/order.model.js";
 import { Types } from "mongoose";
+import { getSocketInstance } from "../socket.js";
 
 // Tạo một yêu cầu thanh toán mới với VNPAY
 export const createVnpayPayment = async (req, res) => {
@@ -83,7 +84,7 @@ export const createVnpayPayment = async (req, res) => {
       status: 0,
       amount: order.totalAmount,
       transactionId: vnpTxnRef,
-      paymentUrl
+      paymentUrl,
     });
 
     await newPayment.save();
@@ -130,7 +131,7 @@ export const vnpayCallback = async (req, res) => {
       return res.status(404).send("Không tìm thấy thông tin thanh toán");
     }
     const order = await orderModel.findById(payment.orderId);
-    if(order.status === 5) {
+    if (order.status === 5) {
       return res.status(400).send("Đơn hàng đã bị hủy, không thể thanh toán");
     }
 
@@ -162,30 +163,31 @@ export const vnpayCallback = async (req, res) => {
           },
         },
         { new: true }
-      ); ///////////////////////////////////////
+      );
+      // Realtime cập nhật trạng thái thanh toán
+      const io = getSocketInstance();
+      if (io) {
+        io.to("admin").emit("payment-updated", {
+          order: updatedOrder?._id,
+          paymentStatus: updatedOrder?.paymentStatus,
+        });
+      }
 
       // Lấy orderCode để redirect
       const orderCode = updatedOrder?.orderCode || payment.orderId;
 
       // Redirect về trang xác nhận đơn hàng trên frontend
-      return res.redirect(302, `http://localhost:5173/order/${orderCode}`);
+      return res.redirect(302, `http://localhost:5173/user/order`);
     } else {
       // Thanh toán thất bại, chuyển hướng về trang thất bại (nếu có)
-      return res.redirect(
-        302,
-        `http://localhost:5173/order/code`
-      );
+      return res.redirect(302, `http://localhost:5173/`);
     }
   } catch (error) {
     console.error("VNPAY Callback Error:", error);
     // Lỗi hệ thống, redirect về trang lỗi tổng quát
-    return res.redirect(
-      302,
-      `http://localhost:5173/order/error`
-    );
+    return res.redirect(302, `http://localhost:5173/order/error`);
   }
 };
-
 
 // Lấy trạng thái thanh toán của đơn hàng
 export const getPaymentStatus = async (req, res) => {
@@ -404,7 +406,7 @@ export const refundPayment = async (req, res) => {
       // },
       {
         $set: {
-          paymentStatus: 2
+          paymentStatus: 2,
         },
         $push: {
           paymentStatusHistory: {

@@ -66,7 +66,7 @@ const sendRankWarning = async (user) => {
         <p>Hãy mua sắm ngay hôm nay để giữ vững hạng và tiếp tục nhận nhiều ưu đãi hấp dẫn!</p>
 
         <div style="text-align:center; margin-top: 24px;">
-          <a href="http://localhost:5174/products" style="display:inline-block; background-color:#ff9800; color:white; padding:12px 24px; border-radius:4px; text-decoration:none;">Mua sắm ngay</a>
+          <a href="http://localhost:5173/products" style="display:inline-block; background-color:#ff9800; color:white; padding:12px 24px; border-radius:4px; text-decoration:none;">Mua sắm ngay</a>
         </div>
 
         <p style="margin-top: 24px;">Nếu bạn có bất kỳ câu hỏi nào, đừng ngần ngại liên hệ với chúng tôi.</p>

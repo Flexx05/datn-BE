@@ -61,27 +61,30 @@ export const createVoucher = async (req, res) => {
       delete createData.maxDiscount;
     }
 
-    if (
-      createData.discountType === "fixed" &&
-      createData.minOrderValues <= createData.discountValue
-    ) {
-      return res.status(400).json({
-        message: "Giá trị đơn tối thiểu phải lớn hơn số tiền giảm.",
-      });
-    }
-    if (
-      createData.discountType === "percent" &&
-      createData.minOrderValues < createData.maxDiscount
-    ) {
-      return res.status(400).json({
-        message:
-          "Giá trị đơn tối thiểu phải lớn hơn hoặc bằng mức giảm tối đa.",
-      });
+    if (createData.voucherType === "product") {
+      if (
+        createData.discountType === "fixed" &&
+        createData.minOrderValues <= createData.discountValue
+      ) {
+        return res.status(400).json({
+          message: "Giá trị đơn tối thiểu phải lớn hơn số tiền giảm.",
+        });
+      }
+
+      if (
+        createData.discountType === "percent" &&
+        createData.minOrderValues < createData.maxDiscount
+      ) {
+        return res.status(400).json({
+          message:
+            "Giá trị đơn tối thiểu phải lớn hơn hoặc bằng mức giảm tối đa.",
+        });
+      }
     }
 
     // Xử lý dùng riêng/dùng chung và quantity
     if (Array.isArray(createData.userIds) && createData.userIds.length > 0) {
-      // ✅ Check trùng lặp trước
+      // Check trùng lặp trước
       const uniqueUserIds = [...new Set(createData.userIds.map(String))];
       if (uniqueUserIds.length < createData.userIds.length) {
         return res.status(400).json({
@@ -312,23 +315,27 @@ export const updateVoucher = async (req, res) => {
     updateData.code = code;
     const now = new Date();
 
-    if (
-      updateData.discountType === "fixed" &&
-      updateData.minOrderValues <= updateData.discountValue
-    ) {
-      return res.status(400).json({
-        message: "Giá trị đơn tối thiểu phải lớn hơn số tiền giảm.",
-      });
+     if (updateData.voucherType === "product") {
+      if (
+        updateData.discountType === "fixed" &&
+        updateData.minOrderValues <= updateData.discountValue
+      ) {
+        return res.status(400).json({
+          message: "Giá trị đơn tối thiểu phải lớn hơn số tiền giảm.",
+        });
+      }
+
+      if (
+        updateData.discountType === "percent" &&
+        updateData.minOrderValues < updateData.maxDiscount
+      ) {
+        return res.status(400).json({
+          message:
+            "Giá trị đơn tối thiểu phải lớn hơn hoặc bằng mức giảm tối đa.",
+        });
+      }
     }
-    if (
-      updateData.discountType === "percent" &&
-      updateData.minOrderValues < updateData.maxDiscount
-    ) {
-      return res.status(400).json({
-        message:
-          "Giá trị đơn tối thiểu phải lớn hơn hoặc bằng mức giảm tối đa.",
-      });
-    }
+
 
     // Tự động cập nhật trạng thái dựa trên ngày
     const startDate = new Date(
