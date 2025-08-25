@@ -27,8 +27,8 @@ router.patch("/order/status/:id", verifyToken,updateOrderStatus);
 router.patch("/order/payment-status/:id", updatePaymentStatus);
 router.patch("/order/cancel/:id", cancelOrder);
 router.patch("/order/update-total/:id", updateOrderTotal); 
-router.patch("/order/update-item-status/:id", updateStatusOrderItem);
-router.patch("/order/update-return-order/:id", updateReturnOrder);
+router.patch("/order/update-item-status/:id", verifyToken, updateStatusOrderItem);
+router.patch("/order/update-return-order/:id",verifyToken, updateReturnOrder);
 
 export default router;
  
