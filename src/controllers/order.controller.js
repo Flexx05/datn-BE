@@ -44,8 +44,8 @@ const createEmailTemplate = (order, recipientInfo) => {
       <p style="color: #666;">Cảm ơn bạn đã đặt hàng tại Binova. Đơn hàng <strong>${
         order.orderCode
       }</strong> của bạn đã được tiếp nhận.</p>
-      <p style="color: #666;">Bạn có thể theo dõi đơn hàng tại http://localhost:5173/order/code</p>
-      
+      <p style="color: #666;">Bạn có thể theo dõi đơn hàng tại http://localhost:5173/order/${order.orderCode}</p>
+
       <h3 style="color: #333; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;">📦 Thông tin đơn hàng</h3>
       <table style="width: 100%; color: #333; font-size: 14px;">
         <tr><td style="padding: 5px 0;"><strong>Mã đơn hàng:</strong></td><td>${
@@ -121,14 +121,6 @@ const createEmailTemplate = (order, recipientInfo) => {
       <div style="margin-top: 20px; text-align: center; color: #666;">
         <p>Cảm ơn bạn đã mua sắm tại <strong>Binova</strong>!</p>
         <p>Nếu có thắc mắc, vui lòng liên hệ qua email <a href="mailto:binovaweb73@gmail.com" style="color: #4CAF50;">binovaweb73@gmail.com</a></p>
-        <p style="margin-top: 20px;">
-          <a href="http://localhost:5173/guest-cancel?orderCode=${
-            order.orderCode
-          }&email=${recipientInfo.email}" 
-             style="display: inline-block; padding: 10px 20px; background-color: #ff4444; color: white; text-decoration: none; border-radius: 5px;">
-            Hủy đơn hàng
-          </a>
-        </p>
       </div>
 
       <div style="text-align: right; margin-top: 20px; color: #666;">
@@ -1423,17 +1415,34 @@ export const updateStatusOrderItem = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
 
-    for (const { itemId, returnQuantity } of items) {
-      const item = order.items.id(itemId);
-      if (!item) {
-        return res.status(404).json({ message: `Không tìm thấy sản phẩm ${itemId} trong đơn hàng` });
-      }
-      if (returnQuantity <= 0 || returnQuantity > item.quantity) {
-        return res.status(400).json({ message: `Số lượng hoàn không hợp lệ cho sản phẩm ${itemId}` });
-      }
+    if (!items || items.length === 0) {
+      // Nếu không có items được gửi lên, cập nhật tất cả sản phẩm
+      order.items.forEach((item) => {
+        item.returnStatus = false;
+        item.returnQuantity = 0;
+      });
+    } else {
+      // Xử lý danh sách items được gửi lên
+      for (const { itemId, returnQuantity } of items) {
+        const item = order.items.id(itemId);
+        if (!item) {
+          return res
+            .status(404)
+            .json({
+              message: `Không tìm thấy sản phẩm ${itemId} trong đơn hàng`,
+            });
+        }
+        if (returnQuantity <= 0 || returnQuantity > item.quantity) {
+          return res
+            .status(400)
+            .json({
+              message: `Số lượng hoàn không hợp lệ cho sản phẩm ${itemId}`,
+            });
+        }
 
-      item.returnStatus = true;
-      item.returnQuantity = returnQuantity;
+        item.returnStatus = true;
+        item.returnQuantity = returnQuantity;
+      }
     }
 
     await order.save();
@@ -1444,7 +1453,9 @@ export const updateStatusOrderItem = async (req, res) => {
     });
   } catch (error) {
     console.error("Lỗi returnOrder:", error);
-    return res.status(500).json({ message: "Lỗi server", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Lỗi server", error: error.message });
   }
 };
 
@@ -1454,7 +1465,6 @@ export const updateReturnOrder = async (req, res) => {
     const { id } = req.params;
     const orderId = id;
 
-    // 1. Lấy order từ DB
     const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
@@ -1464,8 +1474,10 @@ export const updateReturnOrder = async (req, res) => {
       return sum + (i.returnQuantity * i.priceAtOrder);
     }, 0);
 
-    order.refundAmount = refundAmount;
-    order.totalAmount -= refundAmount;
+    order.refundAmount = refundAmount - order.discountAmount + 30000;
+    // console.log(order.refundAmount);
+    order.totalAmount -= order.refundAmount;
+    // console.log(order.totalAmount);
 
     await order.save();
 

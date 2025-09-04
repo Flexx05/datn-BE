@@ -199,13 +199,13 @@ export const addComment = async (req, res) => {
     const { orderId, productId, content, rating, images } = value;
     const user = req.user;
     const userId = user._id;
+    console.log("value", value);
 
     // Kiểm tra đơn hàng tồn tại và đã hoàn thành
     const order = await Order.findOne({
       _id: orderId,
       userId,
-      status: 4, // 4: Hoàn thành đơn hàng
-      paymentStatus: 1, // 1: Đã thanh toán
+      status: 4,
     });
 
     if (!order) {

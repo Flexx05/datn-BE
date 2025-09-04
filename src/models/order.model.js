@@ -3,7 +3,7 @@ import mongoose, { Schema, model } from "mongoose";
 const orderItemSchema = new Schema(
   {
     productId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "Product",
       required: true,
     },
@@ -43,9 +43,9 @@ const orderItemSchema = new Schema(
       required: true,
       min: 0,
     },
-    returnStatus: {
+   returnStatus: {
       type: Boolean,
-      default: 0,
+      default: false,
     },
     returnQuantity: {
       type: Number,
@@ -222,17 +222,6 @@ const orderSchema = new mongoose.Schema(
     deliveryDate: {
       type: Date,
       default: null,
-    },
-    returnStatus: {
-      type: Number,
-      enum: [0, 1, 2, 3, 4, 5],
-      // 0: Chua yeu cau
-      // 1: Da yeu cau
-      // 2: Da duyet
-      // 3: Da tu choi
-      // 4: Da hoan tien
-      // 5: Da huy
-      default: 0,
     },
     completedBy: {
       type: String,

@@ -32,13 +32,16 @@ export const createReturnRequest = async (req, res) => {
       order.paymentStatus !== 1 ||
       (order.status !== 3 && order.status !== 4)
     ) {
+      console.log(order.paymentStatus, order.status);
+      
       throw new Error("Đơn hàng chưa được thanh toán hoặc chưa giao");
     }
 
     // Kiểm tra tổng số tiền hoàn lại
     const discount = order?.discountAmount || 0;
     const total = products.reduce((sum, p) => sum + p.quantity * p.price, 0);
-    const calculatedRefund = total - discount;
+
+    const calculatedRefund = total - discount + 30000
 
     if (calculatedRefund !== refundAmount) {
       throw new Error("Số tiền hoàn lại không khớp với danh sách sản phẩm");
