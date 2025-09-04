@@ -10,6 +10,7 @@ import {
 } from "../validations/comment.validation";
 import { nontifyAdmin } from "./nontification.controller";
 import { getSocketInstance } from "../socket";
+import path from "path";
 
 // Hiển thị danh sách bình luận (có thể lọc theo người dùng,sản phẩm, trạng thái, thời gian )
 export const getAllComment = async (req, res) => {
@@ -89,7 +90,7 @@ export const getAllComment = async (req, res) => {
       sort: { [_sort]: _order === "desc" ? -1 : 1 },
       populate: [
         { path: "productId", select: "name" },
-        { path: "userId", select: "fullName email" },
+        { path: "userId", select: "fullName email" }
       ],
     };
 
@@ -136,7 +137,8 @@ export const getCommentById = async (req, res) => {
 
     const comment = await Comment.findById(id)
       .populate("productId", "name")
-      .populate("userId", "fullName email");
+      .populate("userId", "fullName email")
+      .populate("orderId", "orderCode");
 
     if (!comment) {
       return res.status(404).json({ message: "Không tìm thấy bình luận." });
