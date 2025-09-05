@@ -216,18 +216,19 @@ export const refreshToken = async (req, res) => {
 };
 
 export const loginGoogle = async (req, res) => {
-  const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+  const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID); // GOOGLE_: client id của ứng dụng,xác định ứng dụng mik vs gg
   const { token } = req.body;
   try {
     // Xác thực token
-    const ticket = await client.verifyIdToken({
+    const ticket = await client.verifyIdToken({// xác định tính hợp lệ người dùng
       idToken: token,
-      requiredAudience: process.env.GOOGLE_CLIENT_ID,
+      requiredAudience: process.env.GOOGLE_CLIENT_ID, //client id của ứng dụng để token cấp phát cho đúng ứng dụng mik
     });
+    // đảm bảo token thật
 
-    const payload = ticket.getPayload();
+    const payload = ticket.getPayload(); //Lấy phần payload (dữ liệu người dùng) từ đối tượng ticket sau khi xác minh
 
-    const { email, name, picture } = payload;
+    const { email, name, picture } = payload; //Sử dụng destructuring để trích xuất các trường cụ thể từ object payload
 
     // Kiểm tra xem người dùng đã tồn tại chưa
     let user = await authModel.findOne({ email });
@@ -245,17 +246,18 @@ export const loginGoogle = async (req, res) => {
       });
     }
     let wallet = await Wallet.findOne({ userId: user._id });
-    if(!wallet){
+    if (!wallet) {
       await Wallet.create({ userId: user._id });
     }
     const accessToken = jwt.sign(
       { id: user.id },
-      process.env.JWT_SECRET_KEY || "binova",
+      process.env.JWT_SECRET_KEY || "binova", //Secret key dùng để ký và xác thực token ,Ai biết secret key mới xác thực được token
       {
         expiresIn: "5m",
       }
     );
-    user.isVerify = true;
+    user.isVerify = true; //Cập nhật trường isVerify của object user đảm bảo người dùng được đánh dấu đã xác minh
+    //Tạo refresh token JWT để làm mới access token khi hết hạn, dùng cho phiên đăng nhập dài hạn
     const refreshToken = jwt.sign(
       { id: user._id },
       process.env.JWT_REFRESH_SECRET || "refresh_binova",
@@ -267,9 +269,10 @@ export const loginGoogle = async (req, res) => {
     user.refreshToken = refreshToken;
     await user.save();
     user.password = undefined; // Không trả về mật khẩu trong response
+    // Đặt cookie chứa refreshToken trong phản hồi HTTP, để client lưu trữ an toàn
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: false,
+      secure: false, 
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });

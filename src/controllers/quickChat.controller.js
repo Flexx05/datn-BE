@@ -18,11 +18,14 @@ export const getAllQuickChat = async (req, res) => {
     if (category !== undefined) {
       const categoryNumber = Number(category);
       if (categoryNumber === 0) {
-        query.category = { $in: [1, 2, 3, 4, 5, 6] };
+        query.category = { $in: [1, 2, 3, 4, 5, 6] }; //in : kiểm tra gtri trong mảng
       } else {
         query.category = categoryNumber;
       }
     }
+
+    //Khởi tạo object options để cấu hình truy vấn. Thiết lập populate để lấy thông tin fullName của người tạo 
+    // gaiir (createdBy) từ collection liên quan
     const options = {};
     options.populate = {
       path: "createdBy",
@@ -33,10 +36,12 @@ export const getAllQuickChat = async (req, res) => {
       // Khong phan trang, lay tat ca
       options.pagination = false;
     } else {
-      options.page = parseInt(_page, 10) || 1;
-      options.limit = parseInt(_limit, 10) || 10;
-      options.sort = { [_sort]: _order === "desc" ? -1 : 1 };
+      options.page = parseInt(_page, 10) || 1; // chuyển đổi chuỗi _page thành số nguyên, nếu không hợp lệ thì mặc định là 1
+      // ví dụ: _page = "2", thì options.page = 2. Nếu _page = "abc", thì options.page = 1
+      options.limit = parseInt(_limit, 10) || 10; // Giới hạn số QuickChat trả về trong một trang
+      options.sort = { [_sort]: _order === "desc" ? -1 : 1 }; //-1 : 1 : sắp xếp tăng dần hoặc giảm dần
     }
+    // Sử dụng paginate để lấy danh sách QuickChat theo query(điều kiện tìm kiếm) và options(phân trang,sắp xếp) đã cấu hình
     const chats = await QuickChat.paginate(query, options);
     return res.status(200).json(chats);
   } catch (error) {
@@ -46,9 +51,10 @@ export const getAllQuickChat = async (req, res) => {
 
 export const getQuickChatById = async (req, res) => {
   try {
+    //ID của QuickChat cần truy vấn
     const { id } = req.params;
     const chat = await QuickChat.findById(id)
-      .populate({
+      .populate({ //populate : lấy thông tin chi tiết từ collection liên quan
         path: "createdBy",
         select: "fullName",
       })
