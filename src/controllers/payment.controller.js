@@ -6,12 +6,13 @@ import {
 import paymentModel from "../models/payment.model.js";
 import orderModel from "../models/order.model.js";
 import { Types } from "mongoose";
+import { getSocketInstance } from "../socket.js";
 
 // Tạo một yêu cầu thanh toán mới với VNPAY
 export const createVnpayPayment = async (req, res) => {
   try {
     const { orderId, bankCode } = req.body;
-    const userId = req.user._id;
+    // const userId = req.user._id;
 
     console.log("Creating VNPAY payment for order:", orderId);
 
@@ -78,12 +79,12 @@ export const createVnpayPayment = async (req, res) => {
     // Tạo bản ghi thanh toán mới
     const newPayment = new paymentModel({
       orderId: order._id,
-      userId,
+      // userId,
       paymentMethod: "VNPAY",
       status: 0,
       amount: order.totalAmount,
       transactionId: vnpTxnRef,
-      paymentUrl
+      paymentUrl,
     });
 
     await newPayment.save();
@@ -130,7 +131,7 @@ export const vnpayCallback = async (req, res) => {
       return res.status(404).send("Không tìm thấy thông tin thanh toán");
     }
     const order = await orderModel.findById(payment.orderId);
-    if(order.status === 5) {
+    if (order.status === 5) {
       return res.status(400).send("Đơn hàng đã bị hủy, không thể thanh toán");
     }
 
@@ -145,9 +146,32 @@ export const vnpayCallback = async (req, res) => {
       // Cập nhật trạng thái đơn hàng
       const updatedOrder = await orderModel.findByIdAndUpdate(
         payment.orderId,
-        { paymentStatus: 1, status: 0, updatedAt: new Date() },
+        // { paymentStatus: 1, status: 0, updatedAt: new Date() },
+        {
+          $set: {
+            paymentStatus: 1,
+            status: 0,
+            updatedAt: new Date(),
+          },
+          $push: {
+            paymentStatusHistory: {
+              paymentStatus: 1,
+              updatedByUser: req.user?._id || null,
+              updatedByType: req.user ? "user" : "guest",
+              note: "Thanh toán thành công qua VNPAY",
+            },
+          },
+        },
         { new: true }
       );
+      // Realtime cập nhật trạng thái thanh toán
+      const io = getSocketInstance();
+      if (io) {
+        io.to("admin").emit("payment-updated", {
+          order: updatedOrder?._id,
+          paymentStatus: updatedOrder?.paymentStatus,
+        });
+      }
 
       // Lấy orderCode để redirect
       const orderCode = updatedOrder?.orderCode || payment.orderId;
@@ -156,21 +180,14 @@ export const vnpayCallback = async (req, res) => {
       return res.redirect(302, `http://localhost:5173/order/${orderCode}`);
     } else {
       // Thanh toán thất bại, chuyển hướng về trang thất bại (nếu có)
-      return res.redirect(
-        302,
-        `http://localhost:5173/order/code`
-      );
+      return res.redirect(302, `http://localhost:5173/order/code`);
     }
   } catch (error) {
     console.error("VNPAY Callback Error:", error);
     // Lỗi hệ thống, redirect về trang lỗi tổng quát
-    return res.redirect(
-      302,
-      `http://localhost:5173/order/error`
-    );
+    return res.redirect(302, `http://localhost:5173/order/error`);
   }
 };
-
 
 // Lấy trạng thái thanh toán của đơn hàng
 export const getPaymentStatus = async (req, res) => {
@@ -384,11 +401,24 @@ export const refundPayment = async (req, res) => {
     // Cập nhật trạng thái đơn hàng
     await orderModel.findByIdAndUpdate(
       payment.orderId,
+      // {
+      //   paymentStatus: "refunded",
+      // },
       {
-        paymentStatus: "refunded",
+        $set: {
+          paymentStatus: 2,
+        },
+        $push: {
+          paymentStatusHistory: {
+            paymentStatus: 2,
+            updatedByUser: req.user?._id || null,
+            updatedByType: req.user ? "user" : "guest",
+            note: "Hoàn tiền thành công",
+          },
+        },
       },
       { new: true }
-    );
+    ); //////////////////////////////////////////
 
     // Ghi chú: Trong thực tế, bạn cần thực hiện các bước hoàn tiền thông qua API của VNPAY
     // Đây chỉ là cập nhật trạng thái trong hệ thống của bạn
